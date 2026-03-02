@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "deploy": "npm run build && git add -A && git commit -m 'deploy: update build' && git push"
+    "deploy": "git add -A && git commit -m 'deploy: update' && git push"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
