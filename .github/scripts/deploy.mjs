@@ -113,6 +113,24 @@ async function triggerBuild(username, domain, archiveBasename, buildSettings) {
     source_type: 'archive',
     source_options: { archive_path: archiveBasename },
   };
+
+  // Force reliable Node app commands when Hostinger exposes these settings.
+  // We only override keys that already exist in detected settings to avoid
+  // sending unsupported fields to the API.
+  if (Object.prototype.hasOwnProperty.call(buildData, 'entry_point')) {
+    buildData.entry_point = 'server.js';
+  }
+  if (Object.prototype.hasOwnProperty.call(buildData, 'install_command')) {
+    buildData.install_command = 'npm install';
+  }
+  if (Object.prototype.hasOwnProperty.call(buildData, 'build_command')) {
+    buildData.build_command = 'npm run build';
+  }
+  if (Object.prototype.hasOwnProperty.call(buildData, 'start_command')) {
+    buildData.start_command = 'npm start';
+  }
+
+  console.log(`Build payload: ${JSON.stringify(buildData)}`);
   const res = await axios.post(url, buildData, {
     headers: { ...authHeaders, 'Content-Type': 'application/json' },
     validateStatus: (s) => s < 500,
