@@ -1,0 +1,47 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Create source archive
+        run: |
+          zip -r /tmp/aicontentstudio.zip . \
+            --exclude ".git/*" \
+            --exclude "node_modules/*" \
+            --exclude "dist/*" \
+            --exclude ".env*" \
+            --exclude "*.log"
+          echo "Archive size: $(du -sh /tmp/aicontentstudio.zip | cut -f1)"
+
+      - name: Install deploy script dependencies
+        run: |
+          mkdir -p /tmp/deploy-deps
+          cp .github/scripts/deploy.mjs /tmp/deploy-deps/
+          cd /tmp/deploy-deps
+          npm init -y
+          npm install axios tus-js-client
+
+      - name: Deploy to Hostinger
+        working-directory: /tmp/deploy-deps
+        env:
+          API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
+          DOMAIN: aicontentstudio.net
+          ARCHIVE_PATH: /tmp/aicontentstudio.zip
+        run: node deploy.mjs
