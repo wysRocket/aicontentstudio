@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Represents a user in the system.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique identifier of the user (from Firebase Auth)."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "The URL to the user's profile photo."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "user"],
+          "description": "The user's role in the system."
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "The time the user profile was created."
+        }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    }
+    "ConnectedAccount": {
+      "title": "ConnectedAccount",
+      "description": "Represents a connected social media account.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who owns this account."
+        },
+        "platform": {
+          "type": "string",
+          "enum": ["twitter", "linkedin", "facebook", "instagram", "youtube", "tiktok", "pinterest", "bluesky", "threads"],
+          "description": "The social media platform."
+        },
+        "handle": {
+          "type": "string",
+          "description": "The user's handle on the platform."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's name on the platform."
+        },
+        "profilePicture": {
+          "type": "string",
+          "description": "The URL to the user's profile picture on the platform."
+        },
+        "accessToken": {
+          "type": "string",
+          "description": "The OAuth access token."
+        },
+        "refreshToken": {
+          "type": "string",
+          "description": "The OAuth refresh token."
+        },
+        "expiresAt": {
+          "type": "number",
+          "description": "The expiration time of the access token."
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "The time the account was connected."
+        }
+      },
+      "required": ["userId", "platform", "handle", "accessToken", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Stores user profiles."
+    },
+    "/users/{userId}/connectedAccounts/{accountId}": {
+      "schema": {
+        "$ref": "#/entities/ConnectedAccount"
+      },
+      "description": "Stores connected social media accounts for a user."
+    }
+  }
+}
