@@ -1,4 +1,4 @@
-name: Deploy to Hostinger VPS
+name: Deploy to Hostinger
 
 on:
   push:
@@ -15,18 +15,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Hostinger VPS
-        uses: hostinger/deploy-on-vps@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          api-key: ${{ secrets.HOSTINGER_API_TOKEN }}
-          virtual-machine: ${{ vars.HOSTINGER_VM_ID }}
-          project-name: aicontentstudio
-          environment-variables: |
-            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
-            APP_URL=https://aicontentstudio.net
-            TWITTER_CLIENT_ID=${{ secrets.TWITTER_CLIENT_ID }}
-            TWITTER_CLIENT_SECRET=${{ secrets.TWITTER_CLIENT_SECRET }}
-            LINKEDIN_CLIENT_ID=${{ secrets.LINKEDIN_CLIENT_ID }}
-            LINKEDIN_CLIENT_SECRET=${{ secrets.LINKEDIN_CLIENT_SECRET }}
-            YOUTUBE_CLIENT_ID=${{ secrets.YOUTUBE_CLIENT_ID }}
-            YOUTUBE_CLIENT_SECRET=${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          node-version: 20
+
+      - name: Create source archive
+        run: |
+          zip -r /tmp/aicontentstudio.zip . \
+            --exclude ".git/*" \
+            --exclude "node_modules/*" \
+            --exclude "dist/*" \
+            --exclude ".env*" \
+            --exclude "*.log"
+          echo "Archive size: $(du -sh /tmp/aicontentstudio.zip | cut -f1)"
+
+      - name: Install deploy script dependencies
+        run: |
+          mkdir -p /tmp/deploy-deps
+          cp .github/scripts/deploy.mjs /tmp/deploy-deps/
+          cd /tmp/deploy-deps
+          npm init -y
+          npm install axios tus-js-client
+
+      - name: Deploy to Hostinger
+        working-directory: /tmp/deploy-deps
+        env:
+          API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
+          DOMAIN: aicontentstudio.net
+          ARCHIVE_PATH: /tmp/aicontentstudio.zip
+        run: node deploy.mjs

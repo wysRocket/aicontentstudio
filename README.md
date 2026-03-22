@@ -19,37 +19,22 @@ View your app in AI Studio: https://ai.studio/apps/659a1553-c634-4909-82e0-eccc6
 3. Run the app:
    `npm run dev`
 
-## Deploy to Hostinger VPS
+## Deploy to Hostinger
 
-This repository is configured for automatic deployment to [Hostinger VPS](https://hpanel.hostinger.com/websites/aicontentstudio.net) on every push to the `main` branch.
+This repository is configured for automatic deployment to [aicontentstudio.net](https://hpanel.hostinger.com/websites/aicontentstudio.net) on every push to the `main` branch.
 
-### Required GitHub Secrets & Variables
+### Required GitHub Secret
 
-In your repository settings (**Settings → Secrets and variables → Actions**), add:
+In your repository settings (**Settings → Secrets and variables → Actions**), ensure the following secret is present:
 
-**Secrets:**
 - `HOSTINGER_API_TOKEN` – Your Hostinger API key (from [hPanel → Profile → API](https://hpanel.hostinger.com/profile/api))
-- `GEMINI_API_KEY` – Your Google Gemini API key
-- `TWITTER_CLIENT_ID` / `TWITTER_CLIENT_SECRET` – Twitter OAuth credentials *(optional)*
-- `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` – LinkedIn OAuth credentials *(optional)*
-- `YOUTUBE_CLIENT_ID` / `YOUTUBE_CLIENT_SECRET` – YouTube OAuth credentials *(optional)*
-
-**Variables:**
-- `HOSTINGER_VM_ID` – Your Hostinger VPS virtual machine ID (find it in your VPS dashboard URL: `https://hpanel.hostinger.com/vps/<VM_ID>/overview`, or from the default hostname `srv<VM_ID>.hstgr.cloud`)
 
 ### How It Works
 
 1. On every push to `main`, the GitHub Actions workflow (`.github/workflows/deploy.yml`) triggers.
-2. The workflow uses Hostinger's official [`deploy-on-vps@v2`](https://github.com/marketplace/actions/deploy-on-hostinger-vps) action.
-3. The action deploys the app to your VPS using Docker (via `docker-compose.yml`).
-4. The container builds the React/Vite frontend and starts the Express server on port 3000, served on port 80.
-
-### VPS Prerequisites
-
-Your Hostinger VPS must have **Docker** installed. If it doesn't, you can install it via SSH:
-
-```bash
-curl -fsSL https://get.docker.com | sh
-systemctl enable docker && systemctl start docker
-apt-get install -y docker-compose-plugin
-```
+2. The workflow creates a source archive (excluding `node_modules`, `dist`, `.env` files, etc.).
+3. A deploy script (`.github/scripts/deploy.mjs`) calls the Hostinger Hosting API to:
+   - Upload the source archive to your hosting account's file manager.
+   - Fetch the detected build settings (entry point, build command, Node.js version) from the archive.
+   - Trigger a Node.js build on the Hostinger server.
+4. Hostinger runs `npm install` + `npm run build` server-side and starts the app automatically.
