@@ -50,16 +50,23 @@ Create a VS Code MCP config in `.vscode/mcp.json`:
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "hostinger-api": {
-      "command": "hostinger-api-mcp",
+      "command": "npx",
+      "args": ["-y", "hostinger-api-mcp"],
       "env": {
         "DEBUG": "false",
-        "API_TOKEN": "YOUR_HOSTINGER_API_TOKEN"
+        "API_TOKEN": "${env:HOSTINGER_API_TOKEN}"
       }
     }
   }
 }
+```
+
+Set your token in your shell before starting VS Code:
+
+```bash
+export HOSTINGER_API_TOKEN="your_real_token"
 ```
 
 With this configured, you can inspect Hostinger deployments and fetch build logs directly via MCP tools.

@@ -78,7 +78,7 @@ async function startServer() {
               Authorization: `Basic ${Buffer.from(`${process.env.TWITTER_CLIENT_ID}:${process.env.TWITTER_CLIENT_SECRET}`).toString("base64")}`,
             },
             body: new URLSearchParams({
-              code: code as string,
+              code: String(code || ""),
               grant_type: "authorization_code",
               client_id: process.env.TWITTER_CLIENT_ID,
               redirect_uri: redirectUri,
@@ -192,7 +192,7 @@ async function startServer() {
             },
             body: new URLSearchParams({
               grant_type: "authorization_code",
-              code: code as string,
+              code: String(code || ""),
               client_id: process.env.LINKEDIN_CLIENT_ID,
               client_secret: process.env.LINKEDIN_CLIENT_SECRET,
               redirect_uri: redirectUri,
@@ -302,7 +302,7 @@ async function startServer() {
             },
             body: new URLSearchParams({
               grant_type: "authorization_code",
-              code: code as string,
+              code: String(code || ""),
               client_id: process.env.YOUTUBE_CLIENT_ID,
               client_secret: process.env.YOUTUBE_CLIENT_SECRET,
               redirect_uri: redirectUri,
