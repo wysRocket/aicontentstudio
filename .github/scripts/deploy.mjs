@@ -117,8 +117,20 @@ async function triggerBuild(username, domain, archiveBasename, buildSettings) {
   // Force reliable Node app commands when Hostinger exposes these settings.
   // We only override keys that already exist in detected settings to avoid
   // sending unsupported fields to the API.
+  if (Object.prototype.hasOwnProperty.call(buildData, 'entry_file')) {
+    buildData.entry_file = 'server.js';
+  }
   if (Object.prototype.hasOwnProperty.call(buildData, 'entry_point')) {
     buildData.entry_point = 'server.js';
+  }
+  if (Object.prototype.hasOwnProperty.call(buildData, 'install_script')) {
+    buildData.install_script = 'install';
+  }
+  if (Object.prototype.hasOwnProperty.call(buildData, 'start_script')) {
+    buildData.start_script = 'start';
+  }
+  if (Object.prototype.hasOwnProperty.call(buildData, 'build_script')) {
+    buildData.build_script = 'build';
   }
   if (Object.prototype.hasOwnProperty.call(buildData, 'install_command')) {
     buildData.install_command = 'npm install';
