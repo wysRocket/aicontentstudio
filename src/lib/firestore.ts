@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc, runTransaction, increment, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, runTransaction, increment, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 
 export enum OperationType {
@@ -81,11 +81,13 @@ export async function getUserCredits(uid: string): Promise<number> {
     return typeof credits === 'number' ? credits : 0;
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, `users/${uid}`);
-    return 0;
   }
 }
 
 export async function deductCredits(uid: string, amount: number): Promise<void> {
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error('amount must be a positive integer');
+  }
   const userRef = doc(db, 'users', uid);
   try {
     await runTransaction(db, async (transaction) => {
@@ -103,9 +105,12 @@ export async function deductCredits(uid: string, amount: number): Promise<void> 
 
 // TODO: Move to server-side after Stripe integration to prevent client-side manipulation
 export async function addCredits(uid: string, amount: number): Promise<void> {
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error('amount must be a positive integer');
+  }
   const userRef = doc(db, 'users', uid);
   try {
-    await updateDoc(userRef, { credits: increment(amount) });
+    await setDoc(userRef, { credits: increment(amount) }, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
   }

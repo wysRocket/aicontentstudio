@@ -86,7 +86,15 @@ export default function Dashboard() {
       setCredits(prev => (prev ?? 0) - 10);
     } catch (err) {
       if (err instanceof Error && err.message === 'insufficient_credits') {
+        try {
+          const freshCredits = await getUserCredits(user.uid);
+          setCredits(freshCredits);
+        } catch {
+          setCredits(0);
+        }
         setIsPurchaseModalOpen(true);
+      } else {
+        console.error('Failed to deduct credits:', err);
       }
     } finally {
       setIsProcessing(false);
