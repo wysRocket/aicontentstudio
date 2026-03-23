@@ -1,0 +1,22 @@
+---
+title: "Troubleshooting"
+description: "Common setup and runtime issues with practical fixes."
+---
+
+## App does not start
+
+- Verify Node.js version is 20+
+- Reinstall dependencies: `rm -rf node_modules package-lock.json && npm install`
+- Run lint/type check: `npm run lint`
+
+## Firebase auth or data errors
+
+- Confirm environment variables are present and correct
+- Verify Firestore rules deployment and project selection
+- Check browser console and server logs for permission errors
+
+## Docs preview issues
+
+- Ensure `mint` CLI is available: `npx mint --version`
+- Confirm `docs.json` is valid JSON
+- Make sure page paths in navigation match existing files

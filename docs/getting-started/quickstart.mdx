@@ -1,0 +1,42 @@
+---
+title: "Quickstart"
+description: "Run AiContentStudio locally with Node, Firebase config, and Vite."
+---
+
+## Prerequisites
+
+- Node.js 20+
+- npm 10+
+- Firebase project credentials
+
+## Install dependencies
+
+```bash
+npm install
+```
+
+## Configure environment
+
+Create a `.env` file in the repository root and add your Firebase and app configuration values.
+
+```bash
+cp .env.example .env
+```
+
+If `.env.example` does not exist yet, create `.env` manually and include the keys your project reads in `src/firebase.ts` and `server.js`.
+
+## Run the app
+
+```bash
+npm run dev
+```
+
+This starts the local server and the Vite-powered frontend.
+
+## Run docs locally
+
+```bash
+npm run docs:dev
+```
+
+Mintlify serves documentation using `docs.json` and your `docs/` folder.

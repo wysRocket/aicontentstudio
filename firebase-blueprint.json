@@ -33,7 +33,7 @@
         }
       },
       "required": ["uid", "email", "role", "createdAt"]
-    }
+    },
     "ConnectedAccount": {
       "title": "ConnectedAccount",
       "description": "Represents a connected social media account.",

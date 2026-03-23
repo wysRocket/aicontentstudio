@@ -1,0 +1,32 @@
+---
+title: "Architecture"
+description: "High-level architecture for frontend, backend, and Firebase integration."
+---
+
+## Overview
+
+AiContentStudio uses a React frontend with Vite, a Node/Express backend, and Firebase for authentication and data services.
+
+```text
+Browser (React + Vite)
+  -> Express API (server.js / server.ts)
+  -> Firebase services (Auth + Firestore)
+```
+
+## Frontend
+
+- Entry: `src/main.tsx`
+- App shell and routes: `src/App.tsx`
+- Pages: `src/pages/*`
+- Shared components: `src/components/*`
+
+## Backend
+
+- Runtime server: `server.js`
+- TypeScript server source: `server.ts`
+
+## Data and auth
+
+- Firebase setup: `src/firebase.ts`
+- Firestore helpers: `src/lib/firestore.ts`
+- Security rules: `firestore.rules`

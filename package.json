@@ -8,6 +8,8 @@
     "build": "vite build",
     "start": "node server.js",
     "preview": "vite preview",
+    "docs:dev": "npx mint dev",
+    "docs:check": "npx mint openapi-check",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
   },

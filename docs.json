@@ -1,0 +1,69 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "AiContentStudio Docs",
+  "theme": "mint",
+  "colors": {
+    "primary": "#0F766E",
+    "light": "#14B8A6",
+    "dark": "#115E59"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Getting Started",
+        "groups": [
+          {
+            "group": "Welcome",
+            "pages": [
+              "docs/index",
+              "docs/getting-started/quickstart",
+              "docs/getting-started/architecture"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Product",
+        "groups": [
+          {
+            "group": "Core Features",
+            "pages": [
+              "docs/product/dashboard",
+              "docs/product/create-post",
+              "docs/product/inspiration",
+              "docs/product/video-generation",
+              "docs/product/prompts"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Workflows",
+            "pages": [
+              "docs/guides/content-workflow",
+              "docs/guides/team-collaboration",
+              "docs/guides/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Technical Reference",
+            "pages": [
+              "docs/reference/env-variables",
+              "docs/reference/firebase",
+              "docs/reference/faq",
+              "docs/reference/changelog"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
