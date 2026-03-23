@@ -10,6 +10,7 @@ import Prompts from "./pages/Prompts";
 import Coach from "./pages/Coach";
 import { FirebaseProvider } from "./contexts/FirebaseContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import Dashboard from "./pages/Dashboard";
 
 // Placeholder component for empty routes
@@ -23,6 +24,7 @@ function Placeholder({ title }: { title: string }) {
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <FirebaseProvider>
       <BrowserRouter>
         <Routes>
@@ -52,5 +54,6 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </FirebaseProvider>
+    </ErrorBoundary>
   );
 }

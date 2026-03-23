@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Coins, Loader2, Sparkles, Plus, ArrowLeft, ChevronUp, ChevronDown, PlusCircle } from 'lucide-react';
 import PurchaseCreditsModal from '../components/PurchaseCreditsModal';
-import { auth } from '../firebase';
 import { getUserCredits, deductCredits, addCredits } from '../lib/firestore';
+import { useFirebase } from '../contexts/FirebaseContext';
 
 const Toggle = ({ checked, onChange, id }: { checked?: boolean, onChange?: () => void, id?: string }) => (
   <button 
@@ -42,6 +42,7 @@ const SelectInput = ({ label, placeholder, disabled, options = [] }: { label: st
 };
 
 export default function Dashboard() {
+  const { user, isAuthReady } = useFirebase();
   const [credits, setCredits] = useState<number | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -57,12 +58,12 @@ export default function Dashboard() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
+  // Wait for auth to be ready before loading credits to avoid reading
+  // stale/null uid during Firebase initialization.
   useEffect(() => {
-    const uid = auth.currentUser?.uid;
-    if (uid) {
-      getUserCredits(uid).then(setCredits).catch(() => setCredits(0));
-    }
-  }, []);
+    if (!isAuthReady || !user) return;
+    getUserCredits(user.uid).then(setCredits).catch(() => setCredits(0));
+  }, [isAuthReady, user]);
 
   useEffect(() => {
     if (searchParams.get('buy') === 'true') {
@@ -78,11 +79,10 @@ export default function Dashboard() {
       setIsPurchaseModalOpen(true);
       return;
     }
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
+    if (!user) return;
     setIsProcessing(true);
     try {
-      await deductCredits(uid, 10);
+      await deductCredits(user.uid, 10);
       setCredits(prev => (prev ?? 0) - 10);
     } catch (err) {
       if (err instanceof Error && err.message === 'insufficient_credits') {
@@ -94,10 +94,13 @@ export default function Dashboard() {
   };
 
   const handlePurchase = async (amount: number) => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
-    await addCredits(uid, amount);
-    setCredits(prev => (prev ?? 0) + amount);
+    if (!user) return;
+    try {
+      await addCredits(user.uid, amount);
+      setCredits(prev => (prev ?? 0) + amount);
+    } catch (err) {
+      console.error('Failed to add credits:', err);
+    }
   };
 
   return (

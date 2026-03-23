@@ -11,16 +11,16 @@ import {
   Pin, // Using Pin for Pinterest
   Cloud, // Using Cloud for Bluesky
 } from "lucide-react";
-import { db, auth } from "../../firebase";
+import { db } from "../../firebase";
 import {
   collection,
   doc,
   setDoc,
-  getDocs,
   deleteDoc,
   serverTimestamp,
   onSnapshot,
 } from "firebase/firestore";
+import { useFirebase } from "../../contexts/FirebaseContext";
 
 interface SocialButtonProps {
   icon: React.ElementType;
@@ -86,16 +86,21 @@ const PLATFORM_COLORS: Record<string, string> = {
 };
 
 export function Accounts() {
+  const { user, isAuthReady } = useFirebase();
   const [connectedAccounts, setConnectedAccounts] = useState<
     ConnectedAccount[]
   >([]);
   const [loading, setLoading] = useState(true);
 
+  // Wait for auth to be fully initialised before subscribing to Firestore.
   useEffect(() => {
-    if (!auth.currentUser) return;
+    if (!isAuthReady || !user) {
+      if (isAuthReady) setLoading(false); // auth ready but not signed in
+      return;
+    }
 
     const unsubscribe = onSnapshot(
-      collection(db, `users/${auth.currentUser.uid}/connectedAccounts`),
+      collection(db, `users/${user.uid}/connectedAccounts`),
       (snapshot) => {
         const accounts = snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -111,7 +116,7 @@ export function Accounts() {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [isAuthReady, user]);
 
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
@@ -127,7 +132,7 @@ export function Accounts() {
       if (event.data?.type === "OAUTH_AUTH_SUCCESS") {
         const { provider, tokenData, profile } = event.data;
 
-        if (!auth.currentUser) {
+        if (!user) {
           console.error("User not authenticated");
           return;
         }
@@ -136,12 +141,12 @@ export function Accounts() {
           const accountId = `${provider}_${profile.handle.replace(/[^a-zA-Z0-9]/g, "")}`;
           const accountRef = doc(
             db,
-            `users/${auth.currentUser.uid}/connectedAccounts`,
+            `users/${user.uid}/connectedAccounts`,
             accountId,
           );
 
           await setDoc(accountRef, {
-            userId: auth.currentUser.uid,
+            userId: user.uid,
             platform: provider,
             handle: profile.handle,
             name: profile.name || profile.handle,
@@ -167,7 +172,8 @@ export function Accounts() {
 
   const handleConnect = async (provider: string) => {
     try {
-      const response = await fetch(`/api/auth/${provider}/url`);
+      const params = new URLSearchParams({ origin: window.location.origin });
+      const response = await fetch(`/api/auth/${provider}/url?${params}`);
       if (!response.ok) {
         throw new Error(`Failed to get auth URL for ${provider}`);
       }
@@ -189,10 +195,10 @@ export function Accounts() {
   };
 
   const handleDisconnect = async (accountId: string) => {
-    if (!auth.currentUser) return;
+    if (!user) return;
     try {
       await deleteDoc(
-        doc(db, `users/${auth.currentUser.uid}/connectedAccounts`, accountId),
+        doc(db, `users/${user.uid}/connectedAccounts`, accountId),
       );
     } catch (error) {
       console.error("Error disconnecting account:", error);
