@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useFirebase } from "../contexts/FirebaseContext";
 
@@ -18,11 +18,22 @@ const pricingBackgroundRightUrl = new URL(
   "../../images/pricing-2.webp",
   import.meta.url,
 ).href;
+const featuresBackgroundUrl = new URL(
+  "../../images/credits-1600.webp",
+  import.meta.url,
+).href;
 
 export default function Landing() {
-  const observerRef = useRef<IntersectionObserver | null>(null);
   const { user } = useFirebase();
   const navigate = useNavigate();
+
+  const landingArtStyles = {
+    "--landing-hero-url": `url(${heroBackgroundUrl})`,
+    "--landing-credits-url": `url(${creditsBackgroundUrl})`,
+    "--landing-pricing-left-url": `url(${pricingBackgroundLeftUrl})`,
+    "--landing-pricing-right-url": `url(${pricingBackgroundRightUrl})`,
+    "--landing-features-url": `url(${featuresBackgroundUrl})`,
+  } as React.CSSProperties;
 
   useEffect(() => {
     if (user) {
@@ -35,21 +46,506 @@ export default function Landing() {
   };
 
   useEffect(() => {
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
-          }
+    let lastY = window.scrollY || 0;
+    let dir: "up" | "down" = "down";
+    const timeouts = new Set<number>();
+
+    const queue = (callback: () => void, delay: number) => {
+      const timeoutId = window.setTimeout(() => {
+        timeouts.delete(timeoutId);
+        callback();
+      }, delay);
+      timeouts.add(timeoutId);
+    };
+
+    const clearAllTimeouts = () => {
+      timeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      timeouts.clear();
+    };
+
+    const isDesktop = () =>
+      window.matchMedia("(min-width: 992px)").matches;
+
+    const markReady = (element: Element | null) => {
+      if (!(element instanceof HTMLElement)) return;
+      element.classList.add("reveal-ready");
+      element.classList.remove("is-visible", "no-motion");
+    };
+
+    const showAnimated = (element: Element | null) => {
+      if (!(element instanceof HTMLElement)) return;
+      element.classList.remove("no-motion", "reveal-ready");
+      element.classList.add("is-visible");
+    };
+
+    const showInstant = (element: Element | null) => {
+      if (!(element instanceof HTMLElement)) return;
+      element.classList.remove("reveal-ready");
+      element.classList.add("is-visible", "no-motion");
+    };
+
+    const setStaggerDelay = (element: Element | null, ms: number) => {
+      if (!(element instanceof HTMLElement)) return;
+      element.style.setProperty("--delay", `${Math.max(0, ms)}ms`);
+    };
+
+    const topEdgeInView = (element: Element | null, threshold = 0.9) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const rect = element.getBoundingClientRect();
+      return rect.top <= window.innerHeight * threshold;
+    };
+
+    const shouldResetBecauseBelowViewport = (section: Element | null) => {
+      if (!(section instanceof HTMLElement)) return false;
+      return section.getBoundingClientRect().top >= window.innerHeight;
+    };
+
+    const bgEarlyInView = (section: Element | null, threshold = 1.06) =>
+      topEdgeInView(section, threshold);
+
+    type SectionController = { update: () => void };
+    const sections: SectionController[] = [];
+
+    const features = (() => {
+      const section = document.querySelector(".landing .features");
+      if (!section) return null;
+
+      const h2 = section.querySelector("h2");
+      const lead = section.querySelector("p.lead");
+      const cards = Array.from(section.querySelectorAll(".card"));
+      const state = { played: false, headerShown: false };
+
+      const reset = () => {
+        state.played = false;
+        state.headerShown = false;
+        markReady(h2);
+        markReady(lead);
+        cards.forEach((card) => {
+          markReady(card);
+          if (card instanceof HTMLElement) card.style.removeProperty("--delay");
         });
-      },
-      { threshold: 0.1 },
-    );
+      };
 
-    const elements = document.querySelectorAll(".reveal-up");
-    elements.forEach((el) => observerRef.current?.observe(el));
+      const playHeaderDown = () => {
+        if (state.headerShown) return;
+        showAnimated(h2);
+        queue(() => showAnimated(lead), 90);
+        state.headerShown = true;
+      };
 
-    return () => observerRef.current?.disconnect();
+      const playCardsDown = () => {
+        const step = isDesktop() ? 110 : 140;
+        cards.forEach((card, index) => {
+          setStaggerDelay(card, index * step);
+          queue(() => showAnimated(card), index * step);
+        });
+      };
+
+      const showUpInstant = () => {
+        showInstant(h2);
+        showInstant(lead);
+        cards.forEach(showInstant);
+        state.played = true;
+        state.headerShown = true;
+      };
+
+      const update = () => {
+        if (dir === "up") {
+          if (!state.played) {
+            const rect = section.getBoundingClientRect();
+            if (rect.bottom > 0 && rect.top < window.innerHeight) showUpInstant();
+          }
+          if (shouldResetBecauseBelowViewport(section)) reset();
+          return;
+        }
+
+        if (state.played) {
+          if (shouldResetBecauseBelowViewport(section)) reset();
+          return;
+        }
+
+        const anchor = lead || cards[0] || h2;
+        if (topEdgeInView(anchor, 0.92)) {
+          playHeaderDown();
+          queue(playCardsDown, 110);
+          state.played = true;
+        }
+      };
+
+      reset();
+      return { update };
+    })();
+
+    if (features) sections.push(features);
+
+    const credits = (() => {
+      const section = document.querySelector(".landing .credits");
+      if (!section) return null;
+
+      const h2 = section.querySelector("h2");
+      const lead = section.querySelector("p.lead");
+      const cards = Array.from(section.querySelectorAll(".card"));
+      const alert = section.querySelector(".credits-alert");
+      const state = { played: false, headerShown: false, bgPlayed: false };
+
+      const reset = () => {
+        state.played = false;
+        state.headerShown = false;
+        state.bgPlayed = false;
+        section.classList.remove("bg-reveal-on");
+        markReady(h2);
+        markReady(lead);
+        cards.forEach((card) => {
+          markReady(card);
+          if (card instanceof HTMLElement) card.style.removeProperty("--delay");
+        });
+        markReady(alert);
+      };
+
+      const playHeaderDown = () => {
+        if (state.headerShown) return;
+        showAnimated(h2);
+        queue(() => showAnimated(lead), 90);
+        state.headerShown = true;
+      };
+
+      const playCardsDown = () => {
+        const order = isDesktop() ? cards.slice().reverse() : cards;
+        const step = isDesktop() ? 120 : 140;
+        order.forEach((card, index) => {
+          setStaggerDelay(card, index * step);
+          queue(() => showAnimated(card), index * step);
+        });
+        if (alert) {
+          queue(() => showAnimated(alert), order.length * step + 160);
+        }
+      };
+
+      const showUpInstant = () => {
+        showInstant(h2);
+        showInstant(lead);
+        cards.forEach(showInstant);
+        showInstant(alert);
+        state.played = true;
+        state.headerShown = true;
+      };
+
+      const update = () => {
+        if (dir === "up") {
+          if (!state.bgPlayed && bgEarlyInView(section, 0.45)) {
+            section.classList.add("bg-reveal-on");
+            state.bgPlayed = true;
+          }
+          if (!state.played) {
+            const rect = section.getBoundingClientRect();
+            if (rect.bottom > 0 && rect.top < window.innerHeight) showUpInstant();
+          }
+          if (shouldResetBecauseBelowViewport(section)) reset();
+          return;
+        }
+
+        if (!state.bgPlayed && bgEarlyInView(section, 0.45)) {
+          section.classList.add("bg-reveal-on");
+          state.bgPlayed = true;
+        }
+
+        if (state.played) {
+          if (shouldResetBecauseBelowViewport(section)) reset();
+          return;
+        }
+
+        const anchor = cards[0] || h2;
+        if (topEdgeInView(anchor, 0.9)) {
+          playHeaderDown();
+          queue(playCardsDown, 110);
+          state.played = true;
+        }
+      };
+
+      reset();
+      return { update };
+    })();
+
+    if (credits) sections.push(credits);
+
+    const trust = (() => {
+      const section = document.querySelector(".landing .trust");
+      if (!section) return null;
+
+      const h2 = section.querySelector("h2");
+      const lead = section.querySelector("p.lead");
+      const cards = Array.from(section.querySelectorAll(".card"));
+      const bottomText = section.querySelector(".trust-tail");
+      const state = { played: false, headerShown: false };
+
+      const reset = () => {
+        state.played = false;
+        state.headerShown = false;
+        markReady(h2);
+        markReady(lead);
+        cards.forEach((card) => {
+          markReady(card);
+          if (card instanceof HTMLElement) card.style.removeProperty("--delay");
+        });
+        markReady(bottomText);
+      };
+
+      const playHeaderDown = () => {
+        if (state.headerShown) return;
+        showAnimated(h2);
+        queue(() => showAnimated(lead), 90);
+        state.headerShown = true;
+      };
+
+      const playCardsDown = () => {
+        if (isDesktop()) {
+          cards.forEach((card) => {
+            setStaggerDelay(card, 0);
+            showAnimated(card);
+          });
+          if (bottomText) queue(() => showAnimated(bottomText), 170);
+          return;
+        }
+
+        const step = 140;
+        cards.forEach((card, index) => {
+          setStaggerDelay(card, index * step);
+          queue(() => showAnimated(card), index * step);
+        });
+        if (bottomText) queue(() => showAnimated(bottomText), cards.length * step + 170);
+      };
+
+      const showUpInstant = () => {
+        showInstant(h2);
+        showInstant(lead);
+        cards.forEach(showInstant);
+        showInstant(bottomText);
+        state.played = true;
+        state.headerShown = true;
+      };
+
+      const update = () => {
+        if (dir === "up") {
+          if (!state.played) {
+            const rect = section.getBoundingClientRect();
+            if (rect.bottom > 0 && rect.top < window.innerHeight) showUpInstant();
+          }
+          if (shouldResetBecauseBelowViewport(section)) reset();
+          return;
+        }
+
+        if (state.played) {
+          if (shouldResetBecauseBelowViewport(section)) reset();
+          return;
+        }
+
+        const anchor = cards[0] || h2;
+        if (topEdgeInView(anchor, 0.9)) {
+          playHeaderDown();
+          queue(playCardsDown, 110);
+          state.played = true;
+        }
+      };
+
+      reset();
+      return { update };
+    })();
+
+    if (trust) sections.push(trust);
+
+    const pricing = (() => {
+      const section = document.querySelector(".landing .pricing");
+      if (!section) return null;
+
+      const h2 = section.querySelector("h2");
+      const lead = section.querySelector("p.lead");
+      const cards = Array.from(section.querySelectorAll(".card"));
+      const bottomText = section.querySelector(".pricing-tail");
+      const state = { played: false, headerShown: false, bgPlayed: false };
+
+      const reset = () => {
+        state.played = false;
+        state.headerShown = false;
+        state.bgPlayed = false;
+        section.classList.remove("bg-reveal-on");
+        markReady(h2);
+        markReady(lead);
+        cards.forEach((card) => {
+          markReady(card);
+          if (card instanceof HTMLElement) card.style.removeProperty("--delay");
+        });
+        markReady(bottomText);
+      };
+
+      const playHeaderDown = () => {
+        if (state.headerShown) return;
+        showAnimated(h2);
+        queue(() => showAnimated(lead), 90);
+        state.headerShown = true;
+      };
+
+      const playCardsDown = () => {
+        const step = isDesktop() ? 120 : 140;
+        cards.forEach((card, index) => {
+          setStaggerDelay(card, index * step);
+          queue(() => showAnimated(card), index * step);
+        });
+        if (bottomText) queue(() => showAnimated(bottomText), cards.length * step + 170);
+      };
+
+      const showUpInstant = () => {
+        showInstant(h2);
+        showInstant(lead);
+        cards.forEach(showInstant);
+        showInstant(bottomText);
+        state.played = true;
+        state.headerShown = true;
+      };
+
+      const update = () => {
+        if (dir === "up") {
+          if (!state.bgPlayed && bgEarlyInView(section, 0.8)) {
+            section.classList.add("bg-reveal-on");
+            state.bgPlayed = true;
+          }
+          if (!state.played) {
+            const rect = section.getBoundingClientRect();
+            if (rect.bottom > 0 && rect.top < window.innerHeight) showUpInstant();
+          }
+          if (shouldResetBecauseBelowViewport(section)) reset();
+          return;
+        }
+
+        if (!state.bgPlayed && bgEarlyInView(section, 0.8)) {
+          section.classList.add("bg-reveal-on");
+          state.bgPlayed = true;
+        }
+
+        if (state.played) {
+          if (shouldResetBecauseBelowViewport(section)) reset();
+          return;
+        }
+
+        const anchor = cards[0] || h2;
+        if (topEdgeInView(anchor, 0.9)) {
+          playHeaderDown();
+          queue(playCardsDown, 110);
+          state.played = true;
+        }
+      };
+
+      reset();
+      return { update };
+    })();
+
+    if (pricing) sections.push(pricing);
+
+    const faq = (() => {
+      const section = document.querySelector(".landing .faq");
+      if (!section) return null;
+
+      const h2 = section.querySelector("h2");
+      const lead = section.querySelector("p.lead");
+      const items = Array.from(section.querySelectorAll(".faq-item"));
+      const button = section.querySelector(".faq-cta");
+      const firstQuestion = items[0]?.querySelector("h3") ?? null;
+      const state = { played: false, headerShown: false };
+
+      const reset = () => {
+        state.played = false;
+        state.headerShown = false;
+        markReady(h2);
+        markReady(lead);
+        items.forEach((item) => {
+          markReady(item);
+          item.classList.remove("faq-from-left", "faq-from-right");
+          if (item instanceof HTMLElement) item.style.removeProperty("--delay");
+        });
+        markReady(button);
+      };
+
+      const playHeaderDown = () => {
+        if (state.headerShown) return;
+        showAnimated(h2);
+        queue(() => showAnimated(lead), 90);
+        state.headerShown = true;
+      };
+
+      const playItemsDown = () => {
+        const step = isDesktop() ? 180 : 140;
+        items.forEach((item, index) => {
+          item.classList.remove("faq-from-left", "faq-from-right");
+          item.classList.add(!isDesktop() || index % 2 === 0 ? "faq-from-left" : "faq-from-right");
+          setStaggerDelay(item, index * step);
+          queue(() => showAnimated(item), index * step);
+        });
+        if (button) queue(() => showAnimated(button), items.length * step + 220);
+      };
+
+      const showUpInstant = () => {
+        showInstant(h2);
+        showInstant(lead);
+        items.forEach(showInstant);
+        showInstant(button);
+        state.played = true;
+        state.headerShown = true;
+      };
+
+      const update = () => {
+        if (dir === "up") {
+          if (!state.played) {
+            const rect = section.getBoundingClientRect();
+            if (rect.bottom > 0 && rect.top < window.innerHeight) showUpInstant();
+          }
+          if (shouldResetBecauseBelowViewport(section)) reset();
+          return;
+        }
+
+        if (state.played) {
+          if (shouldResetBecauseBelowViewport(section)) reset();
+          return;
+        }
+
+        const headerAnchor = lead || h2 || section;
+        if (!state.headerShown && topEdgeInView(headerAnchor, 0.98)) {
+          playHeaderDown();
+        }
+
+        const itemsAnchor = firstQuestion || items[0] || h2;
+        if (topEdgeInView(itemsAnchor, 0.88)) {
+          playHeaderDown();
+          queue(playItemsDown, 240);
+          state.played = true;
+        }
+      };
+
+      reset();
+      return { update };
+    })();
+
+    if (faq) sections.push(faq);
+
+    let rafId = 0;
+    const updateAll = () => sections.forEach((section) => section.update());
+
+    const onScrollOrResize = () => {
+      const y = window.scrollY || 0;
+      dir = y < lastY ? "up" : "down";
+      lastY = y;
+      if (rafId) window.cancelAnimationFrame(rafId);
+      rafId = window.requestAnimationFrame(updateAll);
+    };
+
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize);
+    rafId = window.requestAnimationFrame(updateAll);
+
+    return () => {
+      clearAllTimeouts();
+      if (rafId) window.cancelAnimationFrame(rafId);
+      window.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
   }, []);
 
   return (
@@ -126,29 +622,19 @@ export default function Landing() {
         </div>
       </nav>
 
-      <main className="flex-1">
+      <main className="landing flex-1" style={landingArtStyles}>
         {/* Hero Section */}
-        <section className="relative pt-32 pb-24 overflow-hidden min-h-[750px] flex items-center">
-          <div
-            className="absolute inset-0 z-0 pointer-events-none hero-art"
-            style={{
-              backgroundImage: `url(${heroBackgroundUrl})`,
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
-              backgroundSize: "cover",
-            }}
-          ></div>
-          <div className="absolute inset-0 z-10 pointer-events-none bg-linear-hero"></div>
-          <div className="absolute inset-0 z-20 pointer-events-none bg-radial-hero"></div>
+        <section className="hero flex items-center">
+          <div className="hero__art" aria-hidden="true"></div>
 
-          <div className="container max-w-6xl mx-auto px-4 relative z-30 hero-content-in">
+          <div className="container hero__content max-w-6xl mx-auto px-4">
             <div className="grid lg:grid-cols-12 gap-8 items-center">
               <div className="lg:col-span-8">
                 <h1 className="text-5xl md:text-6xl font-semibold mb-6 tracking-tight leading-tight max-w-[18ch]">
                   <span className="text-primary">AI Content Studio</span>,
                   powered by credits
                 </h1>
-                <p className="text-xl text-text-muted mb-8 max-w-[62ch] leading-relaxed">
+                <p className="lead text-xl text-text-muted mb-8 max-w-[62ch] leading-relaxed">
                   Create, rewrite, summarize, and transcribe content with a
                   clear balance, predictable spend, and a complete order history
                   in your account.
@@ -190,7 +676,7 @@ export default function Landing() {
                 </div>
               </div>
               <div className="lg:col-span-4">
-                <div className="bg-bg-card border border-border-main rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
+                <div className="card bg-bg-card border border-border-main rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
                   <div className="font-semibold mb-4 text-lg">
                     <span className="text-primary">In your</span> account
                   </div>
@@ -207,14 +693,14 @@ export default function Landing() {
         </section>
 
         {/* Features Section */}
-        <section id="features" className="py-20 relative">
+        <section id="features" className="features">
           <div className="container max-w-6xl mx-auto px-4">
-            <div className="mb-12 reveal-up">
+            <div className="mb-12">
               <h2 className="text-4xl font-semibold mb-4 tracking-tight">
                 <span className="text-primary">Tools</span> designed for real
                 work
               </h2>
-              <p className="text-xl text-text-muted">
+              <p className="lead text-xl text-text-muted">
                 A focused set of AI tools with predictable usage — powered by
                 your credit balance.
               </p>
@@ -254,8 +740,7 @@ export default function Landing() {
               ].map((feature, i) => (
                 <div
                   key={i}
-                  className={`bg-bg-card-hover border border-border-main rounded-2xl p-6 card-hover reveal-up ${i === 0 ? "outline outline-1 outline-primary outline-offset-[-1px]" : ""}`}
-                  style={{ transitionDelay: feature.delay }}
+                  className={`card bg-bg-card-hover border border-border-main rounded-2xl p-6 card-hover ${i === 0 ? "outline outline-1 outline-primary outline-offset-[-1px]" : ""}`}
                 >
                   <div className="font-semibold mb-3 text-lg">
                     {feature.title}
@@ -272,21 +757,14 @@ export default function Landing() {
         {/* How credits work */}
         <section
           id="how-credits-work"
-          className="py-20 relative border-y border-border-main"
+          className="credits border-y border-border-main"
         >
-          <div
-            className="absolute inset-0 z-0 pointer-events-none opacity-[0.65]"
-            style={{
-              background: `url(${creditsBackgroundUrl}) center/contain no-repeat`,
-            }}
-          ></div>
-          <div className="absolute inset-0 z-0 pointer-events-none bg-linear-credits"></div>
           <div className="container max-w-6xl mx-auto px-4 relative z-10">
-            <div className="mb-12 reveal-up">
+            <div className="mb-12">
               <h2 className="text-4xl font-semibold mb-4 tracking-tight">
                 <span className="text-primary">Simple</span> credit-based usage
               </h2>
-              <p className="text-xl text-text-muted">
+              <p className="lead text-xl text-text-muted">
                 One balance. Transparent costs. Full control over your spending.
               </p>
             </div>
@@ -313,8 +791,7 @@ export default function Landing() {
               ].map((item, i) => (
                 <div
                   key={i}
-                  className="bg-bg-card-solid border border-border-main rounded-2xl p-6 shadow-xl card-hover reveal-up"
-                  style={{ transitionDelay: item.delay }}
+                  className="card bg-bg-card-solid border border-border-main rounded-2xl p-6 shadow-xl card-hover"
                 >
                   <div className="font-semibold mb-3 text-lg">
                     <span className="text-primary">{item.step}</span>{" "}
@@ -326,7 +803,7 @@ export default function Landing() {
                 </div>
               ))}
             </div>
-            <div className="bg-bg-alert border border-border-main rounded-xl p-5 text-text-alert reveal-up">
+            <div className="credits-alert bg-bg-alert border border-border-main rounded-xl p-5 text-text-alert">
               Credits are consumed only for successful operations. No hidden
               fees or background charges.
             </div>
@@ -334,14 +811,13 @@ export default function Landing() {
         </section>
 
         {/* Trust Section */}
-        <section id="trust" className="py-20 relative overflow-hidden">
-          <div className="absolute right-[-120px] top-[90px] w-[500px] h-[450px] pointer-events-none opacity-65 bg-radial-trust z-0"></div>
+        <section id="trust" className="trust">
           <div className="container max-w-6xl mx-auto px-4 relative z-10">
-            <div className="mb-12 reveal-up">
+            <div className="mb-12">
               <h2 className="text-4xl font-semibold mb-4 tracking-tight">
                 <span className="text-primary">Reliable by</span> design
               </h2>
-              <p className="text-xl text-text-muted">
+              <p className="lead text-xl text-text-muted">
                 Built for stability, transparency, and predictable results.
               </p>
             </div>
@@ -362,7 +838,7 @@ export default function Landing() {
               ].map((item, i) => (
                 <div
                   key={i}
-                  className="bg-bg-card-solid border border-border-main rounded-2xl p-6 card-hover reveal-up"
+                  className="card bg-bg-card-solid border border-border-main rounded-2xl p-6 card-hover"
                 >
                   <div className="font-semibold mb-3 text-lg">
                     <span className="text-primary">{item.title}</span>
@@ -373,7 +849,7 @@ export default function Landing() {
                 </div>
               ))}
             </div>
-            <p className="text-text-muted reveal-up">
+            <p className="trust-tail text-text-muted mb-0">
               The system is designed to behave consistently today and tomorrow -
               without hidden mechanics.
             </p>
@@ -381,29 +857,18 @@ export default function Landing() {
         </section>
 
         {/* Pricing Section */}
-        <section id="pricing" className="py-20 relative">
-          <div
-            className="absolute inset-0 z-0 pointer-events-none pricing-art"
-            style={{
-              backgroundImage: `url(${pricingBackgroundLeftUrl}), url(${pricingBackgroundRightUrl})`,
-              backgroundRepeat: "no-repeat, no-repeat",
-              backgroundPosition: "left 6% bottom 10%, right 6% top 10%",
-              backgroundSize: "600px auto, 750px auto",
-              opacity: 0.65,
-            }}
-          ></div>
-          <div className="absolute inset-0 z-0 pointer-events-none bg-radial-pricing opacity-[0.65]"></div>
+        <section id="pricing" className="pricing">
           <div className="container max-w-6xl mx-auto px-4 relative z-10">
-            <div className="mb-12 reveal-up">
+            <div className="mb-12">
               <h2 className="text-4xl font-semibold mb-4 tracking-tight">
                 Credit packages
               </h2>
-              <p className="text-xl text-text-muted">
+              <p className="lead text-xl text-text-muted">
                 Simple pricing based on prepaid usage credits.
               </p>
             </div>
             <div className="grid md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-bg-card-solid border border-primary rounded-2xl p-8 flex flex-col relative card-hover reveal-up">
+              <div className="card bg-bg-card-solid border border-primary rounded-2xl p-8 flex flex-col relative card-hover">
                 <div className="absolute top-[-10px] right-6 bg-primary text-white text-xs font-bold px-2 py-1 rounded">
                   Most popular
                 </div>
@@ -425,8 +890,7 @@ export default function Landing() {
                 </button>
               </div>
               <div
-                className="bg-bg-card-solid border border-border-main rounded-2xl p-8 flex flex-col card-hover reveal-up"
-                style={{ transitionDelay: "120ms" }}
+                className="card bg-bg-card-solid border border-border-main rounded-2xl p-8 flex flex-col card-hover"
               >
                 <h3 className="text-xl font-semibold mb-2">Professional</h3>
                 <div className="text-text-muted mb-4">
@@ -448,8 +912,7 @@ export default function Landing() {
                 </button>
               </div>
               <div
-                className="bg-bg-card-solid border border-border-main rounded-2xl p-8 flex flex-col card-hover reveal-up"
-                style={{ transitionDelay: "240ms" }}
+                className="card bg-bg-card-solid border border-border-main rounded-2xl p-8 flex flex-col card-hover"
               >
                 <h3 className="text-xl font-semibold mb-2">Enterprise</h3>
                 <div className="text-text-muted mb-4">
@@ -471,7 +934,7 @@ export default function Landing() {
                 </button>
               </div>
             </div>
-            <p className="text-text-muted reveal-up">
+            <p className="pricing-tail text-text-muted mb-0">
               Credits are deducted only for completed operations. Unused balance
               remains available.
             </p>
@@ -479,19 +942,18 @@ export default function Landing() {
         </section>
 
         {/* FAQ Section */}
-        <section id="faq" className="py-20 relative overflow-hidden">
-          <div className="absolute left-[-250px] top-[90px] w-[500px] h-[450px] pointer-events-none opacity-75 bg-radial-faq z-0"></div>
+        <section id="faq" className="faq">
           <div className="container max-w-6xl mx-auto px-4 relative z-10">
-            <div className="mb-12 reveal-up">
+            <div className="mb-12">
               <h2 className="text-4xl font-semibold mb-4 tracking-tight">
                 <span className="text-primary">How</span> credits work
               </h2>
-              <p className="text-xl text-text-muted">
+              <p className="lead text-xl text-text-muted">
                 Clear rules, transparent usage, no hidden limits.
               </p>
             </div>
             <div className="grid md:grid-cols-2 gap-x-12 gap-y-8 mb-12">
-              <div className="reveal-up">
+              <div className="faq-item">
                 <h3 className="text-xl font-semibold mb-3">
                   What is a credit?
                 </h3>
@@ -501,7 +963,7 @@ export default function Landing() {
                   different number of credits.
                 </p>
               </div>
-              <div className="reveal-up">
+              <div className="faq-item">
                 <h3 className="text-xl font-semibold mb-3">
                   Can I track usage?
                 </h3>
@@ -510,7 +972,7 @@ export default function Landing() {
                   per-operation statistics.
                 </p>
               </div>
-              <div className="reveal-up">
+              <div className="faq-item">
                 <h3 className="text-xl font-semibold mb-3">
                   When are credits deducted?
                 </h3>
@@ -519,7 +981,7 @@ export default function Landing() {
                   or cancelled requests do not consume your balance.
                 </p>
               </div>
-              <div className="reveal-up">
+              <div className="faq-item">
                 <h3 className="text-xl font-semibold mb-3">
                   What happens if I run out of credits?
                 </h3>
@@ -528,7 +990,7 @@ export default function Landing() {
                   balance. No unexpected charges or over-usage.
                 </p>
               </div>
-              <div className="reveal-up">
+              <div className="faq-item">
                 <h3 className="text-xl font-semibold mb-3">
                   Do credits expire?
                 </h3>
@@ -537,7 +999,7 @@ export default function Landing() {
                   fully used.
                 </p>
               </div>
-              <div className="reveal-up">
+              <div className="faq-item">
                 <h3 className="text-xl font-semibold mb-3">
                   Can I upgrade later?
                 </h3>
@@ -547,7 +1009,7 @@ export default function Landing() {
                 </p>
               </div>
             </div>
-            <div className="reveal-up">
+            <div className="faq-cta">
               <button
                 onClick={() => goToAuth("signup")}
                 className="inline-block px-6 py-3 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors font-medium text-lg"
