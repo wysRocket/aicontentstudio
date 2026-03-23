@@ -1,11 +1,21 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
+import {
+  User,
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+  updateProfile,
+} from 'firebase/auth';
 import { auth } from '../firebase';
 import { createUserProfileIfNotExists } from '../lib/firestore';
 
 interface FirebaseContextType {
   user: User | null;
   isAuthReady: boolean;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (name: string, email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -34,8 +44,38 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
+  const signInWithEmail = async (email: string, password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error('Error signing in with email/password', error);
+      throw error;
+    }
+  };
+
+  const signUpWithEmail = async (name: string, email: string, password: string) => {
+    try {
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      const trimmedName = name.trim();
+
+      if (trimmedName) {
+        await updateProfile(credential.user, { displayName: trimmedName });
+        await createUserProfileIfNotExists(
+          credential.user.uid,
+          credential.user.email,
+          trimmedName,
+          credential.user.photoURL
+        );
+      }
+    } catch (error) {
+      console.error('Error signing up with email/password', error);
+      throw error;
+    }
+  };
+
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     try {
       await signInWithPopup(auth, provider);
     } catch (error) {
@@ -54,7 +94,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <FirebaseContext.Provider value={{ user, isAuthReady, signInWithGoogle, signOut }}>
+    <FirebaseContext.Provider value={{ user, isAuthReady, signInWithEmail, signUpWithEmail, signInWithGoogle, signOut }}>
       {children}
     </FirebaseContext.Provider>
   );

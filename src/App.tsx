@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Settings } from "./pages/Settings";
 import Landing from "./pages/Landing";
+import Auth from "./pages/Auth";
 import Videos from "./pages/Videos";
 import VideoGeneration from "./pages/VideoGeneration";
 import CreatePost from "./pages/CreatePost";
@@ -29,6 +30,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <Layout />

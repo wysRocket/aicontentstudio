@@ -21,7 +21,7 @@ const pricingBackgroundRightUrl = new URL(
 
 export default function Landing() {
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const { signInWithGoogle, user } = useFirebase();
+  const { user } = useFirebase();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,14 +30,8 @@ export default function Landing() {
     }
   }, [user, navigate]);
 
-  const handleSignIn = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    try {
-      await signInWithGoogle();
-      navigate("/dashboard");
-    } catch (error) {
-      console.error("Failed to sign in", error);
-    }
+  const goToAuth = (mode: "signin" | "signup") => {
+    navigate(`/auth?mode=${mode}`);
   };
 
   useEffect(() => {
@@ -117,13 +111,13 @@ export default function Landing() {
           </ul>
           <div className="flex items-center gap-3">
             <button
-              onClick={handleSignIn}
+              onClick={() => goToAuth("signin")}
               className="px-4 py-2 rounded-lg text-primary border border-outline-border hover:bg-outline-hover-bg hover:border-outline-hover-border hover:text-white transition-colors text-sm font-medium"
             >
               Sign in
             </button>
             <button
-              onClick={handleSignIn}
+              onClick={() => goToAuth("signup")}
               className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors text-sm font-medium"
             >
               Create account
@@ -161,13 +155,13 @@ export default function Landing() {
                 </p>
                 <div className="flex flex-wrap gap-3 mb-6">
                   <button
-                    onClick={handleSignIn}
+                    onClick={() => goToAuth("signup")}
                     className="px-6 py-3 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors font-medium text-lg"
                   >
                     Create account
                   </button>
                   <button
-                    onClick={handleSignIn}
+                    onClick={() => goToAuth("signin")}
                     className="px-6 py-3 rounded-xl text-primary border border-outline-border hover:bg-outline-hover-bg hover:border-outline-hover-border hover:text-white transition-colors font-medium text-lg"
                   >
                     Sign in
@@ -424,7 +418,7 @@ export default function Landing() {
                   <li>• No expiration</li>
                 </ul>
                 <button
-                  onClick={handleSignIn}
+                  onClick={() => goToAuth("signup")}
                   className="block text-center w-full py-3 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors font-medium"
                 >
                   Buy credits
@@ -447,7 +441,7 @@ export default function Landing() {
                   <li>• Usage alerts</li>
                 </ul>
                 <button
-                  onClick={handleSignIn}
+                  onClick={() => goToAuth("signup")}
                   className="block text-center w-full py-3 rounded-xl text-primary border border-outline-border hover:bg-outline-hover-bg hover:border-outline-hover-border hover:text-white transition-colors font-medium"
                 >
                   Buy credits
@@ -470,7 +464,7 @@ export default function Landing() {
                   <li>• Dedicated support</li>
                 </ul>
                 <button
-                  onClick={handleSignIn}
+                  onClick={() => goToAuth("signup")}
                   className="block text-center w-full py-3 rounded-xl text-primary border border-outline-border hover:bg-outline-hover-bg hover:border-outline-hover-border hover:text-white transition-colors font-medium"
                 >
                   Contact sales
@@ -555,7 +549,7 @@ export default function Landing() {
             </div>
             <div className="reveal-up">
               <button
-                onClick={handleSignIn}
+                onClick={() => goToAuth("signup")}
                 className="inline-block px-6 py-3 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors font-medium text-lg"
               >
                 Get started with credits

@@ -66,6 +66,29 @@ export async function createUserProfileIfNotExists(uid: string, email: string | 
         credits: 1000,
         createdAt: serverTimestamp(),
       });
+      return;
+    }
+
+    const existingData = userSnap.data();
+    const nextEmail = email || '';
+    const nextDisplayName = displayName || '';
+    const nextPhotoURL = photoURL || '';
+
+    const shouldBackfillProfile =
+      (nextEmail && existingData.email !== nextEmail) ||
+      (nextDisplayName && existingData.displayName !== nextDisplayName) ||
+      (nextPhotoURL && existingData.photoURL !== nextPhotoURL);
+
+    if (shouldBackfillProfile) {
+      await setDoc(
+        userRef,
+        {
+          email: nextEmail || existingData.email || '',
+          displayName: nextDisplayName || existingData.displayName || '',
+          photoURL: nextPhotoURL || existingData.photoURL || '',
+        },
+        { merge: true }
+      );
     }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `users/${uid}`);
