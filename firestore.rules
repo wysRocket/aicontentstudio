@@ -13,6 +13,7 @@ service cloud.firestore {
     //   - displayName: string (optional) - The user's display name
     //   - photoURL: string (optional) - The user's photo URL
     //   - role: string (required) - The user's role ('admin' or 'user')
+    //   - credits: int (optional) - Current credit balance
     //   - createdAt: timestamp (required, immutable) - Creation time
     //
     // ===============================================================
@@ -70,12 +71,13 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt']) &&
+      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'role', 'credits', 'createdAt']) &&
              data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
              data.email is string && isValidEmail(data.email) &&
              isValidOptionalString('displayName', 0, 100) &&
              isValidOptionalString('photoURL', 0, 2048) &&
              data.role in ['admin', 'user'] &&
+             (!('credits' in data) || (data.credits is int && data.credits >= 0)) &&
              data.createdAt is timestamp;
     }
 

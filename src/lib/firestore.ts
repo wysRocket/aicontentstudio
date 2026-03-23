@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, runTransaction, increment, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 
 export enum OperationType {
@@ -63,10 +63,50 @@ export async function createUserProfileIfNotExists(uid: string, email: string | 
         displayName: displayName || '',
         photoURL: photoURL || '',
         role: 'user',
+        credits: 1000,
         createdAt: serverTimestamp(),
       });
     }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `users/${uid}`);
+  }
+}
+
+export async function getUserCredits(uid: string): Promise<number> {
+  const userRef = doc(db, 'users', uid);
+  try {
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) return 0;
+    const credits = snap.data().credits;
+    return typeof credits === 'number' ? credits : 0;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `users/${uid}`);
+    return 0;
+  }
+}
+
+export async function deductCredits(uid: string, amount: number): Promise<void> {
+  const userRef = doc(db, 'users', uid);
+  try {
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(userRef);
+      if (!snap.exists()) throw new Error('User document not found');
+      const current = typeof snap.data().credits === 'number' ? snap.data().credits : 0;
+      if (current < amount) throw new Error('insufficient_credits');
+      transaction.update(userRef, { credits: current - amount });
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'insufficient_credits') throw error;
+    handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+  }
+}
+
+// TODO: Move to server-side after Stripe integration to prevent client-side manipulation
+export async function addCredits(uid: string, amount: number): Promise<void> {
+  const userRef = doc(db, 'users', uid);
+  try {
+    await updateDoc(userRef, { credits: increment(amount) });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
   }
 }

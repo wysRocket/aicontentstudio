@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Coins, Loader2, Sparkles, Plus, ArrowLeft, ChevronUp, ChevronDown, PlusCircle } from 'lucide-react';
 import PurchaseCreditsModal from '../components/PurchaseCreditsModal';
+import { auth } from '../firebase';
+import { getUserCredits, deductCredits, addCredits } from '../lib/firestore';
 
 const Toggle = ({ checked, onChange, id }: { checked?: boolean, onChange?: () => void, id?: string }) => (
   <button 
@@ -40,7 +42,7 @@ const SelectInput = ({ label, placeholder, disabled, options = [] }: { label: st
 };
 
 export default function Dashboard() {
-  const [credits, setCredits] = useState(1000);
+  const [credits, setCredits] = useState<number | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -56,6 +58,13 @@ export default function Dashboard() {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
   useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (uid) {
+      getUserCredits(uid).then(setCredits).catch(() => setCredits(0));
+    }
+  }, []);
+
+  useEffect(() => {
     if (searchParams.get('buy') === 'true') {
       setIsPurchaseModalOpen(true);
       searchParams.delete('buy');
@@ -65,16 +74,30 @@ export default function Dashboard() {
 
   const handleProcess = async () => {
     if (!prompt.trim()) return;
-    if (credits < 10) {
+    if (credits === null || credits < 10) {
       setIsPurchaseModalOpen(true);
       return;
     }
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
     setIsProcessing(true);
-    // Simulation of processing for UX
-    setTimeout(() => {
+    try {
+      await deductCredits(uid, 10);
+      setCredits(prev => (prev ?? 0) - 10);
+    } catch (err) {
+      if (err instanceof Error && err.message === 'insufficient_credits') {
+        setIsPurchaseModalOpen(true);
+      }
+    } finally {
       setIsProcessing(false);
-      setCredits(prev => prev - 10);
-    }, 2000);
+    }
+  };
+
+  const handlePurchase = async (amount: number) => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    await addCredits(uid, amount);
+    setCredits(prev => (prev ?? 0) + amount);
   };
 
   return (
@@ -84,7 +107,10 @@ export default function Dashboard() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg">
               <Coins className="w-4 h-4 text-[#D81B60]" />
-              <span className="font-medium text-sm text-gray-700">{credits} credits</span>
+              {credits === null
+                ? <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                : <span className="font-medium text-sm text-gray-700">{credits} credits</span>
+              }
             </div>
             <button 
               type="button"
@@ -394,10 +420,10 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <PurchaseCreditsModal 
-        isOpen={isPurchaseModalOpen} 
-        onClose={() => setIsPurchaseModalOpen(false)} 
-        onPurchase={(amount) => setCredits(prev => prev + amount)} 
+      <PurchaseCreditsModal
+        isOpen={isPurchaseModalOpen}
+        onClose={() => setIsPurchaseModalOpen(false)}
+        onPurchase={handlePurchase}
       />
     </div>
   );
