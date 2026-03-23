@@ -243,27 +243,29 @@ export default function Prompts() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto h-[calc(100vh-80px)] overflow-y-auto">
-      <div className="flex items-center justify-between mb-2">
+    <div className="mx-auto max-w-7xl space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
             <BookOpen className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">My Prompts</h1>
-          <span className="text-sm text-gray-400 font-medium">
-            {prompts.length} prompts
-          </span>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">My Prompts</h1>
+            <span className="text-sm font-medium text-gray-400">
+              {prompts.length} prompts
+            </span>
+          </div>
         </div>
         <button
           onClick={handleNew}
-          className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-sm"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-700 sm:w-auto"
         >
           <Plus className="w-4 h-4" />
           New Prompt
         </button>
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <a href="#" className="text-violet-600 hover:underline text-sm inline-block">
           How do I customize prompts for my voice?
         </a>
@@ -307,7 +309,71 @@ export default function Prompts() {
         </div>
       )}
 
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="space-y-4 md:hidden">
+        {isLoading ? (
+          <div className="rounded-xl border border-gray-200 bg-white px-4 py-10 text-center text-gray-500 shadow-sm">
+            <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin text-violet-500" />
+            Loading your prompt library...
+          </div>
+        ) : sortedPrompts.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white px-4 py-10 text-center text-gray-400 shadow-sm">
+            <Search className="mx-auto mb-2 h-8 w-8 opacity-40" />
+            <p className="font-medium">No prompts found</p>
+            <p className="mt-1 text-sm">Try a different search term or add a new prompt.</p>
+          </div>
+        ) : (
+          sortedPrompts.map((prompt) => (
+            <div
+              key={prompt.id}
+              className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-base font-semibold text-gray-900">{prompt.title}</p>
+                  <p className="mt-1 text-sm text-gray-500">{prompt.description}</p>
+                </div>
+                <span className="inline-flex shrink-0 items-center rounded-full bg-fuchsia-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-fuchsia-700">
+                  {prompt.type}
+                </span>
+              </div>
+              <p className="mt-3 line-clamp-5 text-sm leading-6 text-gray-600">
+                {prompt.content}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  onClick={(e) => handleCopyContent(prompt.content, e)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700"
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy
+                </button>
+                <button
+                  onClick={() => handleDuplicate(prompt)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  Duplicate
+                </button>
+                <button
+                  onClick={() => handleEdit(prompt)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-700"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(prompt.id)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="hidden overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm md:block">
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>

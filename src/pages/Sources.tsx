@@ -385,8 +385,8 @@ export default function Sources() {
   };
 
   return (
-    <div className="h-[calc(100vh-80px)] overflow-y-auto">
-      <div className="mb-6 flex items-center justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Sources</h1>
           <p className="mt-2 text-gray-500">
@@ -396,7 +396,7 @@ export default function Sources() {
         </div>
         <button
           onClick={() => openModal()}
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 sm:w-auto"
         >
           <Plus className="h-4 w-4" />
           Add Source
@@ -604,12 +604,12 @@ export default function Sources() {
                   </span>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => analyzeSource(selectedSource)}
-                    disabled={analyzingId === selectedSource.id}
-                    className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70"
-                  >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <button
+                      onClick={() => analyzeSource(selectedSource)}
+                      disabled={analyzingId === selectedSource.id}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70 sm:w-auto"
+                    >
                     {analyzingId === selectedSource.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
@@ -618,14 +618,14 @@ export default function Sources() {
                     {selectedSource.analysisSummary ? "Refresh Brief" : "Analyze Source"}
                   </button>
 
-                  <button
-                    onClick={() =>
-                      navigate(
-                        `/dashboard/create?source=${encodeURIComponent(selectedSource.id)}`,
-                      )
-                    }
-                    className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
-                  >
+                    <button
+                      onClick={() =>
+                        navigate(
+                          `/dashboard/create?source=${encodeURIComponent(selectedSource.id)}`,
+                        )
+                      }
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 sm:w-auto"
+                    >
                     Create Drafts
                     <ArrowRight className="h-4 w-4" />
                   </button>
@@ -776,7 +776,7 @@ export default function Sources() {
               </button>
             </div>
 
-            <div className="space-y-4 p-5">
+            <div className="max-h-[80dvh] space-y-4 overflow-y-auto p-5">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-gray-800">

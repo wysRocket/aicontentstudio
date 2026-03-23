@@ -130,11 +130,11 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans">
+    <div className="min-h-screen bg-white flex flex-col font-sans overflow-x-hidden">
       <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shrink-0">
-        <div className="max-w-[1400px] mx-auto px-6 py-3 flex items-center justify-end">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-end">
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap sm:gap-4">
+            <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5">
               <Coins className="w-4 h-4 text-[#D81B60]" />
               {credits === null
                 ? <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
@@ -144,12 +144,12 @@ export default function Dashboard() {
             <button 
               type="button"
               onClick={() => setIsPurchaseModalOpen(true)}
-              className="flex items-center gap-1.5 bg-pink-50 text-[#D81B60] hover:bg-pink-100 border border-pink-200 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm"
+              className="flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-pink-200 bg-pink-50 px-3 py-2 text-sm font-medium text-[#D81B60] transition-colors hover:bg-pink-100 sm:min-h-0 sm:flex-none sm:justify-start sm:py-1.5"
             >
               <Plus className="w-4 h-4" />
               Top up credits
             </button>
-            <Link to="/dashboard/settings?tab=profile" className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#D81B60] to-purple-500 flex items-center justify-center text-white font-bold ml-2 shadow-sm hover:opacity-90 transition-opacity">
+            <Link to="/dashboard/settings?tab=profile" className="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-[#D81B60] to-purple-500 text-white font-bold shadow-sm transition-opacity hover:opacity-90 sm:ml-2 sm:h-8 sm:w-8">
               U
             </Link>
           </div>
@@ -159,31 +159,35 @@ export default function Dashboard() {
       <div className="flex-1 max-w-[1400px] w-full mx-auto flex flex-col min-h-0 bg-white shadow-none border-none">
         
         {/* Engaging Hero Section */}
-        <div className="mx-6 lg:mx-8 mt-6 mb-2 bg-gradient-to-br from-[#D81B60] to-purple-700 rounded-2xl overflow-hidden shadow-lg p-8 relative shrink-0">
+        <div className="relative mx-4 mb-2 mt-4 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#D81B60] to-purple-700 p-5 shadow-lg shrink-0 sm:mx-6 sm:mt-6 sm:p-8 lg:mx-8">
           <div className="relative z-10 max-w-3xl">
-            <h1 className="text-3xl font-bold text-white mb-4 tracking-tight">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/14 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-pink-50 backdrop-blur-sm">
+              <Sparkles className="h-3.5 w-3.5" />
+              Dashboard overview
+            </div>
+            <h1 className="mb-3 text-[28px] font-bold leading-[1.05] text-white tracking-tight sm:mb-4 sm:text-3xl">
               Supercharge Your Video Workflow
             </h1>
-            <p className="text-pink-100 text-[15px] leading-relaxed mb-6 font-medium">
+            <p className="mb-5 max-w-2xl text-[14px] font-medium leading-relaxed text-pink-100 sm:mb-6 sm:text-[15px]">
               Welcome to AI Content Studio! Seamlessly combine clips, apply edits, and generate stunning video content. Powered by Google's state-of-the-art <b>Gemini 3.1 Pro</b> model with Advanced Thinking, our platform understands context deeper and creates professional, high-quality results in seconds. Just input your prompt and let the AI do the heavy lifting.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <div className="flex items-center gap-1.5 text-[13px] font-semibold text-[#D81B60] bg-white px-3 py-1.5 rounded-lg shadow-sm">
+            <div className="flex flex-wrap gap-2.5 sm:gap-3">
+              <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[12px] font-semibold text-[#D81B60] shadow-sm sm:rounded-lg sm:py-1.5 sm:text-[13px]">
                 <Sparkles className="w-4 h-4 text-[#D81B60]" /> Lightning Fast
               </div>
-              <div className="flex items-center gap-1.5 text-[13px] font-semibold text-[#D81B60] bg-white px-3 py-1.5 rounded-lg shadow-sm">
+              <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[12px] font-semibold text-[#D81B60] shadow-sm sm:rounded-lg sm:py-1.5 sm:text-[13px]">
                 <Sparkles className="w-4 h-4 text-[#D81B60]" /> Deep Context Awareness
               </div>
-              <div className="flex items-center gap-1.5 text-[13px] font-semibold text-[#D81B60] bg-white px-3 py-1.5 rounded-lg shadow-sm">
+              <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[12px] font-semibold text-[#D81B60] shadow-sm sm:rounded-lg sm:py-1.5 sm:text-[13px]">
                 <Sparkles className="w-4 h-4 text-[#D81B60]" /> Advanced Video Edits
               </div>
             </div>
           </div>
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 blur-3xl rounded-full pointer-events-none" />
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-black/10 blur-2xl rounded-full pointer-events-none" />
+          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl sm:h-96 sm:w-96" />
+          <div className="pointer-events-none absolute -bottom-24 -left-24 h-52 w-52 rounded-full bg-black/10 blur-2xl sm:h-64 sm:w-64" />
         </div>
 
-        <div className="px-6 lg:px-8 pt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 shrink-0">
+        <div className="grid shrink-0 grid-cols-1 gap-3 px-4 pt-4 sm:grid-cols-2 sm:gap-4 sm:px-6 lg:px-8 xl:grid-cols-4">
           {[
             {
               label: 'Prompt Library',
@@ -247,9 +251,11 @@ export default function Dashboard() {
               to={item.href}
               className={`rounded-2xl border p-4 transition-transform hover:-translate-y-0.5 ${item.tone}`}
             >
-              <div className="flex items-center justify-between">
-                <item.icon className="w-5 h-5" />
-                <span className="text-2xl font-bold">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/70 shadow-sm">
+                  <item.icon className="w-5 h-5" />
+                </div>
+                <span className="text-2xl font-bold sm:text-[30px]">
                   {workspaceStats ? item.value : '...'}
                 </span>
               </div>
@@ -259,7 +265,7 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="px-6 lg:px-8 pt-6 grid grid-cols-1 lg:grid-cols-3 gap-4 shrink-0">
+        <div className="grid shrink-0 grid-cols-1 gap-4 px-4 pt-6 sm:px-6 lg:grid-cols-3 lg:px-8">
           <div className="rounded-2xl border border-violet-100 bg-violet-50 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-700">Review Queue</p>
             <p className="mt-3 text-3xl font-bold text-violet-950">
@@ -268,11 +274,11 @@ export default function Dashboard() {
             <p className="mt-2 text-sm text-violet-900">
               {workspaceStats?.readyCount || 0} ready drafts and {workspaceStats?.approvedCount || 0} approved drafts are waiting in the copy pipeline.
             </p>
-            <div className="mt-4 flex gap-2">
-              <Link to="/dashboard/create" className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-violet-700 shadow-sm hover:bg-violet-100">
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <Link to="/dashboard/create" className="rounded-lg bg-white px-3 py-2 text-center text-sm font-semibold text-violet-700 shadow-sm hover:bg-violet-100">
                 Review drafts
               </Link>
-              <Link to="/dashboard/calendar" className="rounded-lg border border-violet-200 px-3 py-2 text-sm font-semibold text-violet-700 hover:bg-white">
+              <Link to="/dashboard/calendar" className="rounded-lg border border-violet-200 px-3 py-2 text-center text-sm font-semibold text-violet-700 hover:bg-white">
                 Open calendar
               </Link>
             </div>
@@ -287,7 +293,7 @@ export default function Dashboard() {
               Approved posts only move into the scheduled queue, so this number now reflects truly schedule-ready work.
             </p>
             <div className="mt-4">
-              <Link to="/dashboard/calendar" className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-sky-700 shadow-sm hover:bg-sky-100">
+              <Link to="/dashboard/calendar" className="inline-flex rounded-lg bg-white px-3 py-2 text-sm font-semibold text-sky-700 shadow-sm hover:bg-sky-100">
                 Manage schedule
               </Link>
             </div>
@@ -301,11 +307,11 @@ export default function Dashboard() {
             <p className="mt-2 text-sm text-amber-900">
               Keep feeding the top of the funnel: sources become hooks, hooks become drafts, and strong drafts move through approval.
             </p>
-            <div className="mt-4 flex gap-2">
-              <Link to="/dashboard/sources" className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-amber-700 shadow-sm hover:bg-amber-100">
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <Link to="/dashboard/sources" className="rounded-lg bg-white px-3 py-2 text-center text-sm font-semibold text-amber-700 shadow-sm hover:bg-amber-100">
                 Open sources
               </Link>
-              <Link to="/dashboard/inspiration" className="rounded-lg border border-amber-200 px-3 py-2 text-sm font-semibold text-amber-700 hover:bg-white">
+              <Link to="/dashboard/inspiration" className="rounded-lg border border-amber-200 px-3 py-2 text-center text-sm font-semibold text-amber-700 hover:bg-white">
                 Inspiration
               </Link>
             </div>
@@ -313,22 +319,23 @@ export default function Dashboard() {
         </div>
 
         {/* Header Title Area */}
-        <div className="px-6 py-6 pb-4 flex items-start gap-4 shrink-0">
-          <button type="button" className="mt-1 flex items-center justify-center text-purple-600 hover:bg-purple-50 p-1.5 rounded-lg transition-colors">
+        <div className="flex shrink-0 items-start gap-3 px-4 pb-4 pt-6 sm:gap-4 sm:px-6 sm:py-6 lg:px-8">
+          <button type="button" className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl border border-purple-100 bg-white text-purple-600 transition-colors hover:bg-purple-50">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div>
-            <h1 id="dashboard-title" className="text-[22px] font-bold text-gray-900 tracking-[-0.02em]">Combine Clips and Apply Basic Edits</h1>
-            <p className="text-[13px] text-gray-500 mt-1">Combine Clips and Apply Basic Edits</p>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-purple-500">Video builder</p>
+            <h1 id="dashboard-title" className="mt-1 text-[20px] font-bold tracking-[-0.02em] text-gray-900 sm:text-[22px]">Combine Clips and Apply Basic Edits</h1>
+            <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-gray-500">Assemble clips, review the preview, and fine-tune settings without losing momentum on mobile.</p>
           </div>
         </div>
 
         {/* Content Split Layout */}
-        <div className="flex-1 flex flex-col lg:flex-row px-6 lg:px-8 pb-8 gap-10 lg:gap-8 min-h-0">
+        <div className="flex min-h-0 flex-1 flex-col gap-6 px-4 pb-8 sm:px-6 lg:flex-row lg:gap-8 lg:px-8">
           
           {/* Left Media Player (Sticky or fixed height taking available space) */}
-          <div className="w-full lg:w-[45%] shrink-0">
-            <div className="w-full aspect-[9/16] rounded-xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-200 bg-gray-900 relative">
+          <div className="w-full shrink-0 lg:sticky lg:top-[104px] lg:w-[45%] lg:self-start">
+            <div className="relative overflow-hidden rounded-[24px] border border-gray-200 bg-gray-900 shadow-[0_8px_30px_rgb(0,0,0,0.12)] aspect-[4/5] sm:aspect-[9/14] lg:aspect-[9/16]">
               <video 
                 src="/images/dash-vid.mp4" 
                 autoPlay 
@@ -338,26 +345,30 @@ export default function Dashboard() {
                 className="w-full h-full object-cover"
               />
             </div>
+            <div className="mt-3 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
+              <p className="text-sm font-semibold text-gray-900">Preview-first workflow</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-gray-500">Keep the video visible while adjusting prompt details so small-screen edits feel anchored and less cramped.</p>
+            </div>
           </div>
 
           {/* Right Configuration Form */}
-          <div className="flex-1 flex flex-col overflow-y-auto pr-2 pb-10">
-            <div className="w-full flex flex-col gap-6">
+          <div className="flex-1 flex flex-col pb-2 lg:max-h-[calc(100vh-180px)] lg:overflow-y-auto lg:pr-2 lg:pb-10">
+            <div className="w-full flex flex-col gap-5 sm:gap-6">
               
               {/* Prompt Area */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 rounded-[24px] border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
                 <label htmlFor="prompt-input" className="text-[13px] font-semibold text-gray-900">Prompt</label>
                 <textarea 
                   id="prompt-input"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder="Describe your video idea..."
-                  className="w-full h-[120px] px-4 py-4 rounded-xl border border-gray-200 text-[14px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#D81B60]/20 focus:border-[#D81B60] resize-none transition-shadow"
+                  className="h-[132px] w-full rounded-xl border border-gray-200 px-4 py-4 text-[14px] text-gray-800 placeholder:text-gray-400 transition-shadow resize-none focus:border-[#D81B60] focus:outline-none focus:ring-2 focus:ring-[#D81B60]/20"
                 />
               </div>
 
               {/* Brand Kit Toggle */}
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 rounded-[24px] border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
                 <div className="mt-0.5">
                   <Toggle id="brand-kit-toggle" checked={useBrandKit} onChange={() => setUseBrandKit(!useBrandKit)} />
                 </div>
@@ -372,7 +383,7 @@ export default function Dashboard() {
                 type="button"
                 onClick={handleProcess}
                 disabled={isProcessing}
-                className="w-full py-[14px] rounded-xl bg-[#c2185b] hover:bg-[#ad1457] text-white font-semibold flex items-center justify-center gap-2 text-[15px] shadow-sm transition-colors mt-1 disabled:opacity-70"
+                className="sticky bottom-4 z-10 mt-1 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#c2185b] px-4 py-[15px] text-[15px] font-semibold text-white shadow-[0_16px_40px_rgba(194,24,91,0.28)] transition-colors hover:bg-[#ad1457] disabled:opacity-70 lg:static lg:shadow-sm"
               >
                 {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
                 {isProcessing ? 'Generating...' : 'Generate Video'}
@@ -390,7 +401,7 @@ export default function Dashboard() {
 
               {/* Advanced Options Content */}
               {isAdvancedOpen && (
-                <div className="flex flex-col gap-8 bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
+                <div className="flex flex-col gap-8 rounded-[24px] border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
                 
                 {/* Video Clips */}
                 <div className="flex flex-col gap-3">

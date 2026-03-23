@@ -321,11 +321,11 @@ export default function Inspiration() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-2rem)] -m-10 overflow-hidden bg-[#f3f1ec] text-slate-900">
+    <div className="flex min-h-[calc(100dvh-4rem)] flex-col overflow-hidden rounded-[32px] border border-black/5 bg-[#f3f1ec] text-slate-900 shadow-[0_20px_60px_rgba(15,23,42,0.06)] xl:min-h-[calc(100dvh-6rem)] xl:flex-row">
       {showFilters && (
-        <aside className="w-[320px] shrink-0 border-r border-black/5 bg-[#f7f6f2]">
-          <div className="flex h-full flex-col overflow-y-auto">
-            <div className="border-b border-black/6 p-6">
+        <aside className="border-b border-black/5 bg-[#f7f6f2] xl:w-[320px] xl:shrink-0 xl:border-b-0 xl:border-r">
+          <div className="flex h-full flex-col xl:overflow-y-auto">
+            <div className="border-b border-black/6 p-4 sm:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">
@@ -357,7 +357,7 @@ export default function Inspiration() {
               </button>
             </div>
 
-            <div className="space-y-5 p-6">
+            <div className="space-y-5 p-4 sm:p-6">
               <div className="rounded-[26px] border border-black/5 bg-white p-4 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -493,7 +493,7 @@ export default function Inspiration() {
       )}
 
       <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="border-b border-black/5 bg-[#f4f1ea]/90 px-6 py-5 backdrop-blur">
+        <div className="border-b border-black/5 bg-[#f4f1ea]/90 px-4 py-4 backdrop-blur sm:px-6 sm:py-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-start gap-3">
               {!showFilters && (
@@ -509,7 +509,7 @@ export default function Inspiration() {
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
                   Inspiration Board
                 </p>
-                <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-950">
+                <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
                   Choose the post, then remix it into your own.
                 </h1>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
@@ -520,13 +520,13 @@ export default function Inspiration() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
               <div className="rounded-full border border-black/5 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm">
                 {filteredRecords.length} results, {formatRelativeDensity(records.length)}
               </div>
               <button
                 onClick={handleShuffle}
-                className="inline-flex items-center gap-2 rounded-2xl border border-black/8 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-black/12 hover:bg-slate-50"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-black/8 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-black/12 hover:bg-slate-50 sm:w-auto"
               >
                 <Shuffle className="h-4 w-4" />
                 Shuffle
@@ -534,7 +534,7 @@ export default function Inspiration() {
               <button
                 onClick={() => openComposer()}
                 disabled={!selectedRecord}
-                className="inline-flex items-center gap-2 rounded-2xl bg-[#1f9f55] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#188248] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#1f9f55] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#188248] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 <Sparkles className="h-4 w-4" />
                 Create post
@@ -543,7 +543,7 @@ export default function Inspiration() {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+        <div className="min-h-0 flex-1 px-4 py-4 sm:px-6 sm:py-6 xl:overflow-y-auto">
           {error && (
             <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
@@ -566,7 +566,7 @@ export default function Inspiration() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-6">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4 sm:gap-6">
               {filteredRecords.map((record) => {
                 const palette = getPlatformPalette(record.platform);
                 const isSelected = selectedRecord?.id === record.id;
@@ -574,7 +574,7 @@ export default function Inspiration() {
                 return (
                   <article
                     key={record.id}
-                    className={`group relative flex min-h-[420px] flex-col overflow-hidden rounded-[30px] border bg-[linear-gradient(180deg,#ffffff_0%,#fcfbf7_100%)] shadow-[0_18px_48px_rgba(15,23,42,0.06)] transition duration-200 hover:-translate-y-1.5 hover:shadow-[0_28px_80px_rgba(15,23,42,0.1)] ${
+                    className={`group relative flex min-h-[380px] flex-col overflow-hidden rounded-[30px] border bg-[linear-gradient(180deg,#ffffff_0%,#fcfbf7_100%)] shadow-[0_18px_48px_rgba(15,23,42,0.06)] transition duration-200 hover:-translate-y-1.5 hover:shadow-[0_28px_80px_rgba(15,23,42,0.1)] sm:min-h-[420px] ${
                       isSelected
                         ? `border-slate-900/70 ring-4 ${palette.ring}`
                         : "border-black/6 hover:border-black/10"
@@ -684,8 +684,8 @@ export default function Inspiration() {
 
                       <div className="mt-auto pt-5">
                         <div className="mb-4 h-px bg-gradient-to-r from-transparent via-black/8 to-transparent" />
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex flex-wrap items-center gap-2">
                             <button
                               onClick={() => openComposer(record.id)}
                               className="inline-flex items-center gap-1.5 rounded-full bg-[#6f4bff]/10 px-3.5 py-2 text-xs font-semibold text-[#694ae0] transition hover:bg-[#6f4bff]/15"
@@ -706,7 +706,7 @@ export default function Inspiration() {
                             </button>
                           </div>
 
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 self-end sm:self-auto">
                             <button
                               onClick={() => openEditModal(record)}
                               className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"

@@ -30,12 +30,12 @@ export function Settings() {
     setSearchParams({ tab: id });
   };
 
-  return (
+    return (
     <div className="w-full">
-      <h1 className="text-4xl font-bold text-gray-900 mb-8">Settings</h1>
+      <h1 className="mb-6 text-3xl font-bold text-gray-900 sm:mb-8 sm:text-4xl">Settings</h1>
 
-      <div className="border-b border-gray-200 mb-8">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+      <div className="mb-8 border-b border-gray-200">
+        <nav className="-mb-px flex flex-wrap gap-x-6 gap-y-2 sm:gap-x-8" aria-label="Tabs">
           {tabs.map((tab) => (
             <button
               key={tab.id}

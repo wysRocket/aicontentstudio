@@ -117,7 +117,7 @@ export default function Calendar() {
   };
 
   return (
-    <div className="space-y-8 h-[calc(100vh-80px)] overflow-y-auto">
+    <div className="space-y-6 sm:space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Calendar</h1>
         <p className="text-gray-500 mt-2">
@@ -165,7 +165,7 @@ export default function Calendar() {
                           {item.body}
                         </p>
                       </div>
-                      <div className="min-w-[220px]">
+                      <div className="w-full sm:max-w-[260px]">
                         <label className="block text-sm font-medium text-gray-800 mb-1.5">
                           Scheduled date
                         </label>
@@ -214,7 +214,7 @@ export default function Calendar() {
                           {item.platforms.join(", ")} · {item.status}
                         </p>
                       </div>
-                      <div className="min-w-[220px]">
+                      <div className="w-full sm:max-w-[260px]">
                         <label className="block text-sm font-medium text-gray-800 mb-1.5">
                           Pick a date
                         </label>

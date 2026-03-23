@@ -11,7 +11,7 @@ export default function ApiDashboard() {
   const hasGeminiKey = getGeminiKeyConfigured();
 
   return (
-    <div className="space-y-8 h-[calc(100vh-80px)] overflow-y-auto">
+    <div className="space-y-6 sm:space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">API Dashboard</h1>
         <p className="text-gray-500 mt-2">

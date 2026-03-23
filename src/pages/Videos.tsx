@@ -88,8 +88,8 @@ export default function Videos() {
   const navigate = useNavigate();
 
   return (
-    <div className="relative min-h-screen -m-10 p-10 bg-[#F3F4F6]">
-      <div className="mb-8">
+    <div className="relative overflow-hidden rounded-[32px] border border-gray-200 bg-[#F3F4F6] p-4 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-6 lg:p-8">
+      <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Choose a Template</h1>
         <p className="text-gray-500">Select a template to get started with your video or a carousel</p>
       </div>
@@ -98,7 +98,7 @@ export default function Videos() {
         {TEMPLATES.map((template) => (
           <div 
             key={template.id} 
-            className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer flex flex-col h-[400px]"
+            className="flex h-[380px] cursor-pointer flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md sm:h-[400px]"
             onClick={() => {
               if (template.id === 'video-gen') {
                 navigate('/dashboard/video-generation');
@@ -155,8 +155,8 @@ export default function Videos() {
 
       {/* Welcome Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md relative overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-xl">
             <button 
               onClick={() => setShowModal(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
@@ -164,7 +164,7 @@ export default function Videos() {
               <X className="w-5 h-5" />
             </button>
             
-            <div className="p-8 text-center">
+            <div className="p-5 text-center sm:p-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to AIcontentStudio!</h2>
               <p className="text-gray-500 mb-8">Your brand is set up. Here's what you can do:</p>
               

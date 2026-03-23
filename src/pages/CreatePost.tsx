@@ -657,9 +657,9 @@ export default function CreatePost() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-2rem)] -m-10 overflow-hidden bg-[#f3f1ec] text-slate-900">
-      <aside className="flex w-[320px] shrink-0 flex-col border-r border-black/6 bg-[#f8f6f2]">
-        <div className="border-b border-black/6 px-5 py-6">
+    <div className="flex min-h-[calc(100dvh-4rem)] flex-col overflow-hidden rounded-[32px] border border-black/5 bg-[#f3f1ec] text-slate-900 shadow-[0_20px_60px_rgba(15,23,42,0.06)] xl:min-h-[calc(100dvh-6rem)] xl:flex-row">
+      <aside className="flex flex-col border-b border-black/6 bg-[#f8f6f2] xl:w-[320px] xl:shrink-0 xl:border-b-0 xl:border-r">
+        <div className="border-b border-black/6 px-4 py-5 sm:px-5 sm:py-6">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -694,7 +694,7 @@ export default function CreatePost() {
           </p>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-5">
+        <div className="flex-1 px-4 py-4 sm:px-5 sm:py-5 xl:overflow-y-auto">
           <div className="space-y-4">
             {inspiration ? (
               <div className="rounded-[28px] border border-black/6 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
@@ -942,7 +942,7 @@ export default function CreatePost() {
       </aside>
 
       <section className="flex min-w-0 flex-1 flex-col">
-        <div className="flex flex-wrap items-center gap-3 border-b border-black/6 bg-[#f6f3ec] px-6 py-4">
+        <div className="flex items-center gap-3 overflow-x-auto border-b border-black/6 bg-[#f6f3ec] px-4 py-4 sm:px-6">
           {composerDrafts.map((draft, index) => {
             const isActive = draft.id === activeDraftId;
 
@@ -951,7 +951,7 @@ export default function CreatePost() {
                 key={draft.id}
                 type="button"
                 onClick={() => setActiveDraftId(draft.id)}
-                className={`group inline-flex items-center gap-2 rounded-t-2xl border px-4 py-3 text-sm font-medium transition ${
+                className={`group inline-flex shrink-0 items-center gap-2 rounded-t-2xl border px-4 py-3 text-sm font-medium transition ${
                   isActive
                     ? "border-black/10 bg-white text-slate-900"
                     : "border-transparent bg-transparent text-slate-500 hover:text-slate-900"
@@ -981,7 +981,7 @@ export default function CreatePost() {
           <button
             type="button"
             onClick={addDraftTab}
-            className="inline-flex items-center gap-2 rounded-2xl border border-black/8 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            className="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-black/8 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
           >
             <Plus className="h-4 w-4" />
             Add Post
@@ -990,13 +990,13 @@ export default function CreatePost() {
           <button
             type="button"
             onClick={closeAllDraftTabs}
-            className="text-sm font-semibold text-red-600 transition hover:text-red-700"
+            className="shrink-0 text-sm font-semibold text-red-600 transition hover:text-red-700"
           >
             Close All
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+        <div className="min-h-0 flex-1 px-4 py-4 sm:px-6 sm:py-6 xl:overflow-y-auto">
           {error && (
             <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
@@ -1011,7 +1011,7 @@ export default function CreatePost() {
 
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="min-w-0 rounded-[34px] border border-black/6 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.06)]">
-              <div className="border-b border-black/6 px-7 py-6">
+              <div className="border-b border-black/6 px-5 py-5 sm:px-7 sm:py-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
@@ -1038,12 +1038,12 @@ export default function CreatePost() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex w-full flex-wrap gap-3 sm:w-auto">
                     <button
                       type="button"
                       onClick={copyActiveDraft}
                       disabled={!activeDraft?.body.trim()}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-black/8 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-black/8 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                     >
                       <Copy className="h-4 w-4" />
                       Copy
@@ -1052,7 +1052,7 @@ export default function CreatePost() {
                       type="button"
                       onClick={saveActiveDraft}
                       disabled={isSavingDraft || !activeDraft}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-black/8 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-black/8 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                     >
                       {isSavingDraft ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -1065,7 +1065,7 @@ export default function CreatePost() {
                       <button
                         type="button"
                         onClick={() => handleActiveDraftWorkflowStatusUpdate("ready")}
-                        className="inline-flex items-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 sm:w-auto"
                       >
                         Mark Ready
                       </button>
@@ -1074,7 +1074,7 @@ export default function CreatePost() {
                       <button
                         type="button"
                         onClick={() => handleActiveDraftWorkflowStatusUpdate("approved")}
-                        className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 sm:w-auto"
                       >
                         Approve
                       </button>
@@ -1083,7 +1083,7 @@ export default function CreatePost() {
                       <button
                         type="button"
                         onClick={() => handleActiveDraftWorkflowStatusUpdate("draft")}
-                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 sm:w-auto"
                       >
                         Send Back To Draft
                       </button>
@@ -1092,7 +1092,7 @@ export default function CreatePost() {
                       type="button"
                       onClick={generateDrafts}
                       disabled={isGenerating || isLoading}
-                      className="inline-flex items-center gap-2 rounded-2xl bg-[#1f9f55] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#188248] disabled:cursor-not-allowed disabled:opacity-70"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#1f9f55] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#188248] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
                     >
                       {isGenerating ? (
                         <>
@@ -1111,7 +1111,7 @@ export default function CreatePost() {
               </div>
 
               {activeDraft ? (
-                <div className="space-y-5 px-7 py-6">
+                <div className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
                   <label className="grid gap-2">
                     <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Title
@@ -1135,11 +1135,11 @@ export default function CreatePost() {
                         updateDraft(activeDraft.id, { body: e.target.value })
                       }
                       placeholder="Write the post here or use Generate Drafts to create variations from your inspiration."
-                      className="min-h-[520px] w-full resize-none rounded-[30px] border border-slate-200 bg-[#fffdf8] px-5 py-5 text-[18px] leading-9 text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-[#6f4bff]/15"
+                      className="min-h-[360px] w-full resize-none rounded-[30px] border border-slate-200 bg-[#fffdf8] px-5 py-5 text-base leading-8 text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-[#6f4bff]/15 sm:min-h-[520px] sm:text-[18px] sm:leading-9"
                     />
                   </label>
 
-                  <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
+                  <div className="flex flex-col gap-3 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-4">
                       <span>{activeDraft.body.length}/800 characters</span>
                       {activeDraft.contentId && (
@@ -1180,7 +1180,7 @@ export default function CreatePost() {
               )}
             </div>
 
-            <aside className="space-y-5">
+            <aside className="space-y-4 lg:space-y-5">
               <div className="rounded-[30px] border border-black/6 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.05)]">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Post Brief

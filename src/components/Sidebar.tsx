@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "../lib/utils";
 import {
+  X,
   PlusCircle,
   Lightbulb,
   MessageSquare,
@@ -34,90 +35,169 @@ const bottomNavItems = [
   { icon: Settings, label: "Settings", href: "/dashboard/settings", color: "text-blue-500" },
 ];
 
-export function Sidebar() {
+type SidebarProps = {
+  isMobileOpen?: boolean;
+  onMobileClose?: () => void;
+};
+
+function SidebarNav({
+  isExpanded,
+  onNavigate,
+}: {
+  isExpanded: boolean;
+  onNavigate?: () => void;
+}) {
   const location = useLocation();
-  const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <div 
-      className={cn(
-        "h-screen bg-[#F9FAFB] border-r border-gray-200 flex flex-col fixed left-0 top-0 items-center py-4 transition-all duration-300 z-50",
-        isHovered ? "w-64 items-start px-4" : "w-16 items-center"
-      )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Logo Area */}
-      <Link to="/" className={cn("mb-8 flex items-center transition-colors text-text-main hover:text-primary mt-2", isHovered ? "w-full justify-start px-4" : "justify-center")}>
-        <svg aria-hidden="true" focusable="false" height="26" viewBox="0 0 1306 1306" width="26" xmlns="http://www.w3.org/2000/svg" className="shrink-0 group-hover:text-primary transition-colors text-gray-800">
+    <>
+      <Link
+        to="/"
+        onClick={onNavigate}
+        className={cn(
+          "mb-8 mt-2 flex items-center text-text-main transition-colors hover:text-primary",
+          isExpanded ? "w-full justify-start px-4" : "justify-center",
+        )}
+      >
+        <svg
+          aria-hidden="true"
+          focusable="false"
+          height="26"
+          viewBox="0 0 1306 1306"
+          width="26"
+          xmlns="http://www.w3.org/2000/svg"
+          className="shrink-0 text-gray-800 transition-colors group-hover:text-primary"
+        >
           <path d="M1161 653c0-114-38-220-101-305-29 22-69 19-95-6-26-26-28-67-7-95-85-64-190-102-305-102-140 0-267 57-359 149-92 92-149 219-149 359 0 140 57 267 149 359 92 92 219 149 359 149 140 0 267-57 359-149 92-92 149-219 149-359zm-100-510l73-73c28-29 74-29 103 0 28 28 28 74 0 102l-74 73c90 112 143 254 143 408 0 180-73 344-191 462-118 118-282 191-462 191-180 0-343-73-462-191-118-118-191-282-191-462 0-180 73-343 191-462 119-118 282-191 462-191 154 0 296 53 408 143zm-214 510c0-107-87-193-194-193-107 0-193 86-193 193 0 107 86 194 193 194 107 0 194-87 194-194z" fill="currentColor"></path>
         </svg>
-        {isHovered && (
-          <span className="ml-3 font-semibold text-lg whitespace-nowrap text-gray-900 leading-none">AI Content Studio</span>
+        {isExpanded && (
+          <span className="ml-3 whitespace-nowrap text-lg font-semibold leading-none text-gray-900">
+            AI Content Studio
+          </span>
         )}
       </Link>
 
-      {/* Main Navigation */}
-      <nav className="flex-1 w-full flex flex-col space-y-2 overflow-y-auto overflow-x-hidden">
+      <nav className="flex-1 space-y-2 overflow-y-auto overflow-x-hidden">
         {mainNavItems.map((item) => {
           const isActive = location.pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
               to={item.href}
-              title={!isHovered ? item.label : undefined}
+              onClick={onNavigate}
+              title={!isExpanded ? item.label : undefined}
               className={cn(
-                "p-2.5 rounded-lg transition-colors group relative flex items-center w-full",
+                "group relative flex w-full items-center rounded-lg p-2.5 transition-colors",
                 isActive
                   ? "bg-blue-50 text-blue-600"
-                  : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                  : "text-gray-700 hover:bg-gray-100 hover:text-gray-900",
               )}
             >
               <item.icon
                 className={cn(
                   "h-5 w-5 shrink-0",
                   isActive ? "text-blue-600" : "text-gray-400 group-hover:text-gray-500",
-                  isHovered ? "mr-3" : "mx-auto"
+                  isExpanded ? "mr-3" : "mx-auto",
                 )}
               />
-              {isHovered && (
-                <span className="font-medium whitespace-nowrap">{item.label}</span>
-              )}
+              {isExpanded && <span className="font-medium whitespace-nowrap">{item.label}</span>}
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom Navigation */}
-      <div className="w-full flex flex-col space-y-2 pt-4 border-t border-gray-200 mt-auto">
+      <div className="mt-auto w-full space-y-2 border-t border-gray-200 pt-4">
         {bottomNavItems.map((item) => {
           const isActive = location.pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
               to={item.href}
-              title={!isHovered ? item.label : undefined}
+              onClick={onNavigate}
+              title={!isExpanded ? item.label : undefined}
               className={cn(
-                "p-2.5 rounded-lg transition-colors group relative flex items-center w-full",
+                "group relative flex w-full items-center rounded-lg p-2.5 transition-colors",
                 isActive
                   ? "bg-blue-50 text-blue-600"
-                  : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                  : "text-gray-700 hover:bg-gray-100 hover:text-gray-900",
               )}
             >
               <item.icon
                 className={cn(
                   "h-5 w-5 shrink-0",
                   item.color || (isActive ? "text-blue-600" : "text-gray-400 group-hover:text-gray-500"),
-                  isHovered ? "mr-3" : "mx-auto"
+                  isExpanded ? "mr-3" : "mx-auto",
                 )}
               />
-              {isHovered && (
+              {isExpanded && (
                 <span className={cn("font-medium whitespace-nowrap", item.color)}>{item.label}</span>
               )}
             </Link>
           );
         })}
       </div>
-    </div>
+    </>
+  );
+}
+
+export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
+  const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!isMobileOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isMobileOpen]);
+
+  return (
+    <>
+      <div
+        className={cn(
+          "fixed left-0 top-0 z-50 hidden h-screen flex-col border-r border-gray-200 bg-[#F9FAFB] py-4 transition-all duration-300 lg:flex",
+          isDesktopExpanded ? "w-64 items-start px-4" : "w-16 items-center",
+        )}
+        onMouseEnter={() => setIsDesktopExpanded(true)}
+        onMouseLeave={() => setIsDesktopExpanded(false)}
+      >
+        <SidebarNav isExpanded={isDesktopExpanded} />
+      </div>
+
+      <div
+        className={cn(
+          "fixed inset-0 z-[65] bg-slate-950/35 backdrop-blur-[2px] transition lg:hidden",
+          isMobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+        )}
+        onClick={onMobileClose}
+        aria-hidden={!isMobileOpen}
+      >
+        <aside
+          className={cn(
+            "flex h-full w-[min(84vw,320px)] flex-col border-r border-gray-200 bg-[#F9FAFB] px-4 py-4 shadow-2xl transition-transform duration-300",
+            isMobileOpen ? "translate-x-0" : "-translate-x-full",
+          )}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="mb-4 flex items-center justify-between px-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+              Navigation
+            </p>
+            <button
+              type="button"
+              onClick={onMobileClose}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm ring-1 ring-black/5"
+              aria-label="Close navigation menu"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <SidebarNav isExpanded onNavigate={onMobileClose} />
+        </aside>
+      </div>
+    </>
   );
 }
