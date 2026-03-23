@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { cn } from "../lib/utils";
 import { Accounts } from "./settings/Accounts";
 import { Profile } from "./settings/Profile";
@@ -20,7 +21,19 @@ function Placeholder({ title }: { title: string }) {
 }
 
 export function Settings() {
-  const [activeTab, setActiveTab] = useState("accounts");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "accounts";
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
+
+  const handleTabChange = (id: string) => {
+    setActiveTab(id);
+    setSearchParams({ tab: id });
+  };
 
   return (
     <div className="w-full">

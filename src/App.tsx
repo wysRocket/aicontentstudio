@@ -10,6 +10,7 @@ import Prompts from "./pages/Prompts";
 import Coach from "./pages/Coach";
 import { FirebaseProvider } from "./contexts/FirebaseContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import Dashboard from "./pages/Dashboard";
 
 // Placeholder component for empty routes
 function Placeholder({ title }: { title: string }) {
@@ -31,7 +32,7 @@ export default function App() {
               <Layout />
             </ProtectedRoute>
           }>
-            <Route index element={<Placeholder title="Dashboard" />} />
+            <Route index element={<Dashboard />} />
             
             <Route path="create" element={<CreatePost />} />
             <Route path="inspiration" element={<Inspiration />} />

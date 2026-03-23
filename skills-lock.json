@@ -55,6 +55,11 @@
       "source": "firebase/agent-skills",
       "sourceType": "github",
       "computedHash": "9a668e12715c38c3041ae9d77bf22fe2c517dd8cc06b88743e9e43f4d39a27de"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "063a0e6448123cd359ad0044cc46b0e490cc7964d45ef4bb9fd842bd2ffbca67"
     }
   }
 }

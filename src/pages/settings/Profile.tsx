@@ -19,7 +19,7 @@ export function Profile() {
             {user?.photoURL ? (
               <img src={user.photoURL} alt="Profile" className="w-16 h-16 rounded-full mr-4" referrerPolicy="no-referrer" />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mr-4 text-gray-600 font-bold text-xl">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#D81B60] to-purple-500 flex items-center justify-center text-white font-bold text-3xl mr-4 shadow-md">
                 {user?.email?.charAt(0).toUpperCase() || 'U'}
               </div>
             )}

@@ -1,243 +1,397 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { GoogleGenAI, ThinkingLevel } from '@google/genai';
-import { PenLine, FileText, Mic, Languages, Coins, Loader2, Sparkles, Plus } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { Coins, Loader2, Sparkles, Plus, ArrowLeft, ChevronUp, ChevronDown, PlusCircle } from 'lucide-react';
 import PurchaseCreditsModal from '../components/PurchaseCreditsModal';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const Toggle = ({ checked, onChange, id }: { checked?: boolean, onChange?: () => void, id?: string }) => (
+  <button 
+    id={id}
+    type="button"
+    onClick={onChange}
+    className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors duration-200 ${checked ? 'bg-[#D81B60]' : 'bg-gray-200'}`}
+  >
+    <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform duration-200 ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
+  </button>
+);
 
-type Tool = 'write' | 'summarize' | 'transcribe' | 'translate';
+const SelectInput = ({ label, placeholder, disabled, options = [] }: { label: string, placeholder?: string, disabled?: boolean, options?: string[] }) => {
+  const id = `select-${label.toLowerCase().replace(/\s+/g, '-')}`;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="block text-[13px] font-semibold text-gray-900">{label}</label>
+      <div className="relative">
+        <select 
+          id={id}
+          disabled={disabled}
+          className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D81B60]/20 focus:border-[#D81B60] appearance-none bg-white text-gray-700 disabled:bg-gray-50 disabled:text-gray-500"
+        >
+          {placeholder && <option value="">{placeholder}</option>}
+          {options.map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+        <div className={`absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none ${disabled ? 'text-gray-300' : 'text-gray-500'}`}>
+          <ChevronUp className="w-3 h-3 -mb-1" />
+          <ChevronDown className="w-3 h-3" />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function Dashboard() {
-  const [activeTool, setActiveTool] = useState<Tool>('write');
   const [credits, setCredits] = useState(1000);
-  const [input, setInput] = useState('');
-  const [output, setOutput] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState('');
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [file, setFile] = useState<File | null>(null);
+  // Form State
+  const [prompt, setPrompt] = useState('');
+  const [useBrandKit, setUseBrandKit] = useState(false);
+  const [trimSilence, setTrimSilence] = useState(false);
+  const [enableTitle, setEnableTitle] = useState(false);
+  const [enableCaptions, setEnableCaptions] = useState(false);
+  const [enableBgm, setEnableBgm] = useState(false);
+  const [enableVoiceover, setEnableVoiceover] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
   useEffect(() => {
     if (searchParams.get('buy') === 'true') {
       setIsPurchaseModalOpen(true);
-      // Clean up the URL
       searchParams.delete('buy');
       setSearchParams(searchParams, { replace: true });
     }
   }, [searchParams, setSearchParams]);
 
   const handleProcess = async () => {
-    if (!input.trim() && !file) return;
+    if (!prompt.trim()) return;
     if (credits < 10) {
       setIsPurchaseModalOpen(true);
       return;
     }
-
     setIsProcessing(true);
-    setError('');
-    setOutput('');
-
-    try {
-      let prompt = '';
-      let parts: any[] = [];
-
-      if (file) {
-        // Convert file to base64
-        const reader = new FileReader();
-        const base64Data = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => {
-            const result = reader.result as string;
-            resolve(result.split(',')[1]);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-
-        parts.push({
-          inlineData: {
-            data: base64Data,
-            mimeType: file.type
-          }
-        });
-      }
-
-      switch (activeTool) {
-        case 'write':
-          prompt = `Write or rewrite the following content professionally:\n\n${input}`;
-          break;
-        case 'summarize':
-          prompt = `Provide a structured summary, key points, and action items for the following text:\n\n${input}`;
-          break;
-        case 'transcribe':
-          prompt = `Please transcribe or process the following text/audio-notes:\n\n${input}`;
-          break;
-        case 'translate':
-          prompt = `Translate the following content to English (if it's not) or to Spanish/French (if it is English), maintaining professional tone:\n\n${input}`;
-          break;
-      }
-
-      if (prompt) {
-        parts.push({ text: prompt });
-      }
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-preview',
-        contents: { parts },
-        config: {
-          thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
-        }
-      });
-
-      setOutput(response.text || 'No output generated.');
-      setCredits(prev => prev - 10);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during processing.');
-    } finally {
+    // Simulation of processing for UX
+    setTimeout(() => {
       setIsProcessing(false);
-    }
+      setCredits(prev => prev - 10);
+    }, 2000);
   };
 
-  const tools = [
-    { id: 'write', name: 'Write & Rewrite', icon: PenLine },
-    { id: 'summarize', name: 'Summarize', icon: FileText },
-    { id: 'transcribe', name: 'Transcribe', icon: Mic },
-    { id: 'translate', name: 'Translate', icon: Languages },
-  ] as const;
-
   return (
-    <div className="min-h-screen bg-bg-main flex flex-col">
-      <nav className="sticky top-0 z-50 bg-bg-nav/90 backdrop-blur-md border-b border-border-nav">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-text-main hover:text-primary transition-colors font-semibold text-lg">
-            <svg aria-hidden="true" focusable="false" height="24" viewBox="0 0 1306 1306" width="24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M1161 653c0-114-38-220-101-305-29 22-69 19-95-6-26-26-28-67-7-95-85-64-190-102-305-102-140 0-267 57-359 149-92 92-149 219-149 359 0 140 57 267 149 359 92 92 219 149 359 149 140 0 267-57 359-149 92-92 149-219 149-359zm-100-510l73-73c28-29 74-29 103 0 28 28 28 74 0 102l-74 73c90 112 143 254 143 408 0 180-73 344-191 462-118 118-282 191-462 191-180 0-343-73-462-191-118-118-191-282-191-462 0-180 73-343 191-462 119-118 282-191 462-191 154 0 296 53 408 143zm-214 510c0-107-87-193-194-193-107 0-193 86-193 193 0 107 86 194 193 194 107 0 194-87 194-194z" fill="currentColor"></path>
-            </svg>
-            <span>AI Content Studio</span>
-          </Link>
+    <div className="min-h-screen bg-white flex flex-col font-sans">
+      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shrink-0">
+        <div className="max-w-[1400px] mx-auto px-6 py-3 flex items-center justify-end">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-bg-card border border-border-main px-3 py-1.5 rounded-lg">
-              <Coins className="w-4 h-4 text-primary" />
-              <span className="font-medium">{credits} credits</span>
+            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg">
+              <Coins className="w-4 h-4 text-[#D81B60]" />
+              <span className="font-medium text-sm text-gray-700">{credits} credits</span>
             </div>
             <button 
+              type="button"
               onClick={() => setIsPurchaseModalOpen(true)}
-              className="flex items-center gap-1.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm"
+              className="flex items-center gap-1.5 bg-pink-50 text-[#D81B60] hover:bg-pink-100 border border-pink-200 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm"
             >
               <Plus className="w-4 h-4" />
               Buy credits
             </button>
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold ml-2">
+            <Link to="/dashboard/settings?tab=profile" className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#D81B60] to-purple-500 flex items-center justify-center text-white font-bold ml-2 shadow-sm hover:opacity-90 transition-opacity">
               U
-            </div>
+            </Link>
           </div>
         </div>
       </nav>
 
-      <div className="flex-1 max-w-7xl mx-auto w-full flex gap-6 p-6">
-        {/* Sidebar */}
-        <aside className="w-64 shrink-0 flex flex-col gap-2">
-          {tools.map((tool) => (
-            <button
-              key={tool.id}
-              onClick={() => {
-                setActiveTool(tool.id);
-                setInput('');
-                setOutput('');
-                setFile(null);
-                setError('');
-              }}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left ${
-                activeTool === tool.id
-                  ? 'bg-primary text-white'
-                  : 'text-text-muted hover:bg-bg-card-hover hover:text-white'
-              }`}
-            >
-              <tool.icon className="w-5 h-5" />
-              <span className="font-medium">{tool.name}</span>
-            </button>
-          ))}
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 flex flex-col gap-6 h-[calc(100vh-120px)]">
-          <div className="bg-bg-card-solid border border-border-main rounded-2xl p-6 shadow-xl flex-1 flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold">
-                {tools.find(t => t.id === activeTool)?.name}
-              </h2>
-              <div className="flex items-center gap-2 text-sm text-text-muted bg-bg-alert px-3 py-1.5 rounded-lg border border-border-main">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <span>Powered by Gemini 3.1 Pro (Thinking Mode)</span>
+      <div className="flex-1 max-w-[1400px] w-full mx-auto flex flex-col min-h-0 bg-white shadow-none border-none">
+        
+        {/* Engaging Hero Section */}
+        <div className="mx-6 lg:mx-8 mt-6 mb-2 bg-gradient-to-br from-[#D81B60] to-purple-700 rounded-2xl overflow-hidden shadow-lg p-8 relative shrink-0">
+          <div className="relative z-10 max-w-3xl">
+            <h1 className="text-3xl font-bold text-white mb-4 tracking-tight">
+              Supercharge Your Video Workflow
+            </h1>
+            <p className="text-pink-100 text-[15px] leading-relaxed mb-6 font-medium">
+              Welcome to AI Content Studio! Seamlessly combine clips, apply edits, and generate stunning video content. Powered by Google's state-of-the-art <b>Gemini 3.1 Pro</b> model with Advanced Thinking, our platform understands context deeper and creates professional, high-quality results in seconds. Just input your prompt and let the AI do the heavy lifting.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-1.5 text-[13px] font-semibold text-[#D81B60] bg-white px-3 py-1.5 rounded-lg shadow-sm">
+                <Sparkles className="w-4 h-4 text-[#D81B60]" /> Lightning Fast
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6 flex-1 min-h-0">
-              <div className="flex flex-col gap-4 h-full">
-                <label className="text-sm font-medium text-text-muted uppercase tracking-wider">INPUT</label>
-                {activeTool === 'transcribe' && (
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="file"
-                      accept="audio/*,video/*"
-                      onChange={(e) => setFile(e.target.files?.[0] || null)}
-                      className="text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-colors"
-                    />
-                    {file && (
-                      <button
-                        onClick={() => setFile(null)}
-                        className="text-sm text-red-400 hover:text-red-300 transition-colors"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                )}
-                <textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder={activeTool === 'transcribe' ? "Enter your content here or upload an audio file above..." : "Enter your content here..."}
-                  className="flex-1 bg-bg-main border border-border-main rounded-xl p-4 text-text-main placeholder:text-text-muted/50 focus:outline-none focus:border-primary resize-none shadow-inner"
-                />
-                <button
-                  onClick={handleProcess}
-                  disabled={isProcessing || (!input.trim() && !file)}
-                  className="w-full py-3.5 rounded-xl bg-primary text-white hover:bg-primary-hover transition-all font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-5 h-5" />
-                      Generate (10 credits)
-                    </>
-                  )}
-                </button>
-                {error && (
-                  <div className="text-red-400 text-sm p-3 bg-red-400/10 rounded-lg border border-red-400/20">
-                    {error}
-                  </div>
-                )}
+              <div className="flex items-center gap-1.5 text-[13px] font-semibold text-[#D81B60] bg-white px-3 py-1.5 rounded-lg shadow-sm">
+                <Sparkles className="w-4 h-4 text-[#D81B60]" /> Deep Context Awareness
               </div>
-
-              <div className="flex flex-col gap-4 h-full">
-                <label className="text-sm font-medium text-text-muted uppercase tracking-wider">OUTPUT</label>
-                <div className="flex-1 bg-bg-main border border-border-main rounded-xl p-4 text-text-main overflow-y-auto whitespace-pre-wrap shadow-inner">
-                  {output || (
-                    <span className="text-text-muted/50 italic flex items-center justify-center h-full">
-                      Generated content will appear here...
-                    </span>
-                  )}
-                </div>
+              <div className="flex items-center gap-1.5 text-[13px] font-semibold text-[#D81B60] bg-white px-3 py-1.5 rounded-lg shadow-sm">
+                <Sparkles className="w-4 h-4 text-[#D81B60]" /> Advanced Video Edits
               </div>
             </div>
           </div>
-        </main>
+          <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 blur-3xl rounded-full pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-black/10 blur-2xl rounded-full pointer-events-none" />
+        </div>
+
+        {/* Header Title Area */}
+        <div className="px-6 py-6 pb-4 flex items-start gap-4 shrink-0">
+          <button type="button" className="mt-1 flex items-center justify-center text-purple-600 hover:bg-purple-50 p-1.5 rounded-lg transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 id="dashboard-title" className="text-[22px] font-bold text-gray-900 tracking-[-0.02em]">Combine Clips and Apply Basic Edits</h1>
+            <p className="text-[13px] text-gray-500 mt-1">Combine Clips and Apply Basic Edits</p>
+          </div>
+        </div>
+
+        {/* Content Split Layout */}
+        <div className="flex-1 flex flex-col lg:flex-row px-6 lg:px-8 pb-8 gap-10 lg:gap-8 min-h-0">
+          
+          {/* Left Media Player (Sticky or fixed height taking available space) */}
+          <div className="w-full lg:w-[45%] shrink-0">
+            <div className="w-full aspect-[9/16] rounded-xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-200 bg-gray-900 relative">
+              <video 
+                src="/images/dash-vid.mp4" 
+                autoPlay 
+                loop 
+                muted 
+                playsInline
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+
+          {/* Right Configuration Form */}
+          <div className="flex-1 flex flex-col overflow-y-auto pr-2 pb-10">
+            <div className="w-full flex flex-col gap-6">
+              
+              {/* Prompt Area */}
+              <div className="flex flex-col gap-2">
+                <label htmlFor="prompt-input" className="text-[13px] font-semibold text-gray-900">Prompt</label>
+                <textarea 
+                  id="prompt-input"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Describe your video idea..."
+                  className="w-full h-[120px] px-4 py-4 rounded-xl border border-gray-200 text-[14px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#D81B60]/20 focus:border-[#D81B60] resize-none transition-shadow"
+                />
+              </div>
+
+              {/* Brand Kit Toggle */}
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5">
+                  <Toggle id="brand-kit-toggle" checked={useBrandKit} onChange={() => setUseBrandKit(!useBrandKit)} />
+                </div>
+                <div>
+                  <label htmlFor="brand-kit-toggle" className="block text-[13px] font-semibold text-gray-900">Use brand kit</label>
+                  <p className="text-[13px] text-gray-500 mt-0.5 leading-snug">Apply your brand colors, tone, and style. Only works if you have a brand kit set up.</p>
+                </div>
+              </div>
+
+              {/* Generate Button */}
+              <button 
+                type="button"
+                onClick={handleProcess}
+                disabled={isProcessing}
+                className="w-full py-[14px] rounded-xl bg-[#c2185b] hover:bg-[#ad1457] text-white font-semibold flex items-center justify-center gap-2 text-[15px] shadow-sm transition-colors mt-1 disabled:opacity-70"
+              >
+                {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                {isProcessing ? 'Generating...' : 'Generate Video'}
+              </button>
+
+              {/* Accordion Divider */}
+              <button 
+                type="button"
+                onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+                className="w-full text-left pt-6 pb-2 border-t border-gray-100 text-[13px] text-gray-500 flex items-center justify-between hover:text-gray-800 transition-colors mt-2"
+              >
+                Need more customization? Click to see advanced options
+                {isAdvancedOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+              </button>
+
+              {/* Advanced Options Content */}
+              {isAdvancedOpen && (
+                <div className="flex flex-col gap-8 bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
+                
+                {/* Video Clips */}
+                <div className="flex flex-col gap-3">
+                  <label className="block text-[13px] font-semibold text-gray-900">Video Clips</label>
+                  <button 
+                    type="button"
+                    className="w-full py-3 rounded-lg border border-purple-300 text-purple-600 font-semibold flex items-center justify-center gap-2 text-sm hover:bg-purple-50 transition-colors bg-white"
+                  >
+                    <PlusCircle className="w-4 h-4" /> Add Video Clip
+                  </button>
+                </div>
+
+                {/* Trim Silence Toggle */}
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5">
+                    <Toggle checked={trimSilence} onChange={() => setTrimSilence(!trimSilence)} />
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-semibold text-gray-900">Trim Silence</label>
+                    <p className="text-[13px] text-gray-500 mt-0.5 leading-snug">Automatically trim silence at beginning and end of video</p>
+                  </div>
+                </div>
+
+                {/* Title Configuration */}
+                <div className="flex flex-col gap-5 pt-1">
+                  <div>
+                    <h3 className="text-[13px] font-semibold text-gray-900">Title Configuration</h3>
+                    <p className="text-[13px] text-gray-500 mt-0.5">Optional title overlay configuration</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Toggle checked={enableTitle} onChange={() => setEnableTitle(!enableTitle)} />
+                    <label className="text-[13px] font-medium text-gray-900">Enable Title</label>
+                  </div>
+
+                  <div className="flex flex-col gap-5">
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="title-text" className="block text-[13px] font-semibold text-gray-900">Title Text</label>
+                      <input 
+                        id="title-text"
+                        type="text" 
+                        placeholder="Your Title Here" 
+                        disabled={!enableTitle}
+                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D81B60]/20 focus:border-[#D81B60] disabled:bg-gray-50 disabled:text-gray-500 placeholder:text-gray-400" 
+                      />
+                    </div>
+                    
+                    <SelectInput 
+                      label="Title Position" 
+                      disabled={!enableTitle} 
+                      options={['Top Left', 'Top Center', 'Top Right', 'Middle Left', 'Middle Center', 'Middle Right', 'Bottom Left', 'Bottom Center', 'Bottom Right']}
+                    />
+
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="title-duration" className="block text-[13px] font-semibold text-gray-900">Title Duration (seconds)</label>
+                      <p className="text-[12px] text-gray-500 -mt-1 mb-0.5">How long the title should appear</p>
+                      <div className="relative">
+                        <input 
+                          id="title-duration"
+                          type="number" 
+                          defaultValue="0" 
+                          disabled={!enableTitle}
+                          className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D81B60]/20 focus:border-[#D81B60] appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none disabled:bg-gray-50 disabled:text-gray-500 m-0" 
+                        />
+                        <div className={`absolute right-3 top-1/2 -translate-y-1/2 flex flex-col pointer-events-none ${!enableTitle ? 'text-gray-300' : 'text-gray-400'}`}>
+                          <ChevronUp className="w-3 h-3 -mb-1" />
+                          <ChevronDown className="w-3 h-3" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <SelectInput 
+                      label="Title Style" 
+                      disabled={!enableTitle} 
+                      options={['Classic', 'Modern', 'Bold', 'Minimalist', 'Neon', 'Outline']}
+                    />
+                  </div>
+                </div>
+
+                {/* Captions Configuration */}
+                <div className="flex flex-col gap-5 pt-1">
+                  <div>
+                    <h3 className="text-[13px] font-semibold text-gray-900">Captions Configuration</h3>
+                    <p className="text-[13px] text-gray-500 mt-0.5">Optional captions/subtitles configuration</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Toggle checked={enableCaptions} onChange={() => setEnableCaptions(!enableCaptions)} />
+                    <label className="text-[13px] font-medium text-gray-900">Enable Captions</label>
+                  </div>
+
+                  <div className="flex flex-col gap-5">
+                    <SelectInput 
+                      label="Caption Style" 
+                      disabled={!enableCaptions} 
+                      options={['Standard', 'Subrip', 'Yellow Box', 'Dynamic', 'Karaoke']}
+                    />
+                    <SelectInput 
+                      label="Caption Position" 
+                      disabled={!enableCaptions} 
+                      options={['Top', 'Middle', 'Bottom']}
+                    />
+                  </div>
+                </div>
+
+                {/* Output Format */}
+                <div className="flex flex-col gap-5 pt-1 border-t border-gray-100 mt-2">
+                  <div>
+                    <h3 className="text-[13px] font-semibold text-gray-900 mt-4">Video Output Format</h3>
+                    <p className="text-[13px] text-gray-500 mt-0.5">Choose your desired dimensions and quality</p>
+                  </div>
+                  <div className="flex flex-col gap-5">
+                    <SelectInput 
+                      label="Aspect Ratio" 
+                      placeholder="Select aspect ratio" 
+                      options={['16:9 (Landscape)', '9:16 (Portrait)', '1:1 (Square)', '4:3 (SD)', '21:9 (Ultrawide)']}
+                    />
+                    <SelectInput 
+                      label="Resolution" 
+                      placeholder="Select resolution" 
+                      options={['720p (HD)', '1080p (FHD)', '1440p (QHD)', '4K (UHD)']}
+                    />
+                  </div>
+                </div>
+
+                {/* Background Music Configuration */}
+                <div className="flex flex-col gap-5 pt-1 border-t border-gray-100 mt-2">
+                  <div>
+                    <h3 className="text-[13px] font-semibold text-gray-900 mt-4">Background Music</h3>
+                    <p className="text-[13px] text-gray-500 mt-0.5">Add an atmospheric soundtrack</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Toggle checked={enableBgm} onChange={() => setEnableBgm(!enableBgm)} />
+                    <label className="text-[13px] font-medium text-gray-900">Enable Background Music</label>
+                  </div>
+
+                  <div className="flex flex-col gap-5 bg-transparent">
+                    <SelectInput 
+                      label="Music Genre" 
+                      disabled={!enableBgm} 
+                      placeholder="Select genre" 
+                      options={['Cinematic', 'Epic', 'Lo-Fi', 'Happy', 'Corporate', 'Upbeat', 'Intense', 'Minimalist']}
+                    />
+                    <SelectInput 
+                      label="Volume Level" 
+                      disabled={!enableBgm} 
+                      placeholder="Select volume" 
+                      options={['Very Low (10%)', 'Low (25%)', 'Medium (50%)', 'High (75%)', 'Full (100%)']}
+                    />
+                  </div>
+                </div>
+
+                {/* AI Voiceover Configuration */}
+                <div className="flex flex-col gap-5 pt-1 border-t border-gray-100 mt-2 mb-2">
+                  <div>
+                    <h3 className="text-[13px] font-semibold text-gray-900 mt-4">AI Voiceover</h3>
+                    <p className="text-[13px] text-gray-500 mt-0.5">Generate a professional voiceover from your script</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Toggle checked={enableVoiceover} onChange={() => setEnableVoiceover(!enableVoiceover)} />
+                    <label className="text-[13px] font-medium text-gray-900">Enable AI Voiceover</label>
+                  </div>
+
+                  <div className="flex flex-col gap-5 bg-transparent">
+                    <SelectInput 
+                      label="Voice Style" 
+                      disabled={!enableVoiceover} 
+                      placeholder="Select voice" 
+                      options={['Professional Male (US)', 'Professional Female (US)', 'Friendly Male (UK)', 'Narrator Female (UK)', 'Deep Male', 'Soft Female']}
+                    />
+                    <SelectInput 
+                      label="Pacing" 
+                      disabled={!enableVoiceover} 
+                      placeholder="Select pacing" 
+                      options={['Slow', 'Normal Speed', 'Fast Speed', 'Dynamic']}
+                    />
+                  </div>
+                </div>
+              </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       <PurchaseCreditsModal 

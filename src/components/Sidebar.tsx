@@ -14,7 +14,6 @@ import {
   Sparkles,
   HelpCircle,
   Settings,
-  Bot,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -49,14 +48,14 @@ export function Sidebar() {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Logo Area */}
-      <div className={cn("mb-8 flex items-center", isHovered ? "w-full px-2" : "justify-center")}>
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 flex items-center justify-center text-white shadow-sm shrink-0">
-          <Bot className="w-6 h-6" />
-        </div>
+      <Link to="/" className={cn("mb-8 flex items-center transition-colors text-text-main hover:text-primary mt-2", isHovered ? "w-full justify-start px-4" : "justify-center")}>
+        <svg aria-hidden="true" focusable="false" height="26" viewBox="0 0 1306 1306" width="26" xmlns="http://www.w3.org/2000/svg" className="shrink-0 group-hover:text-primary transition-colors text-gray-800">
+          <path d="M1161 653c0-114-38-220-101-305-29 22-69 19-95-6-26-26-28-67-7-95-85-64-190-102-305-102-140 0-267 57-359 149-92 92-149 219-149 359 0 140 57 267 149 359 92 92 219 149 359 149 140 0 267-57 359-149 92-92 149-219 149-359zm-100-510l73-73c28-29 74-29 103 0 28 28 28 74 0 102l-74 73c90 112 143 254 143 408 0 180-73 344-191 462-118 118-282 191-462 191-180 0-343-73-462-191-118-118-191-282-191-462 0-180 73-343 191-462 119-118 282-191 462-191 154 0 296 53 408 143zm-214 510c0-107-87-193-194-193-107 0-193 86-193 193 0 107 86 194 193 194 107 0 194-87 194-194z" fill="currentColor"></path>
+        </svg>
         {isHovered && (
-          <span className="ml-3 font-bold text-xl text-gray-900">AIcontentStudio</span>
+          <span className="ml-3 font-semibold text-lg whitespace-nowrap text-gray-900 leading-none">AI Content Studio</span>
         )}
-      </div>
+      </Link>
 
       {/* Main Navigation */}
       <nav className="flex-1 w-full flex flex-col space-y-2 overflow-y-auto overflow-x-hidden">
