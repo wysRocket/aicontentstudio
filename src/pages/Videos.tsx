@@ -129,6 +129,9 @@ export default function Videos() {
                       TRENDING
                     </span>
                   )}
+                  <span className="px-2 py-1 bg-black/75 text-white text-[10px] font-bold rounded uppercase tracking-[0.12em]">
+                    Soon
+                  </span>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 flex items-center text-white text-xs">
                   <span className="flex items-center mr-4">
@@ -170,7 +173,7 @@ export default function Videos() {
                   <LayoutTemplate className="w-6 h-6 text-gray-400 mr-4 mt-1" />
                   <div>
                     <h3 className="font-bold text-gray-900">Make visuals from templates</h3>
-                    <p className="text-sm text-gray-500">Pick a proven template and customize it with your content</p>
+                    <p className="text-sm text-gray-500">Template cards are inspiration for the next build phase. The live workflow today is AI generation.</p>
                   </div>
                 </div>
                 
@@ -178,23 +181,23 @@ export default function Videos() {
                   <Sparkles className="w-6 h-6 text-gray-400 mr-4 mt-1" />
                   <div>
                     <h3 className="font-bold text-gray-900">Create with AI</h3>
-                    <p className="text-sm text-gray-500">Describe your idea and our AI assistant builds the video for you</p>
+                    <p className="text-sm text-gray-500">Describe your idea and use the shipped Veo generator to create a video right now.</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start p-4 border border-gray-200 rounded-xl hover:border-blue-500 transition-colors cursor-pointer">
                   <Calendar className="w-6 h-6 text-gray-400 mr-4 mt-1" />
                   <div>
-                    <h3 className="font-bold text-gray-900">Schedule your posts</h3>
-                    <p className="text-sm text-gray-500">Plan and publish content on a schedule across platforms</p>
+                    <h3 className="font-bold text-gray-900">Track the roadmap</h3>
+                    <p className="text-sm text-gray-500">Scheduling and publishing are not live yet, so this page keeps them clearly in roadmap territory.</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start p-4 border border-gray-200 rounded-xl hover:border-blue-500 transition-colors cursor-pointer">
                   <Code className="w-6 h-6 text-gray-400 mr-4 mt-1" />
                   <div>
-                    <h3 className="font-bold text-gray-900">Use the API</h3>
-                    <p className="text-sm text-gray-500">Integrate AIcontentStudio into your own apps and workflows</p>
+                    <h3 className="font-bold text-gray-900">API integrations later</h3>
+                    <p className="text-sm text-gray-500">The API dashboard is still planned, so this launcher now avoids implying an active integration surface.</p>
                   </div>
                 </div>
               </div>

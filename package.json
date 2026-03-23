@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node server.js",
+    "dev": "tsx server.ts",
     "build": "vite build",
-    "start": "node server.js",
+    "start": "tsx server.ts",
     "preview": "vite preview",
     "docs:dev": "npx mint dev",
     "docs:check": "npx mint openapi-check",

@@ -3,6 +3,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import dotenv from "dotenv";
 import fs from "fs";
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
@@ -84,6 +85,149 @@ function buildPopupHtml(
 </html>`;
 }
 
+function getServerGeminiApiKey() {
+  return process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || "";
+}
+
+function extractJson(text: string) {
+  const fenced = text.match(/```json\s*([\s\S]*?)```/i);
+  return fenced ? fenced[1] : text;
+}
+
+function decodeHtmlEntities(text: string) {
+  return text
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+}
+
+function cleanText(text: string) {
+  return decodeHtmlEntities(text)
+    .replace(/\s+/g, " ")
+    .replace(/\u00a0/g, " ")
+    .trim();
+}
+
+function extractReadableTextFromHtml(html: string) {
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const title = titleMatch ? cleanText(titleMatch[1]) : "";
+
+  const body = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
+    .replace(/<img[^>]*>/gi, " ")
+    .replace(/<\/(p|div|section|article|li|h1|h2|h3|h4|h5|h6|br)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ");
+
+  return {
+    title,
+    text: cleanText(body),
+  };
+}
+
+async function analyzeSourceContent(input: {
+  type: "url" | "pasted_text";
+  url?: string;
+  rawText?: string;
+  brandVoice?: string;
+  brandAudience?: string;
+  ctaStyle?: string;
+  bannedPhrases?: string;
+}) {
+  const apiKey = getServerGeminiApiKey();
+  if (!apiKey) {
+    throw new Error("missing_gemini_api_key");
+  }
+
+  let sourceTitle = "";
+  let sourceText = "";
+
+  if (input.type === "url") {
+    if (!input.url) {
+      throw new Error("url_required");
+    }
+    const response = await fetch(input.url, {
+      signal: AbortSignal.timeout(10000),
+      headers: {
+        "User-Agent":
+          "AIContentStudioBot/1.0 (+https://aicontentstudio.local/source-analysis)",
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`source_fetch_failed_${response.status}`);
+    }
+    const html = await response.text();
+    const extracted = extractReadableTextFromHtml(html);
+    sourceTitle = extracted.title || input.url;
+    sourceText = extracted.text.slice(0, 18000);
+  } else {
+    sourceTitle = "Pasted Source";
+    sourceText = cleanText(input.rawText || "").slice(0, 18000);
+  }
+
+  if (!sourceText.trim()) {
+    throw new Error("empty_source_text");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+  const prompt = [
+    "You analyze source material for a social content workspace.",
+    "Return strict JSON with exactly these keys:",
+    "title, summary, keyPoints, hooks, quotes, ctaIdeas, audience, risks, cleanedText",
+    "Rules:",
+    "- title and summary are strings",
+    "- keyPoints, hooks, quotes, ctaIdeas, risks are arrays of short strings",
+    "- audience is a string",
+    "- cleanedText is a concise cleaned version of the source, max 2500 characters",
+    "- hooks should be reusable opening angles, not full finished posts",
+    "- quotes should only include lines actually supported by the source",
+    "- risks should mention ambiguity, weak evidence, or claims needing verification",
+    input.brandVoice ? `Brand voice: ${input.brandVoice}` : "",
+    input.brandAudience ? `Target audience: ${input.brandAudience}` : "",
+    input.ctaStyle ? `CTA style: ${input.ctaStyle}` : "",
+    input.bannedPhrases ? `Avoid these phrases in hooks and CTA ideas: ${input.bannedPhrases}` : "",
+    `Source title: ${sourceTitle}`,
+    `Source type: ${input.type}`,
+    `Source text:\n${sourceText}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+  });
+
+  const parsed = JSON.parse(extractJson(response.text || "{}")) as {
+    title?: string;
+    summary?: string;
+    keyPoints?: string[];
+    hooks?: string[];
+    quotes?: string[];
+    ctaIdeas?: string[];
+    audience?: string;
+    risks?: string[];
+    cleanedText?: string;
+  };
+
+  return {
+    title: cleanText(parsed.title || sourceTitle || "Untitled source"),
+    summary: cleanText(parsed.summary || ""),
+    keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints.map(cleanText).filter(Boolean) : [],
+    hooks: Array.isArray(parsed.hooks) ? parsed.hooks.map(cleanText).filter(Boolean) : [],
+    quotes: Array.isArray(parsed.quotes) ? parsed.quotes.map(cleanText).filter(Boolean) : [],
+    ctaIdeas: Array.isArray(parsed.ctaIdeas) ? parsed.ctaIdeas.map(cleanText).filter(Boolean) : [],
+    audience: cleanText(parsed.audience || ""),
+    risks: Array.isArray(parsed.risks) ? parsed.risks.map(cleanText).filter(Boolean) : [],
+    cleanedText: cleanText(parsed.cleanedText || sourceText).slice(0, 2500),
+  };
+}
+
 async function startServer() {
   const app = express();
   const PORT = Number.parseInt(process.env.PORT || "3000", 10);
@@ -91,11 +235,58 @@ async function startServer() {
   // Respect proxy headers in hosted environments so req.protocol resolves to https.
   app.set("trust proxy", true);
 
-  app.use(express.json());
+  app.use(express.json({ limit: "2mb" }));
 
   // API routes FIRST
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.post("/api/sources/analyze", async (req, res) => {
+    const {
+      type,
+      url,
+      rawText,
+      brandVoice,
+      brandAudience,
+      ctaStyle,
+      bannedPhrases,
+    } = req.body || {};
+
+    if (type !== "url" && type !== "pasted_text") {
+      return res.status(400).json({ error: "type must be 'url' or 'pasted_text'" });
+    }
+
+    if (type === "url" && typeof url !== "string") {
+      return res.status(400).json({ error: "url is required for url sources" });
+    }
+
+    if (type === "pasted_text" && typeof rawText !== "string") {
+      return res.status(400).json({ error: "rawText is required for pasted_text sources" });
+    }
+
+    try {
+      const analysis = await analyzeSourceContent({
+        type,
+        url,
+        rawText,
+        brandVoice,
+        brandAudience,
+        ctaStyle,
+        bannedPhrases,
+      });
+      return res.json(analysis);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("Source analysis error:", message);
+      const status =
+        message === "missing_gemini_api_key"
+          ? 503
+          : message.startsWith("source_fetch_failed_")
+            ? 502
+            : 500;
+      return res.status(status).json({ error: message });
+    }
   });
 
   // ── Twitter OAuth ────────────────────────────────────────────────────────────

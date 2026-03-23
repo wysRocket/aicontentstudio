@@ -1,33 +1,100 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Copy, Trash2, Plus, X, ChevronDown, ChevronsUpDown, ChevronUp, BookOpen } from 'lucide-react';
-import promptsData from '../prompts_data.json';
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Search,
+  Copy,
+  Trash2,
+  Plus,
+  X,
+  ChevronDown,
+  ChevronsUpDown,
+  ChevronUp,
+  BookOpen,
+  Loader2,
+} from "lucide-react";
+import { useFirebase } from "../contexts/FirebaseContext";
+import {
+  deletePrompt,
+  ensureWorkspaceSeedData,
+  restoreDefaultPromptLibrary,
+  savePrompt,
+  subscribeToPrompts,
+  type PromptRecord,
+  type PromptType,
+} from "../lib/firestore";
 
-interface Prompt {
-  id: string;
-  title: string;
-  description: string;
-  content: string;
-  type: string;
-}
+type SortField = "title" | "description" | "content" | "type";
+type SortDirection = "asc" | "desc";
+type EditablePrompt = Omit<PromptRecord, "createdAt" | "updatedAt">;
 
-type SortField = 'title' | 'description' | 'content' | 'type';
-type SortDirection = 'asc' | 'desc';
-
-const INITIAL_PROMPTS: Prompt[] = promptsData as Prompt[];
+const emptyPrompt: EditablePrompt = {
+  id: "",
+  title: "",
+  description: "",
+  content: "",
+  type: "TEXT",
+};
 
 export default function Prompts() {
-  const [prompts, setPrompts] = useState<Prompt[]>(INITIAL_PROMPTS);
-  const [searchQuery, setSearchQuery] = useState('');
+  const { user, isAuthReady } = useFirebase();
+  const [prompts, setPrompts] = useState<PromptRecord[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
-  const [sortField, setSortField] = useState<SortField>('title');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [editingPrompt, setEditingPrompt] = useState<EditablePrompt | null>(null);
+  const [sortField, setSortField] = useState<SortField>("title");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAuthReady || !user) {
+      if (isAuthReady) {
+        setPrompts([]);
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    let isMounted = true;
+    let cleanup = () => {};
+    setIsLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    ensureWorkspaceSeedData(user.uid)
+      .then(() => {
+        if (!isMounted) return;
+        cleanup = subscribeToPrompts(user.uid, (records) => {
+          if (!isMounted) return;
+          setPrompts(records);
+          setIsLoading(false);
+        });
+      })
+      .catch((err) => {
+        console.error("Failed to load prompts", err);
+        if (isMounted) {
+          setError("We couldn't load your prompt library right now.");
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+      cleanup();
+    };
+  }, [isAuthReady, user]);
 
   const filteredPrompts = useMemo(() => {
-    return prompts.filter(p =>
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.content.toLowerCase().includes(searchQuery.toLowerCase())
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return prompts;
+
+    return prompts.filter((prompt) =>
+      [prompt.title, prompt.description, prompt.content, prompt.type]
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
     );
   }, [prompts, searchQuery]);
 
@@ -35,79 +102,157 @@ export default function Prompts() {
     return [...filteredPrompts].sort((a, b) => {
       const aValue = a[sortField].toLowerCase();
       const bValue = b[sortField].toLowerCase();
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
       return 0;
     });
-  }, [filteredPrompts, sortField, sortDirection]);
+  }, [filteredPrompts, sortDirection, sortField]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
     }
+    setSortField(field);
+    setSortDirection("asc");
   };
 
-  const handleEdit = (prompt: Prompt) => {
-    setEditingPrompt({ ...prompt });
+  const handleEdit = (prompt: PromptRecord) => {
+    setEditingPrompt({
+      id: prompt.id,
+      title: prompt.title,
+      description: prompt.description,
+      content: prompt.content,
+      type: prompt.type,
+    });
     setIsModalOpen(true);
+    setError(null);
+    setSuccessMessage(null);
   };
 
   const handleNew = () => {
-    setEditingPrompt({
-      id: Date.now().toString(),
-      title: '',
-      description: '',
-      content: '',
-      type: 'TEXT'
-    });
+    setEditingPrompt({ ...emptyPrompt });
     setIsModalOpen(true);
+    setError(null);
+    setSuccessMessage(null);
   };
 
-  const handleSave = () => {
-    if (editingPrompt) {
-      const exists = prompts.find(p => p.id === editingPrompt.id);
-      if (exists) {
-        setPrompts(prompts.map(p => p.id === editingPrompt.id ? editingPrompt : p));
-      } else {
-        setPrompts([editingPrompt, ...prompts]);
-      }
-    }
+  const closeModal = () => {
+    if (isSaving) return;
     setIsModalOpen(false);
     setEditingPrompt(null);
   };
 
-  const handleDelete = (id: string) => {
-    setPrompts(prompts.filter(p => p.id !== id));
+  const handleSave = async () => {
+    if (!user || !editingPrompt) return;
+
+    if (!editingPrompt.title.trim() || !editingPrompt.content.trim()) {
+      setError("Title and prompt content are required.");
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await savePrompt(user.uid, {
+        id: editingPrompt.id || undefined,
+        title: editingPrompt.title,
+        description: editingPrompt.description,
+        content: editingPrompt.content,
+        type: editingPrompt.type as PromptType,
+      });
+      setSuccessMessage(
+        editingPrompt.id ? "Prompt updated." : "Prompt saved to your library.",
+      );
+      closeModal();
+    } catch (err) {
+      console.error("Failed to save prompt", err);
+      setError("We couldn't save this prompt. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDuplicate = (prompt: Prompt) => {
-    const newPrompt = { ...prompt, id: Date.now().toString(), title: `${prompt.title} (Copy)` };
-    setPrompts([newPrompt, ...prompts]);
+  const handleDelete = async (id: string) => {
+    if (!user) return;
+    try {
+      await deletePrompt(user.uid, id);
+      setSuccessMessage("Prompt deleted.");
+    } catch (err) {
+      console.error("Failed to delete prompt", err);
+      setError("We couldn't delete that prompt.");
+    }
   };
 
-  const handleCopyContent = (content: string, e: React.MouseEvent) => {
+  const handleDuplicate = async (prompt: PromptRecord) => {
+    if (!user) return;
+    try {
+      await savePrompt(user.uid, {
+        title: `${prompt.title} (Copy)`,
+        description: prompt.description,
+        content: prompt.content,
+        type: prompt.type,
+      });
+      setSuccessMessage("Prompt duplicated.");
+    } catch (err) {
+      console.error("Failed to duplicate prompt", err);
+      setError("We couldn't duplicate that prompt.");
+    }
+  };
+
+  const handleCopyContent = async (
+    content: string,
+    e: React.MouseEvent<HTMLButtonElement>,
+  ) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(content);
+    await navigator.clipboard.writeText(content);
+    setSuccessMessage("Prompt copied.");
+  };
+
+  const handleRestoreLibrary = async () => {
+    if (!user) return;
+    setIsRestoring(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const restoredCount = await restoreDefaultPromptLibrary(user.uid);
+      setSuccessMessage(
+        restoredCount > 0
+          ? `Restored ${restoredCount} default prompts.`
+          : "Your default prompt library is already fully restored.",
+      );
+    } catch (err) {
+      console.error("Failed to restore default library", err);
+      setError("We couldn't restore the default prompt library.");
+    } finally {
+      setIsRestoring(false);
+    }
   };
 
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ChevronsUpDown className="w-4 h-4 text-gray-400" />;
-    return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4 text-violet-600" /> : <ChevronDown className="w-4 h-4 text-violet-600" />;
+    if (sortField !== field) {
+      return <ChevronsUpDown className="w-4 h-4 text-gray-400" />;
+    }
+    return sortDirection === "asc" ? (
+      <ChevronUp className="w-4 h-4 text-violet-600" />
+    ) : (
+      <ChevronDown className="w-4 h-4 text-violet-600" />
+    );
   };
 
   return (
     <div className="p-6 max-w-7xl mx-auto h-[calc(100vh-80px)] overflow-y-auto">
-      {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
             <BookOpen className="w-5 h-5 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">My Prompts</h1>
-          <span className="text-sm text-gray-400 font-medium">{prompts.length} prompts</span>
+          <span className="text-sm text-gray-400 font-medium">
+            {prompts.length} prompts
+          </span>
         </div>
         <button
           onClick={handleNew}
@@ -118,23 +263,37 @@ export default function Prompts() {
         </button>
       </div>
 
-      <a href="#" className="text-violet-600 hover:underline text-sm mb-6 inline-block">
-        How do I customize prompts for my voice?
-      </a>
+      <div className="mb-6 flex flex-wrap items-center gap-4">
+        <a href="#" className="text-violet-600 hover:underline text-sm inline-block">
+          How do I customize prompts for my voice?
+        </a>
+        <button
+          onClick={handleRestoreLibrary}
+          disabled={isRestoring}
+          className="inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-70"
+        >
+          {isRestoring ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+          Restore Default Library
+        </button>
+      </div>
 
-      {/* Search */}
-      <div className="relative mb-6">
+      {successMessage && (
+        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {successMessage}
+        </div>
+      )}
+      <div className="relative mb-4">
         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           type="text"
-          placeholder="Search prompts by title, description, or content…"
+          placeholder="Search prompts by title, description, or content..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+          className="w-full pl-9 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
         />
         {searchQuery && (
           <button
-            onClick={() => setSearchQuery('')}
+            onClick={() => setSearchQuery("")}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
           >
             <X className="w-4 h-4" />
@@ -142,7 +301,12 @@ export default function Prompts() {
         )}
       </div>
 
-      {/* Table */}
+      {error && (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
@@ -150,7 +314,7 @@ export default function Prompts() {
               <th className="px-4 py-3 font-semibold text-gray-700 w-[22%]">
                 <div
                   className="flex items-center gap-2 cursor-pointer hover:text-violet-600 transition-colors select-none"
-                  onClick={() => handleSort('title')}
+                  onClick={() => handleSort("title")}
                 >
                   Title <SortIcon field="title" />
                 </div>
@@ -158,7 +322,7 @@ export default function Prompts() {
               <th className="px-4 py-3 font-semibold text-gray-700 w-[18%]">
                 <div
                   className="flex items-center gap-2 cursor-pointer hover:text-violet-600 transition-colors select-none"
-                  onClick={() => handleSort('description')}
+                  onClick={() => handleSort("description")}
                 >
                   Source <SortIcon field="description" />
                 </div>
@@ -166,22 +330,38 @@ export default function Prompts() {
               <th className="px-4 py-3 font-semibold text-gray-700 w-[44%]">
                 <div
                   className="flex items-center gap-2 cursor-pointer hover:text-violet-600 transition-colors select-none"
-                  onClick={() => handleSort('content')}
+                  onClick={() => handleSort("content")}
                 >
                   Content Preview <SortIcon field="content" />
                 </div>
               </th>
-              <th className="px-4 py-3 font-semibold text-gray-700 w-[8%]">Type</th>
-              <th className="px-4 py-3 w-[8%]"></th>
+              <th className="px-4 py-3 font-semibold text-gray-700 w-[8%]">
+                <div
+                  className="flex items-center gap-2 cursor-pointer hover:text-violet-600 transition-colors select-none"
+                  onClick={() => handleSort("type")}
+                >
+                  Type <SortIcon field="type" />
+                </div>
+              </th>
+              <th className="px-4 py-3 w-[8%]" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {sortedPrompts.length === 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
+                  <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-violet-500" />
+                  Loading your prompt library...
+                </td>
+              </tr>
+            ) : sortedPrompts.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center text-gray-400">
                   <Search className="w-8 h-8 mx-auto mb-2 opacity-40" />
                   <p className="font-medium">No prompts found</p>
-                  <p className="text-sm mt-1">Try a different search term</p>
+                  <p className="text-sm mt-1">
+                    Try a different search term or add a new prompt.
+                  </p>
                 </td>
               </tr>
             ) : (
@@ -192,11 +372,17 @@ export default function Prompts() {
                   onClick={() => handleEdit(prompt)}
                 >
                   <td className="px-4 py-3">
-                    <span className="font-medium text-gray-900 line-clamp-2">{prompt.title}</span>
+                    <span className="font-medium text-gray-900 line-clamp-2">
+                      {prompt.title}
+                    </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{prompt.description}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">
-                    <span className="line-clamp-2 leading-relaxed">{prompt.content}</span>
+                    {prompt.description}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">
+                    <span className="line-clamp-2 leading-relaxed">
+                      {prompt.content}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-fuchsia-100 text-fuchsia-700 uppercase tracking-wide">
@@ -216,14 +402,14 @@ export default function Prompts() {
                         <Copy className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleDuplicate(prompt); }}
+                        onClick={() => handleDuplicate(prompt)}
                         title="Duplicate"
                         className="p-1.5 bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-colors"
                       >
                         <Plus className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleDelete(prompt.id); }}
+                        onClick={() => handleDelete(prompt.id)}
                         title="Delete"
                         className="p-1.5 bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-600 rounded-lg transition-colors"
                       >
@@ -238,26 +424,27 @@ export default function Prompts() {
         </table>
       </div>
 
-      {/* Footer count */}
       {searchQuery && (
         <p className="text-sm text-gray-400 mt-3 text-center">
           Showing {sortedPrompts.length} of {prompts.length} prompts
         </p>
       )}
 
-      {/* Edit / New Modal */}
       {isModalOpen && editingPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setIsModalOpen(false)}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={closeModal}
+        >
           <div
             className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">
-                {prompts.find(p => p.id === editingPrompt.id) ? 'Edit Prompt' : 'New Prompt'}
+                {editingPrompt.id ? "Edit Prompt" : "New Prompt"}
               </h2>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
                 className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -266,33 +453,51 @@ export default function Prompts() {
 
             <div className="p-6 overflow-y-auto flex-1 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-800 mb-1.5">Title</label>
+                <label className="block text-sm font-medium text-gray-800 mb-1.5">
+                  Title
+                </label>
                 <input
                   type="text"
                   value={editingPrompt.title}
-                  onChange={(e) => setEditingPrompt({ ...editingPrompt, title: e.target.value })}
-                  placeholder="Enter prompt title…"
+                  onChange={(e) =>
+                    setEditingPrompt({ ...editingPrompt, title: e.target.value })
+                  }
+                  placeholder="Enter prompt title..."
                   className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-800 mb-1.5">Description / Source</label>
+                <label className="block text-sm font-medium text-gray-800 mb-1.5">
+                  Description / Source
+                </label>
                 <input
                   type="text"
                   value={editingPrompt.description}
-                  onChange={(e) => setEditingPrompt({ ...editingPrompt, description: e.target.value })}
-                  placeholder="e.g. Created by AIcontentStudio"
+                  onChange={(e) =>
+                    setEditingPrompt({
+                      ...editingPrompt,
+                      description: e.target.value,
+                    })
+                  }
+                  placeholder="e.g. Product launch library"
                   className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-800 mb-1.5">Type</label>
+                <label className="block text-sm font-medium text-gray-800 mb-1.5">
+                  Type
+                </label>
                 <div className="relative">
                   <select
                     value={editingPrompt.type}
-                    onChange={(e) => setEditingPrompt({ ...editingPrompt, type: e.target.value })}
+                    onChange={(e) =>
+                      setEditingPrompt({
+                        ...editingPrompt,
+                        type: e.target.value as PromptType,
+                      })
+                    }
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
                   >
                     <option value="TEXT">Text</option>
@@ -305,7 +510,9 @@ export default function Prompts() {
 
               <div className="flex flex-col">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-sm font-medium text-gray-800">Prompt Content</label>
+                  <label className="block text-sm font-medium text-gray-800">
+                    Prompt Content
+                  </label>
                   <button
                     onClick={() => navigator.clipboard.writeText(editingPrompt.content)}
                     className="text-xs text-violet-600 hover:text-violet-700 flex items-center gap-1"
@@ -315,25 +522,38 @@ export default function Prompts() {
                 </div>
                 <textarea
                   value={editingPrompt.content}
-                  onChange={(e) => setEditingPrompt({ ...editingPrompt, content: e.target.value })}
-                  placeholder="Enter your prompt here…"
+                  onChange={(e) =>
+                    setEditingPrompt({
+                      ...editingPrompt,
+                      content: e.target.value,
+                    })
+                  }
+                  placeholder="Enter your prompt here..."
                   className="w-full min-h-[320px] px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-y font-mono leading-relaxed bg-gray-50"
                 />
               </div>
             </div>
 
-            <div className="p-4 border-t border-gray-100 flex justify-end gap-3">
+            <div className="p-5 border-t border-gray-100 flex items-center justify-end gap-3">
               <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors"
+                onClick={closeModal}
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
-                className="px-4 py-2 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors shadow-sm"
+                disabled={isSaving}
+                className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors disabled:opacity-70"
               >
-                Save Prompt
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Prompt"
+                )}
               </button>
             </div>
           </div>

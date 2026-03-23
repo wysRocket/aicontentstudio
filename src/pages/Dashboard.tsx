@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Coins, Loader2, Sparkles, Plus, ArrowLeft, ChevronUp, ChevronDown, PlusCircle } from 'lucide-react';
+import { Coins, Loader2, Sparkles, Plus, ArrowLeft, ChevronUp, ChevronDown, PlusCircle, FileText, Lightbulb, MessageSquare, CheckCircle2, AlertTriangle, CalendarDays } from 'lucide-react';
 import PurchaseCreditsModal from '../components/PurchaseCreditsModal';
-import { getUserCredits, deductCredits } from '../lib/firestore';
+import { getUserCredits, deductCredits, ensureWorkspaceSeedData, getWorkspaceStats, type WorkspaceStats } from '../lib/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
 
 const Toggle = ({ checked, onChange, id }: { checked?: boolean, onChange?: () => void, id?: string }) => (
@@ -44,9 +44,10 @@ const SelectInput = ({ label, placeholder, disabled, options = [] }: { label: st
 export default function Dashboard() {
   const { user, isAuthReady } = useFirebase();
   const [credits, setCredits] = useState<number | null>(null);
+  const [workspaceStats, setWorkspaceStats] = useState<WorkspaceStats | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
-  const purchaseDisabledMessage = 'Credit purchases are handled server-side. Please contact support to top up your balance.';
+  const purchaseDisabledMessage = 'Self-serve checkout is still being hardened server-side. Email support to top up your balance manually for now.';
 
   // Form State
   const [prompt, setPrompt] = useState('');
@@ -64,6 +65,27 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isAuthReady || !user) return;
     getUserCredits(user.uid).then(setCredits).catch(() => setCredits(0));
+  }, [isAuthReady, user]);
+
+  useEffect(() => {
+    if (!isAuthReady || !user) return;
+
+    ensureWorkspaceSeedData(user.uid)
+      .then(() => getWorkspaceStats(user.uid))
+      .then(setWorkspaceStats)
+      .catch((err) => {
+        console.error('Failed to load workspace stats:', err);
+        setWorkspaceStats({
+          promptCount: 0,
+          inspirationCount: 0,
+          draftCount: 0,
+          readyCount: 0,
+          approvedCount: 0,
+          scheduledCount: 0,
+          publishedCount: 0,
+          failedCount: 0,
+        });
+      });
   }, [isAuthReady, user]);
 
   useEffect(() => {
@@ -125,7 +147,7 @@ export default function Dashboard() {
               className="flex items-center gap-1.5 bg-pink-50 text-[#D81B60] hover:bg-pink-100 border border-pink-200 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm"
             >
               <Plus className="w-4 h-4" />
-              Credits info
+              Top up credits
             </button>
             <Link to="/dashboard/settings?tab=profile" className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#D81B60] to-purple-500 flex items-center justify-center text-white font-bold ml-2 shadow-sm hover:opacity-90 transition-opacity">
               U
@@ -159,6 +181,135 @@ export default function Dashboard() {
           </div>
           <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 blur-3xl rounded-full pointer-events-none" />
           <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-black/10 blur-2xl rounded-full pointer-events-none" />
+        </div>
+
+        <div className="px-6 lg:px-8 pt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 shrink-0">
+          {[
+            {
+              label: 'Prompt Library',
+              value: workspaceStats?.promptCount,
+              icon: MessageSquare,
+              href: '/dashboard/prompts',
+              tone: 'bg-violet-50 text-violet-700 border-violet-100',
+            },
+            {
+              label: 'Inspiration Saved',
+              value: workspaceStats?.inspirationCount,
+              icon: Lightbulb,
+              href: '/dashboard/inspiration',
+              tone: 'bg-amber-50 text-amber-700 border-amber-100',
+            },
+            {
+              label: 'Draft Posts',
+              value: workspaceStats?.draftCount,
+              icon: FileText,
+              href: '/dashboard/create',
+              tone: 'bg-blue-50 text-blue-700 border-blue-100',
+            },
+            {
+              label: 'Ready For Review',
+              value: workspaceStats?.readyCount,
+              icon: Sparkles,
+              href: '/dashboard/create',
+              tone: 'bg-violet-50 text-violet-700 border-violet-100',
+            },
+            {
+              label: 'Approved Queue',
+              value: workspaceStats?.approvedCount,
+              icon: CheckCircle2,
+              href: '/dashboard/calendar',
+              tone: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+            },
+            {
+              label: 'Scheduled',
+              value: workspaceStats?.scheduledCount,
+              icon: CalendarDays,
+              href: '/dashboard/calendar',
+              tone: 'bg-sky-50 text-sky-700 border-sky-100',
+            },
+            {
+              label: 'Published',
+              value: workspaceStats?.publishedCount,
+              icon: CheckCircle2,
+              href: '/dashboard/published',
+              tone: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+            },
+            {
+              label: 'Failed',
+              value: workspaceStats?.failedCount,
+              icon: AlertTriangle,
+              href: '/dashboard/failed',
+              tone: 'bg-rose-50 text-rose-700 border-rose-100',
+            },
+          ].map((item) => (
+            <Link
+              key={item.label}
+              to={item.href}
+              className={`rounded-2xl border p-4 transition-transform hover:-translate-y-0.5 ${item.tone}`}
+            >
+              <div className="flex items-center justify-between">
+                <item.icon className="w-5 h-5" />
+                <span className="text-2xl font-bold">
+                  {workspaceStats ? item.value : '...'}
+                </span>
+              </div>
+              <p className="text-sm font-semibold mt-4">{item.label}</p>
+              <p className="text-xs mt-1 opacity-80">Open workspace</p>
+            </Link>
+          ))}
+        </div>
+
+        <div className="px-6 lg:px-8 pt-6 grid grid-cols-1 lg:grid-cols-3 gap-4 shrink-0">
+          <div className="rounded-2xl border border-violet-100 bg-violet-50 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-700">Review Queue</p>
+            <p className="mt-3 text-3xl font-bold text-violet-950">
+              {workspaceStats ? workspaceStats.readyCount + workspaceStats.approvedCount : '...'}
+            </p>
+            <p className="mt-2 text-sm text-violet-900">
+              {workspaceStats?.readyCount || 0} ready drafts and {workspaceStats?.approvedCount || 0} approved drafts are waiting in the copy pipeline.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <Link to="/dashboard/create" className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-violet-700 shadow-sm hover:bg-violet-100">
+                Review drafts
+              </Link>
+              <Link to="/dashboard/calendar" className="rounded-lg border border-violet-200 px-3 py-2 text-sm font-semibold text-violet-700 hover:bg-white">
+                Open calendar
+              </Link>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">Scheduling Signal</p>
+            <p className="mt-3 text-3xl font-bold text-sky-950">
+              {workspaceStats?.scheduledCount ?? '...'}
+            </p>
+            <p className="mt-2 text-sm text-sky-900">
+              Approved posts only move into the scheduled queue, so this number now reflects truly schedule-ready work.
+            </p>
+            <div className="mt-4">
+              <Link to="/dashboard/calendar" className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-sky-700 shadow-sm hover:bg-sky-100">
+                Manage schedule
+              </Link>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">Source Engine</p>
+            <p className="mt-3 text-3xl font-bold text-amber-950">
+              {workspaceStats?.inspirationCount ?? '...'}
+            </p>
+            <p className="mt-2 text-sm text-amber-900">
+              Keep feeding the top of the funnel: sources become hooks, hooks become drafts, and strong drafts move through approval.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <Link to="/dashboard/sources" className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-amber-700 shadow-sm hover:bg-amber-100">
+                Open sources
+              </Link>
+              <Link to="/dashboard/inspiration" className="rounded-lg border border-amber-200 px-3 py-2 text-sm font-semibold text-amber-700 hover:bg-white">
+                Inspiration
+              </Link>
+            </div>
+          </div>
         </div>
 
         {/* Header Title Area */}
@@ -433,6 +584,7 @@ export default function Dashboard() {
         onPurchase={handlePurchase}
         purchasesDisabled
         disabledReason={purchaseDisabledMessage}
+        currentCredits={credits}
       />
     </div>
   );

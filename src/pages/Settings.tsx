@@ -3,6 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import { cn } from "../lib/utils";
 import { Accounts } from "./settings/Accounts";
 import { Profile } from "./settings/Profile";
+import { Brand } from "./settings/Brand";
+import { Api } from "./settings/Api";
+import { Billing } from "./settings/Billing";
 
 const tabs = [
   { id: "accounts", name: "Accounts" },
@@ -11,14 +14,6 @@ const tabs = [
   { id: "profile", name: "Profile" },
   { id: "billing", name: "Billing" },
 ];
-
-function Placeholder({ title }: { title: string }) {
-  return (
-    <div className="flex items-center justify-center h-64 border-2 border-dashed border-gray-200 rounded-lg">
-      <h2 className="text-xl text-gray-400">{title}</h2>
-    </div>
-  );
-}
 
 export function Settings() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -44,7 +39,7 @@ export function Settings() {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={cn(
                 activeTab === tab.id
                   ? "border-blue-500 text-blue-600"
@@ -61,10 +56,10 @@ export function Settings() {
 
       <div className="mt-6">
         {activeTab === "accounts" && <Accounts />}
-        {activeTab === "brand" && <Placeholder title="My Brand Settings" />}
-        {activeTab === "api" && <Placeholder title="API Settings" />}
+        {activeTab === "brand" && <Brand />}
+        {activeTab === "api" && <Api />}
         {activeTab === "profile" && <Profile />}
-        {activeTab === "billing" && <Placeholder title="Billing Settings" />}
+        {activeTab === "billing" && <Billing />}
       </div>
     </div>
   );

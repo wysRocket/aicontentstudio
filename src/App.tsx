@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Settings } from "./pages/Settings";
 import Landing from "./pages/Landing";
@@ -9,19 +9,16 @@ import CreatePost from "./pages/CreatePost";
 import Inspiration from "./pages/Inspiration";
 import Prompts from "./pages/Prompts";
 import Coach from "./pages/Coach";
+import Sources from "./pages/Sources";
+import Calendar from "./pages/Calendar";
+import Published from "./pages/Published";
+import Failed from "./pages/Failed";
+import ApiDashboard from "./pages/ApiDashboard";
+import Help from "./pages/Help";
 import { FirebaseProvider } from "./contexts/FirebaseContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import Dashboard from "./pages/Dashboard";
-
-// Placeholder component for empty routes
-function Placeholder({ title }: { title: string }) {
-  return (
-    <div className="flex items-center justify-center h-full">
-      <h1 className="text-2xl text-gray-400">{title}</h1>
-    </div>
-  );
-}
 
 export default function App() {
   return (
@@ -41,17 +38,17 @@ export default function App() {
             <Route path="create" element={<CreatePost />} />
             <Route path="inspiration" element={<Inspiration />} />
             <Route path="prompts" element={<Prompts />} />
-            <Route path="sources" element={<Placeholder title="Sources" />} />
-            <Route path="calendar" element={<Placeholder title="Calendar" />} />
-            <Route path="published" element={<Placeholder title="Published Posts" />} />
-            <Route path="failed" element={<Placeholder title="Failed Posts" />} />
+            <Route path="sources" element={<Sources />} />
+            <Route path="calendar" element={<Calendar />} />
+            <Route path="published" element={<Published />} />
+            <Route path="failed" element={<Failed />} />
             <Route path="videos" element={<Videos />} />
             <Route path="video-generation" element={<VideoGeneration />} />
-            <Route path="api-dashboard" element={<Placeholder title="API Dashboard" />} />
+            <Route path="api-dashboard" element={<ApiDashboard />} />
             <Route path="coach" element={<Coach />} />
-            <Route path="help" element={<Placeholder title="Help" />} />
-
+            <Route path="help" element={<Help />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>
       </BrowserRouter>

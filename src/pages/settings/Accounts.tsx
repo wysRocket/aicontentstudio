@@ -232,6 +232,9 @@ export function Accounts() {
         </div>
 
         <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+            Available today
+          </p>
           <SocialButton
             icon={Twitter}
             label="Login with Twitter"
@@ -244,6 +247,18 @@ export function Accounts() {
             colorClass="bg-[#0A66C2]"
             onClick={() => handleConnect("linkedin")}
           />
+          <SocialButton
+            icon={Youtube}
+            label="Login with YouTube"
+            colorClass="bg-[#FF0000]"
+            onClick={() => handleConnect("youtube")}
+          />
+        </div>
+
+        <div className="space-y-3 mt-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+            Coming soon
+          </p>
           <SocialButton
             icon={Facebook}
             label="Login with Facebook"
@@ -279,12 +294,6 @@ export function Accounts() {
             label="Login with Bluesky"
             colorClass="bg-[#0085FF]"
             disabled
-          />
-          <SocialButton
-            icon={Youtube}
-            label="Login with YouTube"
-            colorClass="bg-[#FF0000]"
-            onClick={() => handleConnect("youtube")}
           />
         </div>
       </section>
