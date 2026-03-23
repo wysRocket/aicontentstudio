@@ -13,6 +13,7 @@ service cloud.firestore {
     //   - displayName: string (optional) - The user's display name
     //   - photoURL: string (optional) - The user's photo URL
     //   - role: string (required) - The user's role ('admin' or 'user')
+    //   - credits: int (optional) - Current credit balance
     //   - createdAt: timestamp (required, immutable) - Creation time
     //
     // ===============================================================
@@ -31,8 +32,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          (request.auth.token.email == "volodymyr.kvirenko@gmail.com" && request.auth.token.email_verified == true));
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     function uidUnchanged() {
@@ -65,17 +65,30 @@ service cloud.firestore {
               request.resource.data[field].size() <= maxLen);
     }
 
+    function creditsNotIncreasing() {
+      return (
+               (('credits' in resource.data) &&
+                ('credits' in request.resource.data) &&
+                request.resource.data.credits <= resource.data.credits)
+               ||
+               (!('credits' in resource.data) &&
+                (!('credits' in request.resource.data) ||
+                 request.resource.data.credits <= 0))
+             );
+    }
+
     // ===============================================================
     // Domain Validators
     // ===============================================================
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt']) &&
+      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'role', 'credits', 'createdAt']) &&
              data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
              data.email is string && isValidEmail(data.email) &&
              isValidOptionalString('displayName', 0, 100) &&
              isValidOptionalString('photoURL', 0, 2048) &&
              data.role in ['admin', 'user'] &&
+             (!('credits' in data) || (data.credits is int && data.credits >= 0)) &&
              data.createdAt is timestamp;
     }
 
@@ -111,7 +124,8 @@ service cloud.firestore {
                     isValidUser(request.resource.data) && 
                     uidNotModified() &&
                     request.resource.data.createdAt == resource.data.createdAt &&
-                    ((request.resource.data.role == resource.data.role) || isAdmin());
+                    ((request.resource.data.role == resource.data.role) || isAdmin()) &&
+                    (creditsNotIncreasing() || isAdmin());
                     
       allow delete: if isAdmin();
 

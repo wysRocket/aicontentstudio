@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Coins, Loader2, Sparkles, Plus, ArrowLeft, ChevronUp, ChevronDown, PlusCircle } from 'lucide-react';
 import PurchaseCreditsModal from '../components/PurchaseCreditsModal';
+import { getUserCredits, deductCredits } from '../lib/firestore';
+import { useFirebase } from '../contexts/FirebaseContext';
 
 const Toggle = ({ checked, onChange, id }: { checked?: boolean, onChange?: () => void, id?: string }) => (
   <button 
@@ -40,9 +42,11 @@ const SelectInput = ({ label, placeholder, disabled, options = [] }: { label: st
 };
 
 export default function Dashboard() {
-  const [credits, setCredits] = useState(1000);
+  const { user, isAuthReady } = useFirebase();
+  const [credits, setCredits] = useState<number | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const purchaseDisabledMessage = 'Credit purchases are handled server-side. Please contact support to top up your balance.';
 
   // Form State
   const [prompt, setPrompt] = useState('');
@@ -55,6 +59,13 @@ export default function Dashboard() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
+  // Wait for auth to be ready before loading credits to avoid reading
+  // stale/null uid during Firebase initialization.
+  useEffect(() => {
+    if (!isAuthReady || !user) return;
+    getUserCredits(user.uid).then(setCredits).catch(() => setCredits(0));
+  }, [isAuthReady, user]);
+
   useEffect(() => {
     if (searchParams.get('buy') === 'true') {
       setIsPurchaseModalOpen(true);
@@ -65,16 +76,35 @@ export default function Dashboard() {
 
   const handleProcess = async () => {
     if (!prompt.trim()) return;
-    if (credits < 10) {
+    if (credits === null || credits < 10) {
       setIsPurchaseModalOpen(true);
       return;
     }
+    if (!user) return;
     setIsProcessing(true);
-    // Simulation of processing for UX
-    setTimeout(() => {
+    try {
+      await deductCredits(user.uid, 10);
+      setCredits(prev => (prev ?? 0) - 10);
+    } catch (err) {
+      if (err instanceof Error && err.message === 'insufficient_credits') {
+        try {
+          const freshCredits = await getUserCredits(user.uid);
+          setCredits(freshCredits);
+        } catch (refreshError) {
+          console.error('Failed to refresh credits after insufficient_credits:', refreshError);
+          setCredits(0);
+        }
+        setIsPurchaseModalOpen(true);
+      } else {
+        console.error('Failed to deduct credits:', err);
+      }
+    } finally {
       setIsProcessing(false);
-      setCredits(prev => prev - 10);
-    }, 2000);
+    }
+  };
+
+  const handlePurchase = async (amount: number) => {
+    console.warn(purchaseDisabledMessage);
   };
 
   return (
@@ -84,7 +114,10 @@ export default function Dashboard() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg">
               <Coins className="w-4 h-4 text-[#D81B60]" />
-              <span className="font-medium text-sm text-gray-700">{credits} credits</span>
+              {credits === null
+                ? <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                : <span className="font-medium text-sm text-gray-700">{credits} credits</span>
+              }
             </div>
             <button 
               type="button"
@@ -92,7 +125,7 @@ export default function Dashboard() {
               className="flex items-center gap-1.5 bg-pink-50 text-[#D81B60] hover:bg-pink-100 border border-pink-200 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm"
             >
               <Plus className="w-4 h-4" />
-              Buy credits
+              Credits info
             </button>
             <Link to="/dashboard/settings?tab=profile" className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#D81B60] to-purple-500 flex items-center justify-center text-white font-bold ml-2 shadow-sm hover:opacity-90 transition-opacity">
               U
@@ -394,10 +427,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <PurchaseCreditsModal 
-        isOpen={isPurchaseModalOpen} 
-        onClose={() => setIsPurchaseModalOpen(false)} 
-        onPurchase={(amount) => setCredits(prev => prev + amount)} 
+      <PurchaseCreditsModal
+        isOpen={isPurchaseModalOpen}
+        onClose={() => setIsPurchaseModalOpen(false)}
+        onPurchase={handlePurchase}
+        purchasesDisabled
+        disabledReason={purchaseDisabledMessage}
       />
     </div>
   );

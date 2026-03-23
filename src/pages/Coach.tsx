@@ -56,23 +56,34 @@ export default function Coach() {
 
   const analyzeVideo = async () => {
     if (!file) return;
-    
+
+    // Resolve API key: Vite env var (dev) → AI Studio runtime key (production).
+    const apiKey =
+      (import.meta.env.VITE_GEMINI_API_KEY as string | undefined) ||
+      (typeof process !== "undefined" ? process.env.GEMINI_API_KEY : undefined);
+
+    if (!apiKey) {
+      setError(
+        "No Gemini API key found. Set VITE_GEMINI_API_KEY in your .env file or select a key via AI Studio.",
+      );
+      return;
+    }
+
     setIsAnalyzing(true);
     setError(null);
-    
+
     try {
       // Read file as base64
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      
+
       reader.onload = async () => {
         try {
           const base64Data = reader.result as string;
           // Remove the data URL prefix (e.g., "data:video/mp4;base64,")
           const base64String = base64Data.split(",")[1];
-          
-          // @ts-ignore
-          const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY });
+
+          const ai = new GoogleGenAI({ apiKey });
           
           const videoPart = {
             inlineData: {
