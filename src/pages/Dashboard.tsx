@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Coins, Loader2, Sparkles, Plus, ArrowLeft, ChevronUp, ChevronDown, PlusCircle } from 'lucide-react';
 import PurchaseCreditsModal from '../components/PurchaseCreditsModal';
-import { getUserCredits, deductCredits, addCredits } from '../lib/firestore';
+import { getUserCredits, deductCredits } from '../lib/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
 
 const Toggle = ({ checked, onChange, id }: { checked?: boolean, onChange?: () => void, id?: string }) => (
@@ -46,6 +46,7 @@ export default function Dashboard() {
   const [credits, setCredits] = useState<number | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const purchaseDisabledMessage = 'Credit purchases are handled server-side. Please contact support to top up your balance.';
 
   // Form State
   const [prompt, setPrompt] = useState('');
@@ -89,7 +90,8 @@ export default function Dashboard() {
         try {
           const freshCredits = await getUserCredits(user.uid);
           setCredits(freshCredits);
-        } catch {
+        } catch (refreshError) {
+          console.error('Failed to refresh credits after insufficient_credits:', refreshError);
           setCredits(0);
         }
         setIsPurchaseModalOpen(true);
@@ -102,13 +104,7 @@ export default function Dashboard() {
   };
 
   const handlePurchase = async (amount: number) => {
-    if (!user) return;
-    try {
-      await addCredits(user.uid, amount);
-      setCredits(prev => (prev ?? 0) + amount);
-    } catch (err) {
-      console.error('Failed to add credits:', err);
-    }
+    console.warn(purchaseDisabledMessage);
   };
 
   return (
@@ -129,7 +125,7 @@ export default function Dashboard() {
               className="flex items-center gap-1.5 bg-pink-50 text-[#D81B60] hover:bg-pink-100 border border-pink-200 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm"
             >
               <Plus className="w-4 h-4" />
-              Buy credits
+              Credits info
             </button>
             <Link to="/dashboard/settings?tab=profile" className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#D81B60] to-purple-500 flex items-center justify-center text-white font-bold ml-2 shadow-sm hover:opacity-90 transition-opacity">
               U
@@ -435,6 +431,8 @@ export default function Dashboard() {
         isOpen={isPurchaseModalOpen}
         onClose={() => setIsPurchaseModalOpen(false)}
         onPurchase={handlePurchase}
+        purchasesDisabled
+        disabledReason={purchaseDisabledMessage}
       />
     </div>
   );

@@ -66,9 +66,15 @@ service cloud.firestore {
     }
 
     function creditsNotIncreasing() {
-      return !('credits' in request.resource.data) ||
-             !('credits' in resource.data) ||
-             request.resource.data.credits <= resource.data.credits;
+      return (
+               (('credits' in resource.data) &&
+                ('credits' in request.resource.data) &&
+                request.resource.data.credits <= resource.data.credits)
+               ||
+               (!('credits' in resource.data) &&
+                (!('credits' in request.resource.data) ||
+                 request.resource.data.credits <= 0))
+             );
     }
 
     // ===============================================================

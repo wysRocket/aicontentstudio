@@ -5,9 +5,11 @@ interface PurchaseCreditsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPurchase: (amount: number) => void;
+  purchasesDisabled?: boolean;
+  disabledReason?: string;
 }
 
-export default function PurchaseCreditsModal({ isOpen, onClose, onPurchase }: PurchaseCreditsModalProps) {
+export default function PurchaseCreditsModal({ isOpen, onClose, onPurchase, purchasesDisabled = false, disabledReason }: PurchaseCreditsModalProps) {
   if (!isOpen) return null;
 
   const packages = [
@@ -31,8 +33,18 @@ export default function PurchaseCreditsModal({ isOpen, onClose, onPurchase }: Pu
             <Sparkles className="w-6 h-6 text-primary" />
           </div>
           <h2 className="text-2xl font-bold mb-2">Get More Credits</h2>
-          <p className="text-text-muted">Choose a package to continue generating high-quality content.</p>
+          <p className="text-text-muted">
+            {purchasesDisabled
+              ? 'Purchases are processed by our team. Please reach out to support to increase your balance.'
+              : 'Choose a package to continue generating high-quality content.'}
+          </p>
         </div>
+
+        {purchasesDisabled && (
+          <div className="mb-6 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm text-left">
+            {disabledReason || 'Credit purchases are handled server-side. Please contact support to increase your balance.'}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {packages.map((pkg, idx) => (
@@ -58,16 +70,20 @@ export default function PurchaseCreditsModal({ isOpen, onClose, onPurchase }: Pu
               </div>
               <button
                 onClick={() => {
+                  if (purchasesDisabled) return;
                   onPurchase(pkg.credits);
                   onClose();
                 }}
+                disabled={purchasesDisabled}
                 className={`w-full py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
-                  pkg.popular
-                    ? 'bg-primary text-white hover:bg-primary-hover shadow-md shadow-primary/20'
-                    : 'bg-bg-card border border-border-main text-white hover:bg-bg-card-hover'
+                  purchasesDisabled
+                    ? 'bg-bg-card border border-border-main text-text-muted cursor-not-allowed opacity-70'
+                    : pkg.popular
+                      ? 'bg-primary text-white hover:bg-primary-hover shadow-md shadow-primary/20'
+                      : 'bg-bg-card border border-border-main text-white hover:bg-bg-card-hover'
                 }`}
               >
-                Buy Now
+                {purchasesDisabled ? 'Unavailable in app' : 'Buy Now'}
               </button>
             </div>
           ))}

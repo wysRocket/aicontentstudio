@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, runTransaction, increment, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 
 export enum OperationType {
@@ -110,8 +110,29 @@ export async function addCredits(uid: string, amount: number): Promise<void> {
   }
   const userRef = doc(db, 'users', uid);
   try {
-    await setDoc(userRef, { credits: increment(amount) }, { merge: true });
+    const currentUser = auth.currentUser;
+    if (currentUser && currentUser.uid === uid) {
+      await createUserProfileIfNotExists(
+        uid,
+        currentUser.email,
+        currentUser.displayName,
+        currentUser.photoURL
+      );
+    }
+
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(userRef);
+      if (!snap.exists()) {
+        throw new Error('user_not_found');
+      }
+      const data = snap.data();
+      const currentCredits = data && typeof data.credits === 'number' ? data.credits : 0;
+      transaction.update(userRef, { credits: currentCredits + amount });
+    });
   } catch (error) {
+    if (error instanceof Error && error.message === 'user_not_found') {
+      throw error;
+    }
     handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
   }
 }
