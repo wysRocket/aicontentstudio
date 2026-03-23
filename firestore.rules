@@ -65,6 +65,18 @@ service cloud.firestore {
               request.resource.data[field].size() <= maxLen);
     }
 
+    function creditsNotIncreasing() {
+      return (
+               (('credits' in resource.data) &&
+                ('credits' in request.resource.data) &&
+                request.resource.data.credits <= resource.data.credits)
+               ||
+               (!('credits' in resource.data) &&
+                (!('credits' in request.resource.data) ||
+                 request.resource.data.credits <= 0))
+             );
+    }
+
     // ===============================================================
     // Domain Validators
     // ===============================================================
@@ -112,7 +124,8 @@ service cloud.firestore {
                     isValidUser(request.resource.data) && 
                     uidNotModified() &&
                     request.resource.data.createdAt == resource.data.createdAt &&
-                    ((request.resource.data.role == resource.data.role) || isAdmin());
+                    ((request.resource.data.role == resource.data.role) || isAdmin()) &&
+                    (creditsNotIncreasing() || isAdmin());
                     
       allow delete: if isAdmin();
 

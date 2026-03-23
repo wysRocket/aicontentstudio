@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc, runTransaction, increment, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 
 export enum OperationType {
@@ -29,7 +29,7 @@ export interface FirestoreErrorInfo {
   }
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -81,11 +81,13 @@ export async function getUserCredits(uid: string): Promise<number> {
     return typeof credits === 'number' ? credits : 0;
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, `users/${uid}`);
-    return 0;
   }
 }
 
 export async function deductCredits(uid: string, amount: number): Promise<void> {
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error('amount must be a positive integer');
+  }
   const userRef = doc(db, 'users', uid);
   try {
     await runTransaction(db, async (transaction) => {
@@ -103,10 +105,34 @@ export async function deductCredits(uid: string, amount: number): Promise<void> 
 
 // TODO: Move to server-side after Stripe integration to prevent client-side manipulation
 export async function addCredits(uid: string, amount: number): Promise<void> {
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error('amount must be a positive integer');
+  }
   const userRef = doc(db, 'users', uid);
   try {
-    await updateDoc(userRef, { credits: increment(amount) });
+    const currentUser = auth.currentUser;
+    if (currentUser && currentUser.uid === uid) {
+      await createUserProfileIfNotExists(
+        uid,
+        currentUser.email,
+        currentUser.displayName,
+        currentUser.photoURL
+      );
+    }
+
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(userRef);
+      if (!snap.exists()) {
+        throw new Error('user_not_found');
+      }
+      const data = snap.data();
+      const currentCredits = data && typeof data.credits === 'number' ? data.credits : 0;
+      transaction.update(userRef, { credits: currentCredits + amount });
+    });
   } catch (error) {
+    if (error instanceof Error && error.message === 'user_not_found') {
+      throw error;
+    }
     handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
   }
 }
