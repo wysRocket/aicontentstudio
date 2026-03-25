@@ -15,6 +15,7 @@ import Published from "./pages/Published";
 import Failed from "./pages/Failed";
 import ApiDashboard from "./pages/ApiDashboard";
 import Help from "./pages/Help";
+import { ContactPage, PrivacyPage, TermsPage } from "./pages/MarketingPages";
 import { FirebaseProvider } from "./contexts/FirebaseContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -27,6 +28,9 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={
             <ProtectedRoute>

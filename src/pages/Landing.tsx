@@ -35,14 +35,12 @@ export default function Landing() {
     "--landing-features-url": `url(${featuresBackgroundUrl})`,
   } as React.CSSProperties;
 
-  useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
-    }
-  }, [user, navigate]);
-
   const goToAuth = (mode: "signin" | "signup") => {
     navigate(`/auth?mode=${mode}`);
+  };
+
+  const goToDashboard = () => {
+    navigate("/dashboard");
   };
 
   useEffect(() => {
@@ -458,7 +456,6 @@ export default function Landing() {
         markReady(lead);
         items.forEach((item) => {
           markReady(item);
-          item.classList.remove("faq-from-left", "faq-from-right");
           if (item instanceof HTMLElement) item.style.removeProperty("--delay");
         });
         markReady(button);
@@ -472,14 +469,12 @@ export default function Landing() {
       };
 
       const playItemsDown = () => {
-        const step = isDesktop() ? 180 : 140;
+        const step = isDesktop() ? 90 : 110;
         items.forEach((item, index) => {
-          item.classList.remove("faq-from-left", "faq-from-right");
-          item.classList.add(!isDesktop() || index % 2 === 0 ? "faq-from-left" : "faq-from-right");
           setStaggerDelay(item, index * step);
           queue(() => showAnimated(item), index * step);
         });
-        if (button) queue(() => showAnimated(button), items.length * step + 220);
+        if (button) queue(() => showAnimated(button), items.length * step + 80);
       };
 
       const showUpInstant = () => {
@@ -514,7 +509,7 @@ export default function Landing() {
         const itemsAnchor = firstQuestion || items[0] || h2;
         if (topEdgeInView(itemsAnchor, 0.88)) {
           playHeaderDown();
-          queue(playItemsDown, 240);
+          queue(playItemsDown, 80);
           state.played = true;
         }
       };
@@ -551,10 +546,10 @@ export default function Landing() {
   return (
     <div className="min-h-screen flex flex-col">
       <nav className="sticky top-0 z-50 bg-bg-nav/90 backdrop-blur-md border-b border-border-nav">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-2.5 sm:py-3 flex items-center justify-between gap-3">
           <Link
             to="/"
-            className="flex items-center gap-2 text-text-main hover:text-primary transition-colors font-semibold text-lg"
+            className="flex items-center gap-2 text-text-main hover:text-primary transition-colors font-semibold text-base sm:text-lg"
           >
             <svg
               aria-hidden="true"
@@ -605,19 +600,30 @@ export default function Landing() {
               </a>
             </li>
           </ul>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => goToAuth("signin")}
-              className="px-4 py-2 rounded-lg text-primary border border-outline-border hover:bg-outline-hover-bg hover:border-outline-hover-border hover:text-white transition-colors text-sm font-medium"
-            >
-              Sign in
-            </button>
-            <button
-              onClick={() => goToAuth("signup")}
-              className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors text-sm font-medium"
-            >
-              Create account
-            </button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {user ? (
+              <button
+                onClick={goToDashboard}
+                className="px-3 py-2 rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors text-xs sm:text-sm font-medium"
+              >
+                Open dashboard
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => goToAuth("signin")}
+                  className="px-3 py-2 rounded-lg text-primary border border-outline-border hover:bg-outline-hover-bg hover:border-outline-hover-border hover:text-white transition-colors text-xs sm:text-sm font-medium"
+                >
+                  Sign in
+                </button>
+                <button
+                  onClick={() => goToAuth("signup")}
+                  className="px-3 py-2 rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors text-xs sm:text-sm font-medium"
+                >
+                  Create account
+                </button>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -627,46 +633,57 @@ export default function Landing() {
         <section className="hero flex items-center">
           <div className="hero__art" aria-hidden="true"></div>
 
-          <div className="container hero__content max-w-6xl mx-auto px-4">
+          <div className="container hero__content max-w-6xl mx-auto px-4 sm:px-6">
             <div className="grid lg:grid-cols-12 gap-8 items-center">
               <div className="lg:col-span-8">
-                <h1 className="text-5xl md:text-6xl font-semibold mb-6 tracking-tight leading-tight max-w-[18ch]">
+                <h1 className="text-[2.6rem] font-semibold mb-5 tracking-tight leading-[0.94] max-w-[14ch] sm:text-5xl md:text-6xl sm:mb-6">
                   <span className="text-primary">AI Content Studio</span>,
                   powered by credits
                 </h1>
-                <p className="lead text-xl text-text-muted mb-8 max-w-[62ch] leading-relaxed">
+                <p className="lead mb-7 max-w-[62ch] text-base leading-7 text-text-muted sm:mb-8 sm:text-lg md:text-xl md:leading-relaxed">
                   Create, rewrite, summarize, and transcribe content with a
                   clear balance, predictable spend, and a complete order history
                   in your account.
                 </p>
-                <div className="flex flex-wrap gap-3 mb-6">
-                  <button
-                    onClick={() => goToAuth("signup")}
-                    className="px-6 py-3 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors font-medium text-lg"
-                  >
-                    Create account
-                  </button>
-                  <button
-                    onClick={() => goToAuth("signin")}
-                    className="px-6 py-3 rounded-xl text-primary border border-outline-border hover:bg-outline-hover-bg hover:border-outline-hover-border hover:text-white transition-colors font-medium text-lg"
-                  >
-                    Sign in
-                  </button>
+                <div className="mb-6 flex flex-col gap-3 sm:mb-7 sm:flex-row sm:flex-wrap">
+                  {user ? (
+                    <button
+                      onClick={goToDashboard}
+                      className="w-full rounded-xl bg-primary px-5 py-3 text-base font-medium text-white transition-colors hover:bg-primary-hover sm:w-auto sm:px-6"
+                    >
+                      Open dashboard
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => goToAuth("signup")}
+                        className="w-full rounded-xl bg-primary px-5 py-3 text-base font-medium text-white transition-colors hover:bg-primary-hover sm:w-auto sm:px-6"
+                      >
+                        Create account
+                      </button>
+                      <button
+                        onClick={() => goToAuth("signin")}
+                        className="w-full rounded-xl border border-outline-border px-5 py-3 text-base font-medium text-primary transition-colors hover:bg-outline-hover-bg hover:border-outline-hover-border hover:text-white sm:w-auto sm:px-6"
+                      >
+                        Sign in
+                      </button>
+                    </>
+                  )}
                   <a
                     href="#how-credits-work"
-                    className="px-4 py-3 text-primary/85 hover:text-white transition-colors font-medium text-lg"
+                    className="px-1 py-2 text-base font-medium text-primary/85 transition-colors hover:text-white sm:px-4 sm:py-3"
                   >
                     How credits work
                   </a>
                   <a
                     href="#pricing"
-                    className="px-4 py-3 text-primary/85 hover:text-white transition-colors font-medium text-lg"
+                    className="px-1 py-2 text-base font-medium text-primary/85 transition-colors hover:text-white sm:px-4 sm:py-3"
                   >
                     Pricing
                   </a>
                   <a
                     href="#faq"
-                    className="px-4 py-3 text-primary/85 hover:text-white transition-colors font-medium text-lg"
+                    className="px-1 py-2 text-base font-medium text-primary/85 transition-colors hover:text-white sm:px-4 sm:py-3"
                   >
                     FAQ
                   </a>
@@ -696,11 +713,11 @@ export default function Landing() {
         <section id="features" className="features">
           <div className="container max-w-6xl mx-auto px-4">
             <div className="mb-12">
-              <h2 className="text-4xl font-semibold mb-4 tracking-tight">
+              <h2 className="text-3xl font-semibold mb-4 tracking-tight sm:text-4xl">
                 <span className="text-primary">Tools</span> designed for real
                 work
               </h2>
-              <p className="lead text-xl text-text-muted">
+              <p className="lead text-base text-text-muted sm:text-xl">
                 A focused set of AI tools with predictable usage — powered by
                 your credit balance.
               </p>
@@ -761,10 +778,10 @@ export default function Landing() {
         >
           <div className="container max-w-6xl mx-auto px-4 relative z-10">
             <div className="mb-12">
-              <h2 className="text-4xl font-semibold mb-4 tracking-tight">
+              <h2 className="text-3xl font-semibold mb-4 tracking-tight sm:text-4xl">
                 <span className="text-primary">Simple</span> credit-based usage
               </h2>
-              <p className="lead text-xl text-text-muted">
+              <p className="lead text-base text-text-muted sm:text-xl">
                 One balance. Transparent costs. Full control over your spending.
               </p>
             </div>
@@ -814,10 +831,10 @@ export default function Landing() {
         <section id="trust" className="trust">
           <div className="container max-w-6xl mx-auto px-4 relative z-10">
             <div className="mb-12">
-              <h2 className="text-4xl font-semibold mb-4 tracking-tight">
+              <h2 className="text-3xl font-semibold mb-4 tracking-tight sm:text-4xl">
                 <span className="text-primary">Reliable by</span> design
               </h2>
-              <p className="lead text-xl text-text-muted">
+              <p className="lead text-base text-text-muted sm:text-xl">
                 Built for stability, transparency, and predictable results.
               </p>
             </div>
@@ -860,10 +877,10 @@ export default function Landing() {
         <section id="pricing" className="pricing">
           <div className="container max-w-6xl mx-auto px-4 relative z-10">
             <div className="mb-12">
-              <h2 className="text-4xl font-semibold mb-4 tracking-tight">
+              <h2 className="text-3xl font-semibold mb-4 tracking-tight sm:text-4xl">
                 Credit packages
               </h2>
-              <p className="lead text-xl text-text-muted">
+              <p className="lead text-base text-text-muted sm:text-xl">
                 Simple pricing based on prepaid usage credits.
               </p>
             </div>
@@ -945,10 +962,10 @@ export default function Landing() {
         <section id="faq" className="faq">
           <div className="container max-w-6xl mx-auto px-4 relative z-10">
             <div className="mb-12">
-              <h2 className="text-4xl font-semibold mb-4 tracking-tight">
+              <h2 className="text-3xl font-semibold mb-4 tracking-tight sm:text-4xl">
                 <span className="text-primary">How</span> credits work
               </h2>
-              <p className="lead text-xl text-text-muted">
+              <p className="lead text-base text-text-muted sm:text-xl">
                 Clear rules, transparent usage, no hidden limits.
               </p>
             </div>
@@ -1064,24 +1081,24 @@ export default function Landing() {
             </svg>
           </div>
           <div className="flex gap-6 text-sm">
-            <a
-              href="#"
+            <Link
+              to="/privacy"
               className="text-text-muted hover:text-white transition-colors"
             >
               Privacy
-            </a>
-            <a
-              href="#"
+            </Link>
+            <Link
+              to="/terms"
               className="text-text-muted hover:text-white transition-colors"
             >
               Terms
-            </a>
-            <a
-              href="#"
+            </Link>
+            <Link
+              to="/contact"
               className="text-text-muted hover:text-white transition-colors"
             >
               Contact
-            </a>
+            </Link>
           </div>
         </div>
       </footer>

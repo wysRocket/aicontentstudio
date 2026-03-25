@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "../lib/utils";
 import {
@@ -38,6 +38,8 @@ const bottomNavItems = [
 type SidebarProps = {
   isMobileOpen?: boolean;
   onMobileClose?: () => void;
+  isDesktopExpanded?: boolean;
+  onDesktopExpandedChange?: (expanded: boolean) => void;
 };
 
 function SidebarNav({
@@ -55,7 +57,7 @@ function SidebarNav({
         to="/"
         onClick={onNavigate}
         className={cn(
-          "mb-8 mt-2 flex items-center text-text-main transition-colors hover:text-primary",
+          "mb-8 mt-2 flex items-center text-white transition-colors hover:text-[#f2b4cb]",
           isExpanded ? "w-full justify-start px-4" : "justify-center",
         )}
       >
@@ -66,12 +68,12 @@ function SidebarNav({
           viewBox="0 0 1306 1306"
           width="26"
           xmlns="http://www.w3.org/2000/svg"
-          className="shrink-0 text-gray-800 transition-colors group-hover:text-primary"
+          className="shrink-0 text-white transition-colors group-hover:text-[#f2b4cb]"
         >
           <path d="M1161 653c0-114-38-220-101-305-29 22-69 19-95-6-26-26-28-67-7-95-85-64-190-102-305-102-140 0-267 57-359 149-92 92-149 219-149 359 0 140 57 267 149 359 92 92 219 149 359 149 140 0 267-57 359-149 92-92 149-219 149-359zm-100-510l73-73c28-29 74-29 103 0 28 28 28 74 0 102l-74 73c90 112 143 254 143 408 0 180-73 344-191 462-118 118-282 191-462 191-180 0-343-73-462-191-118-118-191-282-191-462 0-180 73-343 191-462 119-118 282-191 462-191 154 0 296 53 408 143zm-214 510c0-107-87-193-194-193-107 0-193 86-193 193 0 107 86 194 193 194 107 0 194-87 194-194z" fill="currentColor"></path>
         </svg>
         {isExpanded && (
-          <span className="ml-3 whitespace-nowrap text-lg font-semibold leading-none text-gray-900">
+          <span className="ml-3 whitespace-nowrap text-lg font-semibold leading-none text-white">
             AI Content Studio
           </span>
         )}
@@ -89,14 +91,14 @@ function SidebarNav({
               className={cn(
                 "group relative flex w-full items-center rounded-lg p-2.5 transition-colors",
                 isActive
-                  ? "bg-blue-50 text-blue-600"
-                  : "text-gray-700 hover:bg-gray-100 hover:text-gray-900",
+                  ? "bg-white/12 text-white"
+                  : "text-white/68 hover:bg-white/8 hover:text-white",
               )}
             >
               <item.icon
                 className={cn(
                   "h-5 w-5 shrink-0",
-                  isActive ? "text-blue-600" : "text-gray-400 group-hover:text-gray-500",
+                  isActive ? "text-[#f2b4cb]" : "text-white/45 group-hover:text-white/75",
                   isExpanded ? "mr-3" : "mx-auto",
                 )}
               />
@@ -106,7 +108,7 @@ function SidebarNav({
         })}
       </nav>
 
-      <div className="mt-auto w-full space-y-2 border-t border-gray-200 pt-4">
+      <div className="mt-auto w-full space-y-2 border-t border-white/10 pt-4">
         {bottomNavItems.map((item) => {
           const isActive = location.pathname.startsWith(item.href);
           return (
@@ -118,14 +120,14 @@ function SidebarNav({
               className={cn(
                 "group relative flex w-full items-center rounded-lg p-2.5 transition-colors",
                 isActive
-                  ? "bg-blue-50 text-blue-600"
-                  : "text-gray-700 hover:bg-gray-100 hover:text-gray-900",
+                  ? "bg-white/12 text-white"
+                  : "text-white/68 hover:bg-white/8 hover:text-white",
               )}
             >
               <item.icon
                 className={cn(
                   "h-5 w-5 shrink-0",
-                  item.color || (isActive ? "text-blue-600" : "text-gray-400 group-hover:text-gray-500"),
+                  item.color || (isActive ? "text-[#f2b4cb]" : "text-white/45 group-hover:text-white/75"),
                   isExpanded ? "mr-3" : "mx-auto",
                 )}
               />
@@ -140,9 +142,12 @@ function SidebarNav({
   );
 }
 
-export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
-  const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
-
+export function Sidebar({
+  isMobileOpen = false,
+  onMobileClose,
+  isDesktopExpanded = false,
+  onDesktopExpandedChange,
+}: SidebarProps) {
   useEffect(() => {
     if (!isMobileOpen) return;
 
@@ -158,11 +163,11 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
     <>
       <div
         className={cn(
-          "fixed left-0 top-0 z-50 hidden h-screen flex-col border-r border-gray-200 bg-[#F9FAFB] py-4 transition-all duration-300 lg:flex",
+          "fixed left-0 top-0 z-50 hidden h-screen flex-col border-r border-white/10 bg-[#17131d] py-4 transition-all duration-300 lg:flex",
           isDesktopExpanded ? "w-64 items-start px-4" : "w-16 items-center",
         )}
-        onMouseEnter={() => setIsDesktopExpanded(true)}
-        onMouseLeave={() => setIsDesktopExpanded(false)}
+        onMouseEnter={() => onDesktopExpandedChange?.(true)}
+        onMouseLeave={() => onDesktopExpandedChange?.(false)}
       >
         <SidebarNav isExpanded={isDesktopExpanded} />
       </div>
@@ -177,19 +182,19 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
       >
         <aside
           className={cn(
-            "flex h-full w-[min(84vw,320px)] flex-col border-r border-gray-200 bg-[#F9FAFB] px-4 py-4 shadow-2xl transition-transform duration-300",
+            "flex h-full w-[min(84vw,320px)] flex-col border-r border-white/10 bg-[#17131d] px-4 py-4 text-white shadow-2xl transition-transform duration-300",
             isMobileOpen ? "translate-x-0" : "-translate-x-full",
           )}
           onClick={(event) => event.stopPropagation()}
         >
           <div className="mb-4 flex items-center justify-between px-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
               Navigation
             </p>
             <button
               type="button"
               onClick={onMobileClose}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm ring-1 ring-black/5"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/70 shadow-sm ring-1 ring-white/10"
               aria-label="Close navigation menu"
             >
               <X className="h-4 w-4" />

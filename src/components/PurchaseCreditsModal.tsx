@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
   ArrowRight,
-  BadgeDollarSign,
   Check,
   Coins,
   Sparkles,
@@ -19,34 +18,49 @@ interface PurchaseCreditsModalProps {
 
 const supportEmail = "support@aicontentstudio.net";
 
-const packages = [
-  {
-    credits: 100,
-    price: 5,
-    label: "Starter",
-    description: "For quick tests and one-off runs.",
-    usage: "~10 premium generations",
-    highlight: "Quick refill",
-  },
-  {
-    credits: 500,
-    price: 20,
-    label: "Growth",
-    description: "The strongest fit for steady weekly production.",
-    usage: "~50 premium generations",
-    highlight: "Best balance",
-  },
-  {
-    credits: 2000,
-    price: 50,
-    label: "Studio",
-    description: "For teams, launches, and heavier publishing windows.",
-    usage: "~200 premium generations",
-    highlight: "Best value",
-  },
+const quickAmounts = [100, 300, 500, 1000, 2500, 5000] as const;
+const pricingAnchors = [
+  { credits: 100, price: 5 },
+  { credits: 500, price: 20 },
+  { credits: 2000, price: 50 },
+  { credits: 5000, price: 110 },
 ] as const;
 
 const creditsFormatter = new Intl.NumberFormat("en-US");
+const euroFormatter = new Intl.NumberFormat("en-IE", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
+
+function getInterpolatedPrice(credits: number) {
+  if (credits <= pricingAnchors[0].credits) return pricingAnchors[0].price;
+
+  for (let index = 1; index < pricingAnchors.length; index += 1) {
+    const previous = pricingAnchors[index - 1];
+    const current = pricingAnchors[index];
+
+    if (credits <= current.credits) {
+      const ratio =
+        (credits - previous.credits) / (current.credits - previous.credits);
+      const price = previous.price + ratio * (current.price - previous.price);
+      return Math.round(price / 5) * 5;
+    }
+  }
+
+  const last = pricingAnchors[pricingAnchors.length - 1];
+  const beforeLast = pricingAnchors[pricingAnchors.length - 2];
+  const slope =
+    (last.price - beforeLast.price) / (last.credits - beforeLast.credits);
+  return Math.round((last.price + (credits - last.credits) * slope) / 5) * 5;
+}
+
+function getTopUpLabel(credits: number) {
+  if (credits >= 3000) return "High-volume refill";
+  if (credits >= 1200) return "Steady production";
+  if (credits >= 500) return "Weekly operating range";
+  return "Quick refill";
+}
 
 export default function PurchaseCreditsModal({
   isOpen,
@@ -78,16 +92,15 @@ export default function PurchaseCreditsModal({
 
   if (!isOpen) return null;
 
-  const selectedPackage =
-    packages.find((pkg) => pkg.credits === selectedCredits) ?? packages[1];
+  const selectedPrice = getInterpolatedPrice(selectedCredits);
   const projectedBalance =
-    currentCredits === null ? null : currentCredits + selectedPackage.credits;
-  const supportSubject = `Credit Top Up Request - ${selectedPackage.label} (${selectedPackage.credits} credits)`;
+    currentCredits === null ? null : currentCredits + selectedCredits;
+  const supportSubject = `Credit Top Up Request - ${creditsFormatter.format(selectedCredits)} credits`;
   const supportBody = [
     "Hi AI Content Studio team,",
     "",
-    `I want to top up my account with the ${selectedPackage.label} package.`,
-    `Package: ${selectedPackage.credits} credits for $${selectedPackage.price}`,
+    `I want to top up my account with ${creditsFormatter.format(selectedCredits)} credits.`,
+    `Approximate price: ${euroFormatter.format(selectedPrice)}`,
     `Current balance: ${
       currentCredits === null ? "Unknown" : `${currentCredits} credits`
     }`,
@@ -133,11 +146,11 @@ export default function PurchaseCreditsModal({
                   id="purchase-credits-title"
                   className="mt-4 max-w-xl text-[2.2rem] font-semibold leading-[1.02] tracking-[-0.05em] text-slate-950"
                 >
-                  Top up credits without slowing your workflow down.
+                  Choose the exact credit top-up you need.
                 </h2>
                 <p className="mt-3 max-w-2xl text-[15px] leading-7 text-slate-600">
-                  Pick a package, preview your balance after the top-up, and
-                  request it in one clean step.
+                  Use the quick buttons for common amounts, fine-tune with the
+                  slider, then preview the new balance before requesting it.
                 </p>
               </div>
 
@@ -161,20 +174,20 @@ export default function PurchaseCreditsModal({
               </div>
 
               <div className="rounded-[26px] border border-pink-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(255,243,249,0.92)_100%)] p-5 shadow-[0_14px_35px_rgba(216,27,96,0.08)]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  After top-up
-                </p>
-                <div className="mt-4">
-                  <p className="text-3xl font-semibold tracking-[-0.05em] text-slate-950">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    After top-up
+                  </p>
+                  <div className="mt-4">
+                    <p className="text-3xl font-semibold tracking-[-0.05em] text-slate-950">
                     {projectedBalance === null
                       ? "..."
                       : creditsFormatter.format(projectedBalance)}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    with the {selectedPackage.label} package
-                  </p>
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      after adding {creditsFormatter.format(selectedCredits)} credits
+                    </p>
+                  </div>
                 </div>
-              </div>
             </div>
           </div>
 
@@ -184,7 +197,7 @@ export default function PurchaseCreditsModal({
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex items-start gap-3">
                     <div className="rounded-2xl bg-white/70 p-2.5 text-amber-700">
-                      <BadgeDollarSign className="h-4 w-4" />
+                      <Coins className="h-4 w-4" />
                     </div>
                     <div>
                       <p className="font-semibold text-amber-950">
@@ -208,105 +221,134 @@ export default function PurchaseCreditsModal({
               </div>
             )}
 
-            <div className="grid gap-4 lg:grid-cols-3">
-              {packages.map((pkg) => {
-                const isSelected = selectedCredits === pkg.credits;
-                const projectedCardBalance =
-                  currentCredits === null ? null : currentCredits + pkg.credits;
+            <div className="grid gap-4 xl:grid-cols-[1.18fr_0.82fr]">
+              <div className="rounded-[30px] border border-slate-200/80 bg-white p-6 shadow-[0_20px_50px_rgba(15,23,42,0.06)]">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Credit amount
+                    </p>
+                    <p className="mt-3 text-4xl font-semibold tracking-[-0.08em] text-slate-950">
+                      {creditsFormatter.format(selectedCredits)}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Use a quick amount or fine-tune with the slider below.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-pink-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-pink-700">
+                    {getTopUpLabel(selectedCredits)}
+                  </span>
+                </div>
 
-                return (
-                  <button
-                    key={pkg.credits}
-                    type="button"
-                    onClick={() => setSelectedCredits(pkg.credits)}
-                    className={`group relative flex h-full flex-col rounded-[30px] border p-6 text-left transition-all duration-200 ${
-                      isSelected
-                        ? "border-pink-400 bg-white shadow-[0_20px_50px_rgba(216,27,96,0.16)]"
-                        : "border-slate-200/80 bg-white/80 hover:-translate-y-0.5 hover:border-pink-200 hover:bg-white"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-lg font-semibold text-slate-950">
-                          {pkg.label}
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-slate-500">
-                          {pkg.description}
-                        </p>
-                      </div>
-
-                      <span
-                        className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {quickAmounts.map((amount) => {
+                    const isSelected = selectedCredits === amount;
+                    return (
+                      <button
+                        key={amount}
+                        type="button"
+                        onClick={() => setSelectedCredits(amount)}
+                        className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                           isSelected
                             ? "bg-pink-600 text-white"
-                            : "bg-slate-100 text-slate-700"
+                            : "border border-slate-200 bg-slate-50 text-slate-700 hover:border-pink-200 hover:bg-white"
                         }`}
                       >
-                        {pkg.highlight}
-                      </span>
-                    </div>
+                        {creditsFormatter.format(amount)}
+                      </button>
+                    );
+                  })}
+                </div>
 
-                    <div className="mt-7 flex items-end justify-between gap-4">
-                      <div>
-                        <div className="text-[3rem] font-semibold leading-none tracking-[-0.08em] text-slate-950">
-                          {creditsFormatter.format(pkg.credits)}
-                        </div>
-                        <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                          Credits
-                        </div>
-                      </div>
+                <div className="mt-8 rounded-[26px] border border-slate-200 bg-[linear-gradient(180deg,#fffdfd_0%,#fff5f9_100%)] px-5 py-5">
+                  <div className="flex items-center justify-between gap-4 text-sm font-medium text-slate-600">
+                    <span>100 credits</span>
+                    <span>5,000 credits</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={100}
+                    max={5000}
+                    step={100}
+                    value={selectedCredits}
+                    onChange={(event) => setSelectedCredits(Number(event.target.value))}
+                    className="mt-4 w-full accent-pink-600"
+                  />
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCredits((current) => Math.max(100, current - 100))}
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
+                    >
+                      -100
+                    </button>
+                    <p className="text-sm text-slate-500">
+                      Approx. {Math.floor(selectedCredits / 10)} premium generations at current video pricing.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCredits((current) => Math.min(5000, current + 100))}
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
+                    >
+                      +100
+                    </button>
+                  </div>
+                </div>
+              </div>
 
-                      <div className="text-right">
-                        <div className="text-[2rem] font-semibold leading-none tracking-[-0.05em] text-slate-950">
-                          ${pkg.price}
-                        </div>
-                        <div className="mt-2 text-xs text-slate-500">
-                          ${(pkg.price / pkg.credits * 100).toFixed(2)} / 100 credits
-                        </div>
-                      </div>
-                    </div>
+              <div className="rounded-[30px] border border-pink-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(255,243,249,0.96)_100%)] p-6 shadow-[0_20px_50px_rgba(216,27,96,0.08)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Selected top-up
+                </p>
+                <div className="mt-5 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-4xl font-semibold tracking-[-0.08em] text-slate-950">
+                      {creditsFormatter.format(selectedCredits)}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">credits</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-semibold tracking-[-0.05em] text-slate-950">
+                      {euroFormatter.format(selectedPrice)}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      approx. {euroFormatter.format(Number(((selectedPrice / selectedCredits) * 100).toFixed(2)))} / 100 credits
+                    </p>
+                  </div>
+                </div>
 
-                    <div className="mt-6 grid gap-3 rounded-[24px] bg-slate-50/90 p-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Typical output
-                        </span>
-                        <span className="text-sm font-medium text-slate-700">
-                          {pkg.usage}
-                        </span>
-                      </div>
-
-                      <div className="h-px bg-slate-200" />
-
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Balance after
-                        </span>
-                        <span className="text-sm font-medium text-slate-700">
-                          {projectedCardBalance === null
-                            ? "..."
-                            : `${creditsFormatter.format(projectedCardBalance)} credits`}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-6 flex items-center gap-3">
-                      <span
-                        className={`flex h-6 w-6 items-center justify-center rounded-full border transition-colors ${
-                          isSelected
-                            ? "border-pink-600 bg-pink-600 text-white"
-                            : "border-slate-300 bg-white text-transparent"
-                        }`}
-                      >
-                        <Check className="h-4 w-4" />
-                      </span>
-                      <span className="text-sm font-medium text-slate-700">
-                        {isSelected ? "Selected" : "Select package"}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
+                <div className="mt-6 grid gap-3 rounded-[24px] bg-white/85 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Recommended use
+                    </span>
+                    <span className="text-sm font-medium text-slate-700">
+                      {getTopUpLabel(selectedCredits)}
+                    </span>
+                  </div>
+                  <div className="h-px bg-slate-200" />
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Balance after
+                    </span>
+                    <span className="text-sm font-medium text-slate-700">
+                      {projectedBalance === null
+                        ? "..."
+                        : `${creditsFormatter.format(projectedBalance)} credits`}
+                    </span>
+                  </div>
+                  <div className="h-px bg-slate-200" />
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Protection
+                    </span>
+                    <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                      <Check className="h-4 w-4 text-pink-600" />
+                      Successful runs only
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="mt-6 rounded-[30px] border border-slate-200/80 bg-white px-6 py-5 shadow-[0_16px_40px_rgba(15,23,42,0.07)]">
@@ -316,7 +358,7 @@ export default function PurchaseCreditsModal({
                     Selected package
                   </p>
                   <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-                    {selectedPackage.label}: {creditsFormatter.format(selectedPackage.credits)} credits for ${selectedPackage.price}
+                    {creditsFormatter.format(selectedCredits)} credits for approximately {euroFormatter.format(selectedPrice)}
                   </p>
                   <p className="mt-2 text-sm text-slate-500">
                     {projectedBalance === null
@@ -330,19 +372,19 @@ export default function PurchaseCreditsModal({
                     href={supportHref}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-pink-600 px-6 py-4 text-sm font-semibold text-white transition-colors hover:bg-pink-700"
                   >
-                    Request {selectedPackage.label} top-up
+                    Request this top-up
                     <ArrowRight className="h-4 w-4" />
                   </a>
                 ) : (
                   <button
                     type="button"
                     onClick={() => {
-                      onPurchase(selectedPackage.credits);
+                      onPurchase(selectedCredits);
                       onClose();
                     }}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-pink-600 px-6 py-4 text-sm font-semibold text-white transition-colors hover:bg-pink-700"
                   >
-                    Buy {creditsFormatter.format(selectedPackage.credits)} credits
+                    Buy {creditsFormatter.format(selectedCredits)} credits
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 )}

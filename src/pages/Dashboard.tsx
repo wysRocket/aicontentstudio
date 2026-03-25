@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { Coins, Loader2, Sparkles, Plus, ArrowLeft, ChevronUp, ChevronDown, PlusCircle, FileText, Lightbulb, MessageSquare, CheckCircle2, AlertTriangle, CalendarDays } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Loader2, Sparkles, ArrowLeft, ChevronUp, ChevronDown, PlusCircle, FileText, Lightbulb, MessageSquare, CheckCircle2, AlertTriangle, CalendarDays } from 'lucide-react';
 import PurchaseCreditsModal from '../components/PurchaseCreditsModal';
 import { getUserCredits, deductCredits, ensureWorkspaceSeedData, getWorkspaceStats, type WorkspaceStats } from '../lib/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
@@ -46,7 +46,6 @@ export default function Dashboard() {
   const [credits, setCredits] = useState<number | null>(null);
   const [workspaceStats, setWorkspaceStats] = useState<WorkspaceStats | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
-  const [searchParams, setSearchParams] = useSearchParams();
   const purchaseDisabledMessage = 'Self-serve checkout is still being hardened server-side. Email support to top up your balance manually for now.';
 
   // Form State
@@ -88,14 +87,6 @@ export default function Dashboard() {
       });
   }, [isAuthReady, user]);
 
-  useEffect(() => {
-    if (searchParams.get('buy') === 'true') {
-      setIsPurchaseModalOpen(true);
-      searchParams.delete('buy');
-      setSearchParams(searchParams, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
-
   const handleProcess = async () => {
     if (!prompt.trim()) return;
     if (credits === null || credits < 10) {
@@ -130,61 +121,79 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans overflow-x-hidden">
-      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shrink-0">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-end">
-          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap sm:gap-4">
-            <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5">
-              <Coins className="w-4 h-4 text-[#D81B60]" />
-              {credits === null
-                ? <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                : <span className="font-medium text-sm text-gray-700">{credits} credits</span>
-              }
-            </div>
-            <button 
-              type="button"
-              onClick={() => setIsPurchaseModalOpen(true)}
-              className="flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-pink-200 bg-pink-50 px-3 py-2 text-sm font-medium text-[#D81B60] transition-colors hover:bg-pink-100 sm:min-h-0 sm:flex-none sm:justify-start sm:py-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              Top up credits
-            </button>
-            <Link to="/dashboard/settings?tab=profile" className="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-[#D81B60] to-purple-500 text-white font-bold shadow-sm transition-opacity hover:opacity-90 sm:ml-2 sm:h-8 sm:w-8">
-              U
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="flex-1 max-w-[1400px] w-full mx-auto flex flex-col min-h-0 bg-white shadow-none border-none">
+    <div className="min-h-screen bg-[#f5eee6] flex flex-col font-sans overflow-x-hidden">
+      <div className="flex-1 max-w-[1400px] w-full mx-auto flex flex-col min-h-0">
         
         {/* Engaging Hero Section */}
-        <div className="relative mx-4 mb-2 mt-4 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#D81B60] to-purple-700 p-5 shadow-lg shrink-0 sm:mx-6 sm:mt-6 sm:p-8 lg:mx-8">
+        <div className="relative mx-4 mb-2 mt-4 overflow-hidden rounded-[32px] bg-[linear-gradient(135deg,#17131d_0%,#2a2238_42%,#8c5f74_100%)] p-5 shadow-[0_24px_70px_rgba(23,19,29,0.28)] shrink-0 sm:mx-6 sm:mt-6 sm:p-8 lg:mx-8">
           <div className="relative z-10 max-w-3xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/14 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-pink-50 backdrop-blur-sm">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f5dfe8] backdrop-blur-sm">
               <Sparkles className="h-3.5 w-3.5" />
               Dashboard overview
             </div>
             <h1 className="mb-3 text-[28px] font-bold leading-[1.05] text-white tracking-tight sm:mb-4 sm:text-3xl">
-              Supercharge Your Video Workflow
+              A clearer path from source material to publish-ready content
             </h1>
-            <p className="mb-5 max-w-2xl text-[14px] font-medium leading-relaxed text-pink-100 sm:mb-6 sm:text-[15px]">
-              Welcome to AI Content Studio! Seamlessly combine clips, apply edits, and generate stunning video content. Powered by Google's state-of-the-art <b>Gemini 3.1 Pro</b> model with Advanced Thinking, our platform understands context deeper and creates professional, high-quality results in seconds. Just input your prompt and let the AI do the heavy lifting.
+            <p className="mb-5 max-w-2xl text-[14px] font-medium leading-relaxed text-[#ead9df] sm:mb-6 sm:text-[15px]">
+              Start by saving source material, pull strong references into Inspiration, then move the best angle into Create Post or the video builder. Video generation currently costs <b>10 credits per run</b>, and credits are only consumed on successful requests.
             </p>
             <div className="flex flex-wrap gap-2.5 sm:gap-3">
-              <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[12px] font-semibold text-[#D81B60] shadow-sm sm:rounded-lg sm:py-1.5 sm:text-[13px]">
-                <Sparkles className="w-4 h-4 text-[#D81B60]" /> Lightning Fast
+              <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[12px] font-semibold text-[#8c3857] shadow-sm sm:rounded-lg sm:py-1.5 sm:text-[13px]">
+                <Sparkles className="w-4 h-4 text-[#8c3857]" /> Clear workflow
               </div>
-              <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[12px] font-semibold text-[#D81B60] shadow-sm sm:rounded-lg sm:py-1.5 sm:text-[13px]">
-                <Sparkles className="w-4 h-4 text-[#D81B60]" /> Deep Context Awareness
+              <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[12px] font-semibold text-[#8c3857] shadow-sm sm:rounded-lg sm:py-1.5 sm:text-[13px]">
+                <Sparkles className="w-4 h-4 text-[#8c3857]" /> Predictable credits
               </div>
-              <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[12px] font-semibold text-[#D81B60] shadow-sm sm:rounded-lg sm:py-1.5 sm:text-[13px]">
-                <Sparkles className="w-4 h-4 text-[#D81B60]" /> Advanced Video Edits
+              <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[12px] font-semibold text-[#8c3857] shadow-sm sm:rounded-lg sm:py-1.5 sm:text-[13px]">
+                <Sparkles className="w-4 h-4 text-[#8c3857]" /> Human-readable sections
               </div>
             </div>
           </div>
           <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl sm:h-96 sm:w-96" />
-          <div className="pointer-events-none absolute -bottom-24 -left-24 h-52 w-52 rounded-full bg-black/10 blur-2xl sm:h-64 sm:w-64" />
+          <div className="pointer-events-none absolute -bottom-24 -left-24 h-52 w-52 rounded-full bg-[#f2b4cb]/12 blur-2xl sm:h-64 sm:w-64" />
+        </div>
+
+        <div className="grid gap-3 px-4 pt-4 sm:px-6 lg:grid-cols-[1.6fr_0.9fr] lg:px-8">
+          <div className="rounded-[28px] border border-[#ead7c9] bg-[#fff8f1] p-5 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8c5f74]">How the workspace works</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {[
+                {
+                  step: "1",
+                  title: "Collect source material",
+                  copy: "Save URLs or pasted text in Sources so the app has real context to work from.",
+                },
+                {
+                  step: "2",
+                  title: "Choose the angle",
+                  copy: "Use Inspiration to keep examples worth remixing and send the best one into Create Post.",
+                },
+                {
+                  step: "3",
+                  title: "Draft, review, schedule",
+                  copy: "Move good drafts through ready, approved, and scheduled states instead of losing track of them.",
+                },
+              ].map((item) => (
+                <div key={item.step} className="rounded-[22px] border border-[#ead7c9] bg-white/90 p-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#17131d] text-xs font-semibold text-white">
+                    {item.step}
+                  </div>
+                  <p className="mt-3 text-sm font-semibold text-[#17131d]">{item.title}</p>
+                  <p className="mt-2 text-sm leading-6 text-[#6e5e58]">{item.copy}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[28px] border border-[#e2d7e9] bg-[#fbf6ff] p-5 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8c5f74]">Credit clarity</p>
+            <p className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-[#17131d]">10 credits</p>
+            <p className="mt-1 text-sm text-[#6e5e58]">Current video generation cost per successful run.</p>
+            <div className="mt-4 rounded-[22px] border border-[#e2d7e9] bg-white px-4 py-3">
+              <p className="text-sm font-semibold text-[#17131d]">Top-up flow</p>
+              <p className="mt-1 text-sm leading-6 text-[#6e5e58]">Use the header on any screen to request more credits. The slider lets you choose an exact amount instead of being locked into fixed packages.</p>
+            </div>
+          </div>
         </div>
 
         <div className="grid shrink-0 grid-cols-1 gap-3 px-4 pt-4 sm:grid-cols-2 sm:gap-4 sm:px-6 lg:px-8 xl:grid-cols-4">
@@ -194,56 +203,56 @@ export default function Dashboard() {
               value: workspaceStats?.promptCount,
               icon: MessageSquare,
               href: '/dashboard/prompts',
-              tone: 'bg-violet-50 text-violet-700 border-violet-100',
+              tone: 'bg-[#fff7fa] text-[#87465d] border-[#f0d4de]',
             },
             {
               label: 'Inspiration Saved',
               value: workspaceStats?.inspirationCount,
               icon: Lightbulb,
               href: '/dashboard/inspiration',
-              tone: 'bg-amber-50 text-amber-700 border-amber-100',
+              tone: 'bg-[#fff8f1] text-[#9b6133] border-[#f0ddc7]',
             },
             {
               label: 'Draft Posts',
               value: workspaceStats?.draftCount,
               icon: FileText,
               href: '/dashboard/create',
-              tone: 'bg-blue-50 text-blue-700 border-blue-100',
+              tone: 'bg-[#f7f1ff] text-[#5f4a8f] border-[#ddd3f2]',
             },
             {
               label: 'Ready For Review',
               value: workspaceStats?.readyCount,
               icon: Sparkles,
               href: '/dashboard/create',
-              tone: 'bg-violet-50 text-violet-700 border-violet-100',
+              tone: 'bg-[#f8f1ff] text-[#6f4f8a] border-[#e4d8f2]',
             },
             {
               label: 'Approved Queue',
               value: workspaceStats?.approvedCount,
               icon: CheckCircle2,
               href: '/dashboard/calendar',
-              tone: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+              tone: 'bg-[#f3faf6] text-[#3f6b53] border-[#d3eadc]',
             },
             {
               label: 'Scheduled',
               value: workspaceStats?.scheduledCount,
               icon: CalendarDays,
               href: '/dashboard/calendar',
-              tone: 'bg-sky-50 text-sky-700 border-sky-100',
+              tone: 'bg-[#f4f7fb] text-[#556885] border-[#d8e0ee]',
             },
             {
               label: 'Published',
               value: workspaceStats?.publishedCount,
               icon: CheckCircle2,
               href: '/dashboard/published',
-              tone: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+              tone: 'bg-[#f3faf6] text-[#3f6b53] border-[#d3eadc]',
             },
             {
               label: 'Failed',
               value: workspaceStats?.failedCount,
               icon: AlertTriangle,
               href: '/dashboard/failed',
-              tone: 'bg-rose-50 text-rose-700 border-rose-100',
+              tone: 'bg-[#fff4f4] text-[#9b4b56] border-[#efd5d9]',
             },
           ].map((item) => (
             <Link
@@ -266,52 +275,52 @@ export default function Dashboard() {
         </div>
 
         <div className="grid shrink-0 grid-cols-1 gap-4 px-4 pt-6 sm:px-6 lg:grid-cols-3 lg:px-8">
-          <div className="rounded-2xl border border-violet-100 bg-violet-50 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-700">Review Queue</p>
-            <p className="mt-3 text-3xl font-bold text-violet-950">
+          <div className="rounded-2xl border border-[#e4d8f2] bg-[#f8f1ff] p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6f4f8a]">Review Queue</p>
+            <p className="mt-3 text-3xl font-bold text-[#2a2238]">
               {workspaceStats ? workspaceStats.readyCount + workspaceStats.approvedCount : '...'}
             </p>
-            <p className="mt-2 text-sm text-violet-900">
+            <p className="mt-2 text-sm text-[#5f4a8f]">
               {workspaceStats?.readyCount || 0} ready drafts and {workspaceStats?.approvedCount || 0} approved drafts are waiting in the copy pipeline.
             </p>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <Link to="/dashboard/create" className="rounded-lg bg-white px-3 py-2 text-center text-sm font-semibold text-violet-700 shadow-sm hover:bg-violet-100">
+              <Link to="/dashboard/create" className="rounded-lg bg-white px-3 py-2 text-center text-sm font-semibold text-[#6f4f8a] shadow-sm hover:bg-[#f3ebff]">
                 Review drafts
               </Link>
-              <Link to="/dashboard/calendar" className="rounded-lg border border-violet-200 px-3 py-2 text-center text-sm font-semibold text-violet-700 hover:bg-white">
+              <Link to="/dashboard/calendar" className="rounded-lg border border-[#d5c6ea] px-3 py-2 text-center text-sm font-semibold text-[#6f4f8a] hover:bg-white">
                 Open calendar
               </Link>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">Scheduling Signal</p>
-            <p className="mt-3 text-3xl font-bold text-sky-950">
+          <div className="rounded-2xl border border-[#d8e0ee] bg-[#f4f7fb] p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#556885]">Scheduling Signal</p>
+            <p className="mt-3 text-3xl font-bold text-[#2a2238]">
               {workspaceStats?.scheduledCount ?? '...'}
             </p>
-            <p className="mt-2 text-sm text-sky-900">
+            <p className="mt-2 text-sm text-[#556885]">
               Approved posts only move into the scheduled queue, so this number now reflects truly schedule-ready work.
             </p>
             <div className="mt-4">
-              <Link to="/dashboard/calendar" className="inline-flex rounded-lg bg-white px-3 py-2 text-sm font-semibold text-sky-700 shadow-sm hover:bg-sky-100">
+              <Link to="/dashboard/calendar" className="inline-flex rounded-lg bg-white px-3 py-2 text-sm font-semibold text-[#556885] shadow-sm hover:bg-[#ebf0f8]">
                 Manage schedule
               </Link>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">Source Engine</p>
-            <p className="mt-3 text-3xl font-bold text-amber-950">
+          <div className="rounded-2xl border border-[#f0ddc7] bg-[#fff8f1] p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9b6133]">Source Engine</p>
+            <p className="mt-3 text-3xl font-bold text-[#2a2238]">
               {workspaceStats?.inspirationCount ?? '...'}
             </p>
-            <p className="mt-2 text-sm text-amber-900">
+            <p className="mt-2 text-sm text-[#9b6133]">
               Keep feeding the top of the funnel: sources become hooks, hooks become drafts, and strong drafts move through approval.
             </p>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <Link to="/dashboard/sources" className="rounded-lg bg-white px-3 py-2 text-center text-sm font-semibold text-amber-700 shadow-sm hover:bg-amber-100">
+              <Link to="/dashboard/sources" className="rounded-lg bg-white px-3 py-2 text-center text-sm font-semibold text-[#9b6133] shadow-sm hover:bg-[#fff0df]">
                 Open sources
               </Link>
-              <Link to="/dashboard/inspiration" className="rounded-lg border border-amber-200 px-3 py-2 text-center text-sm font-semibold text-amber-700 hover:bg-white">
+              <Link to="/dashboard/inspiration" className="rounded-lg border border-[#ecd0b0] px-3 py-2 text-center text-sm font-semibold text-[#9b6133] hover:bg-white">
                 Inspiration
               </Link>
             </div>
