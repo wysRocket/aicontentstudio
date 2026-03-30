@@ -5,53 +5,57 @@ import { Sidebar } from "./Sidebar";
 import PurchaseCreditsModal from "./PurchaseCreditsModal";
 import { cn } from "../lib/utils";
 import { useFirebase } from "../contexts/FirebaseContext";
-import { getUserCredits } from "../lib/firestore";
+import { subscribeToUserCredits } from "../lib/firestore";
+import {
+  WORKSPACE_TOOL_CONFIG,
+  normalizeWorkspaceToolMode,
+} from "../lib/workspace";
 
 const routeMeta: Record<string, { eyebrow: string; title: string; description: string }> = {
   "/dashboard": {
-    eyebrow: "Workspace overview",
-    title: "Dashboard",
-    description: "See your credit balance, understand the workflow, and jump into the next step without guesswork.",
+    eyebrow: "Authenticated workspace",
+    title: "Workspace",
+    description: "Run write, summary, transcription, and translation work from one saved dashboard canvas.",
   },
   "/dashboard/create": {
-    eyebrow: "Drafting studio",
+    eyebrow: "Legacy workflow",
     title: "Create Post",
-    description: "Turn ideas into publishable drafts, save revisions, and move content through review with a clear workflow.",
+    description: "This earlier workflow is still available directly, but the main product surface now lives in Workspace.",
   },
   "/dashboard/inspiration": {
-    eyebrow: "Swipe file",
+    eyebrow: "Legacy workflow",
     title: "Inspiration",
-    description: "Collect strong examples, understand why they work, and send the right one into the composer.",
+    description: "Saved reference material from the earlier pipeline structure.",
   },
   "/dashboard/prompts": {
-    eyebrow: "Prompt library",
+    eyebrow: "Library",
     title: "Prompts",
-    description: "Save reusable instructions so your drafts stay closer to your voice and process.",
+    description: "Reusable prompt references that can still support the authenticated workspace.",
   },
   "/dashboard/sources": {
-    eyebrow: "Source intake",
+    eyebrow: "Legacy workflow",
     title: "Sources",
-    description: "Drop in URLs or pasted text, extract hooks and summaries, then turn them into drafts.",
+    description: "Source intake from the earlier content pipeline.",
   },
   "/dashboard/calendar": {
-    eyebrow: "Publishing queue",
+    eyebrow: "Legacy workflow",
     title: "Calendar",
-    description: "Schedule approved drafts and keep the content pipeline visible in one place.",
+    description: "Scheduling surface retained for older draft flows.",
   },
   "/dashboard/published": {
-    eyebrow: "Archive",
+    eyebrow: "Legacy workflow",
     title: "Published Posts",
-    description: "Review shipped content and reuse your best-performing work as reference material.",
+    description: "Archive of previously published content items.",
   },
   "/dashboard/failed": {
-    eyebrow: "Recovery",
+    eyebrow: "Legacy workflow",
     title: "Failed Posts",
-    description: "Rescue stalled drafts, understand what went wrong, and move them back into the workflow.",
+    description: "Recovery queue from the earlier pipeline model.",
   },
   "/dashboard/videos": {
-    eyebrow: "Visual workflows",
+    eyebrow: "Legacy workflow",
     title: "Videos",
-    description: "Choose a video path, preview formats, and move into the generator without losing context.",
+    description: "Older video entry point retained outside the primary workspace navigation.",
   },
   "/dashboard/video-generation": {
     eyebrow: "Video generation",
@@ -89,7 +93,17 @@ export function Layout() {
   const [credits, setCredits] = useState<number | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
-  const headerMeta = routeMeta[location.pathname] ?? routeMeta["/dashboard"];
+  const activeTool = normalizeWorkspaceToolMode(searchParams.get("tool"));
+  const workspaceHeaderMeta =
+    location.pathname === "/dashboard"
+      ? {
+          eyebrow: "Authenticated workspace",
+          title: WORKSPACE_TOOL_CONFIG[activeTool].label,
+          description: WORKSPACE_TOOL_CONFIG[activeTool].description,
+        }
+      : null;
+  const headerMeta =
+    workspaceHeaderMeta ?? routeMeta[location.pathname] ?? routeMeta["/dashboard"];
   const isCompactCanvas = ["/dashboard/create", "/dashboard/inspiration", "/dashboard/videos"].includes(
     location.pathname,
   );
@@ -100,7 +114,7 @@ export function Layout() {
 
   useEffect(() => {
     if (!isAuthReady || !user) return;
-    getUserCredits(user.uid).then(setCredits).catch(() => setCredits(0));
+    return subscribeToUserCredits(user.uid, setCredits);
   }, [isAuthReady, user]);
 
   useEffect(() => {
@@ -122,7 +136,7 @@ export function Layout() {
 
       <main
         className={cn(
-          "min-w-0 flex-1 transition-[margin] duration-300",
+          "flex min-h-screen min-w-0 flex-1 flex-col transition-[margin] duration-300",
           isDesktopSidebarExpanded ? "lg:ml-64" : "lg:ml-16",
         )}
       >
@@ -195,12 +209,12 @@ export function Layout() {
 
         <div
           className={cn(
-            "mx-auto h-full max-w-7xl p-4 sm:p-6 lg:p-10",
+            "mx-auto flex min-h-0 w-full max-w-7xl flex-1 p-4 sm:p-6 lg:p-10",
             isCompactCanvas && "px-2 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6",
             location.pathname === "/dashboard" && "p-0",
           )}
         >
-          <div className="h-full">
+          <div className="flex min-h-0 flex-1 flex-col">
             <Outlet />
           </div>
         </div>

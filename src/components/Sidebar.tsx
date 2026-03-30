@@ -1,34 +1,29 @@
 import { useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { cn } from "../lib/utils";
 import {
   X,
-  PlusCircle,
-  Lightbulb,
-  MessageSquare,
-  FolderOpen,
-  Calendar,
-  FileText,
-  AlertTriangle,
-  Video,
-  Gauge,
-  Sparkles,
   HelpCircle,
   Settings,
+  PenSquare,
+  ScanText,
+  AudioLines,
+  Languages,
 } from "lucide-react";
+import {
+  WORKSPACE_TOOL_CONFIG,
+  WORKSPACE_TOOL_MODES,
+  getWorkspaceToolHref,
+  normalizeWorkspaceToolMode,
+  type WorkspaceToolMode,
+} from "../lib/workspace";
 
 const mainNavItems = [
-  { icon: PlusCircle, label: "Create Post", href: "/dashboard/create" },
-  { icon: Lightbulb, label: "Inspiration", href: "/dashboard/inspiration" },
-  { icon: MessageSquare, label: "Prompts", href: "/dashboard/prompts" },
-  { icon: FolderOpen, label: "Sources", href: "/dashboard/sources" },
-  { icon: Calendar, label: "Calendar", href: "/dashboard/calendar" },
-  { icon: FileText, label: "Published Posts", href: "/dashboard/published" },
-  { icon: AlertTriangle, label: "Failed Posts", href: "/dashboard/failed" },
-  { icon: Video, label: "Videos", href: "/dashboard/videos" },
-  { icon: Gauge, label: "API Dashboard", href: "/dashboard/api-dashboard" },
-  { icon: Sparkles, label: "Viral AI Coach", href: "/dashboard/coach" },
-];
+  { icon: PenSquare, mode: "write_rewrite" },
+  { icon: ScanText, mode: "summarize" },
+  { icon: AudioLines, mode: "transcribe" },
+  { icon: Languages, mode: "translate" },
+] satisfies Array<{ icon: typeof PenSquare; mode: WorkspaceToolMode }>;
 
 const bottomNavItems = [
   { icon: HelpCircle, label: "Help", href: "/dashboard/help", color: "text-rose-500" },
@@ -50,6 +45,8 @@ function SidebarNav({
   onNavigate?: () => void;
 }) {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const activeTool = normalizeWorkspaceToolMode(searchParams.get("tool"));
 
   return (
     <>
@@ -79,15 +76,25 @@ function SidebarNav({
         )}
       </Link>
 
-      <nav className="flex-1 space-y-2 overflow-y-auto overflow-x-hidden">
+      <nav className="flex-1 space-y-4 overflow-y-auto overflow-x-hidden">
+        {isExpanded && (
+          <div className="px-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/38">
+              Tools
+            </p>
+          </div>
+        )}
         {mainNavItems.map((item) => {
-          const isActive = location.pathname.startsWith(item.href);
+          const href = getWorkspaceToolHref(item.mode);
+          const isActive =
+            location.pathname === "/dashboard" && activeTool === item.mode;
+          const label = WORKSPACE_TOOL_CONFIG[item.mode].label;
           return (
             <Link
-              key={item.href}
-              to={item.href}
+              key={item.mode}
+              to={href}
               onClick={onNavigate}
-              title={!isExpanded ? item.label : undefined}
+              title={!isExpanded ? label : undefined}
               className={cn(
                 "group relative flex w-full items-center rounded-lg p-2.5 transition-colors",
                 isActive
@@ -102,7 +109,7 @@ function SidebarNav({
                   isExpanded ? "mr-3" : "mx-auto",
                 )}
               />
-              {isExpanded && <span className="font-medium whitespace-nowrap">{item.label}</span>}
+              {isExpanded && <span className="font-medium whitespace-nowrap">{label}</span>}
             </Link>
           );
         })}

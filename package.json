@@ -8,6 +8,7 @@
     "build": "vite build",
     "start": "tsx server.ts",
     "preview": "vite preview",
+    "test": "node --import tsx --test src/**/*.test.ts",
     "docs:dev": "npx mint dev",
     "docs:check": "npx mint openapi-check",
     "clean": "rm -rf dist",

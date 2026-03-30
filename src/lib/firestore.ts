@@ -20,6 +20,12 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import promptsData from "../prompts_data.json";
+import {
+  createStarterWorkspaceRuns,
+  createWorkspaceRunDraft,
+  type WorkspaceRunInput,
+  type WorkspaceRunRecord,
+} from "./workspace";
 
 export enum OperationType {
   CREATE = "create",
@@ -328,6 +334,10 @@ function workspaceSettingsDoc(uid: string) {
   return doc(db, "users", uid, "settings", "workspace");
 }
 
+function workspaceRunsCollection(uid: string) {
+  return collection(db, "users", uid, "workspaceRuns");
+}
+
 export function handleFirestoreError(
   error: unknown,
   operationType: OperationType,
@@ -457,6 +467,27 @@ function mapCreditTransaction(
   };
 }
 
+function mapWorkspaceRun(snapshot: QueryDocumentSnapshot): WorkspaceRunRecord {
+  const data = snapshot.data();
+  return {
+    id: snapshot.id,
+    ...createWorkspaceRunDraft((data.mode ?? "write_rewrite") as WorkspaceRunRecord["mode"], {
+      title: data.title ?? "",
+      sourceText: data.sourceText ?? "",
+      instructions: data.instructions ?? "",
+      outputText: data.outputText ?? "",
+      targetLanguage: data.targetLanguage ?? "",
+      status: data.status ?? "draft",
+      creditCost: typeof data.creditCost === "number" ? data.creditCost : undefined,
+      sourceFileName: data.sourceFileName ?? "",
+      sourceMimeType: data.sourceMimeType ?? "",
+      lastError: data.lastError ?? "",
+    }),
+    createdAt: data.createdAt ?? null,
+    updatedAt: data.updatedAt ?? null,
+  };
+}
+
 export function validateContentDraft(
   content: Pick<ContentRecord, "title" | "body" | "platforms">,
 ): string[] {
@@ -545,6 +576,20 @@ export async function getUserCredits(uid: string): Promise<number> {
   }
 }
 
+export function subscribeToUserCredits(
+  uid: string,
+  onChange: (credits: number) => void,
+): Unsubscribe {
+  return onSnapshot(
+    userDoc(uid),
+    (snapshot) => {
+      const data = snapshot.data();
+      onChange(typeof data?.credits === "number" ? data.credits : 0);
+    },
+    (error) => handleFirestoreError(error, OperationType.LIST, `users/${uid}`),
+  );
+}
+
 export async function getRecentCreditTransactions(
   uid: string,
   maxRecords = 20,
@@ -566,7 +611,14 @@ export async function getRecentCreditTransactions(
   }
 }
 
-export async function deductCredits(uid: string, amount: number): Promise<void> {
+export async function deductCredits(
+  uid: string,
+  amount: number,
+  metadata?: {
+    description?: string;
+    source?: string;
+  },
+): Promise<void> {
   if (!Number.isInteger(amount) || amount <= 0) {
     throw new Error("amount must be a positive integer");
   }
@@ -587,8 +639,8 @@ export async function deductCredits(uid: string, amount: number): Promise<void> 
         balanceAfter: nextBalance,
         kind: "usage",
         status: "completed",
-        description: "Workflow usage",
-        source: "app",
+        description: metadata?.description || "Workflow usage",
+        source: metadata?.source || "app",
         createdAt: serverTimestamp(),
       });
     });
@@ -651,11 +703,13 @@ export async function ensureWorkspaceSeedData(uid: string) {
       inspirationSnapshot,
       sourcesSnapshot,
       settingsSnapshot,
+      workspaceRunsSnapshot,
     ] = await Promise.all([
       getDocs(query(promptsCollection(uid), limit(1))),
       getDocs(query(inspirationCollection(uid), limit(1))),
       getDocs(query(sourcesCollection(uid), limit(1))),
       getDoc(workspaceSettingsDoc(uid)),
+      getDocs(query(workspaceRunsCollection(uid), limit(1))),
     ]);
 
     if (promptsSnapshot.empty) {
@@ -694,8 +748,82 @@ export async function ensureWorkspaceSeedData(uid: string) {
         updatedAt: serverTimestamp(),
       });
     }
+
+    if (workspaceRunsSnapshot.empty) {
+      await Promise.all(
+        createStarterWorkspaceRuns().map(async (item) => {
+          const runRef = doc(workspaceRunsCollection(uid));
+          await setDoc(runRef, {
+            ...item,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        }),
+      );
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `users/${uid}`);
+  }
+}
+
+export function subscribeToWorkspaceRuns(
+  uid: string,
+  onChange: (records: WorkspaceRunRecord[]) => void,
+): Unsubscribe {
+  const workspaceRunsQuery = query(
+    workspaceRunsCollection(uid),
+    orderBy("updatedAt", "desc"),
+  );
+  return onSnapshot(
+    workspaceRunsQuery,
+    (snapshot) => onChange(snapshot.docs.map(mapWorkspaceRun)),
+    (error) =>
+      handleFirestoreError(error, OperationType.LIST, `users/${uid}/workspaceRuns`),
+  );
+}
+
+export async function saveWorkspaceRun(
+  uid: string,
+  run: Partial<WorkspaceRunRecord> & WorkspaceRunInput,
+): Promise<string> {
+  const runRef = run.id
+    ? doc(workspaceRunsCollection(uid), run.id)
+    : doc(workspaceRunsCollection(uid));
+
+  try {
+    const existing = run.id ? await getDoc(runRef) : null;
+    const normalized = createWorkspaceRunDraft(run.mode, {
+      title: run.title,
+      sourceText: run.sourceText,
+      instructions: run.instructions,
+      outputText: run.outputText,
+      targetLanguage: run.targetLanguage,
+      status: run.status,
+      creditCost: run.creditCost,
+      sourceFileName: run.sourceFileName,
+      sourceMimeType: run.sourceMimeType,
+      lastError: run.lastError,
+    });
+
+    await setDoc(
+      runRef,
+      {
+        ...normalized,
+        createdAt: existing?.exists()
+          ? existing.data().createdAt
+          : serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    return runRef.id;
+  } catch (error) {
+    handleFirestoreError(
+      error,
+      run.id ? OperationType.UPDATE : OperationType.CREATE,
+      `users/${uid}/workspaceRuns/${runRef.id}`,
+    );
   }
 }
 

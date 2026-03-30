@@ -20,7 +20,7 @@ View your app in AI Studio: https://ai.studio/apps/659a1553-c634-4909-82e0-eccc6
 
 ## Deploy to Hostinger
 
-This repository is configured for automatic deployment to [aicontentstudio.net](https://hpanel.hostinger.com/websites/aicontentstudio.net) on every push to the `main` branch.
+This repository is configured for automatic deployment to [aicontentstudio.net](https://hpanel.hostinger.com/websites/aicontentstudio.net) on every push to the `rebuild` branch.
 
 ### Required GitHub Secret
 
@@ -30,7 +30,7 @@ In your repository settings (**Settings → Secrets and variables → Actions**)
 
 ### How It Works
 
-1. On every push to `main`, the GitHub Actions workflow (`.github/workflows/deploy.yml`) triggers.
+1. On every push to `rebuild`, the GitHub Actions workflow (`.github/workflows/deploy.yml`) triggers.
 2. The workflow creates a source archive (excluding `node_modules`, `dist`, `.env` files, etc.).
 3. A deploy script (`.github/scripts/deploy.mjs`) calls the Hostinger Hosting API to:
    - Upload the source archive to your hosting account's file manager.
