@@ -445,13 +445,25 @@ button:not(:disabled),
   transition-delay: var(--delay, 0ms);
 }
 
+.landing .features .card.is-visible:hover {
+  transform: translateY(-4px);
+}
+
 .landing .credits h2.reveal-ready,
 .landing .credits p.lead.reveal-ready {
   transform: translateY(30px);
 }
 
-.landing .credits .card.reveal-ready {
+.landing .credits .credits-card-left.reveal-ready {
   transform: translateX(-80px);
+}
+
+.landing .credits .credits-card-center.reveal-ready {
+  transform: translateY(34px);
+}
+
+.landing .credits .credits-card-right.reveal-ready {
+  transform: translateX(80px);
 }
 
 .landing .credits .credits-alert.reveal-ready {
@@ -570,13 +582,36 @@ button:not(:disabled),
   }
 
   .landing .hero__content {
-    padding: 1rem 0 0;
+    padding: 0.75rem 0.25rem 0;
   }
 
   .landing .hero__art {
-    background-position: 72% top;
+    background-position: center top;
     background-size: cover;
-    opacity: 0.2;
+    opacity: 0.34;
+  }
+
+  .landing .hero::before {
+    background: linear-gradient(
+      to bottom,
+      rgba(9, 10, 24, 0.24) 0%,
+      rgba(9, 10, 24, 0.76) 35%,
+      rgba(9, 10, 24, 0.96) 100%
+    );
+  }
+
+  .landing .hero::after {
+    background: radial-gradient(
+      850px 460px at 50% 0%,
+      rgba(168, 85, 247, 0.24),
+      transparent 68%
+    );
+  }
+
+  .landing .credits .credits-card-left.reveal-ready,
+  .landing .credits .credits-card-center.reveal-ready,
+  .landing .credits .credits-card-right.reveal-ready {
+    transform: translateX(-44px);
   }
 
   .landing .credits::before {
@@ -598,5 +633,9 @@ button:not(:disabled),
   .landing .hero {
     padding-top: calc(4rem + 1.25rem);
     padding-bottom: 3rem;
+  }
+
+  .landing .hero__content {
+    padding: 0.5rem 0 0;
   }
 }

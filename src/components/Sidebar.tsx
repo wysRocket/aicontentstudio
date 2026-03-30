@@ -5,6 +5,7 @@ import {
   X,
   HelpCircle,
   Settings,
+  Shield,
   PenSquare,
   ScanText,
   AudioLines,
@@ -26,6 +27,7 @@ const mainNavItems = [
 ] satisfies Array<{ icon: typeof PenSquare; mode: WorkspaceToolMode }>;
 
 const bottomNavItems = [
+  { icon: Shield, label: "Admin", href: "/dashboard/admin", color: "text-amber-400" },
   { icon: HelpCircle, label: "Help", href: "/dashboard/help", color: "text-rose-500" },
   { icon: Settings, label: "Settings", href: "/dashboard/settings", color: "text-blue-500" },
 ];

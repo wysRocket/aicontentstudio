@@ -208,8 +208,10 @@ export default function Landing() {
       };
 
       const playCardsDown = () => {
-        const order = isDesktop() ? cards.slice().reverse() : cards;
-        const step = isDesktop() ? 120 : 140;
+        const order = isDesktop()
+          ? [cards[0], cards[2], cards[1]].filter(Boolean)
+          : cards;
+        const step = isDesktop() ? 130 : 140;
         order.forEach((card, index) => {
           setStaggerDelay(card, index * step);
           queue(() => showAnimated(card), index * step);
@@ -546,7 +548,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen flex flex-col">
       <nav className="sticky top-0 z-50 bg-bg-nav/90 backdrop-blur-md border-b border-border-nav">
-        <div className="max-w-6xl mx-auto px-4 py-2.5 sm:py-3 flex items-center justify-between gap-3">
+        <div className="max-w-6xl mx-auto px-5 py-2.5 sm:px-6 sm:py-3 flex items-center justify-between gap-3">
           <Link
             to="/"
             className="flex items-center gap-2 text-text-main hover:text-primary transition-colors font-semibold text-base sm:text-lg"
@@ -633,14 +635,14 @@ export default function Landing() {
         <section className="hero flex items-center">
           <div className="hero__art" aria-hidden="true"></div>
 
-          <div className="container hero__content max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="container hero__content max-w-6xl mx-auto px-5 sm:px-6">
             <div className="grid lg:grid-cols-12 gap-8 items-center">
               <div className="lg:col-span-8">
-                <h1 className="text-[2.6rem] font-semibold mb-5 tracking-tight leading-[0.94] max-w-[14ch] sm:text-5xl md:text-6xl sm:mb-6">
-                  <span className="text-primary">AI Content Studio</span>,
-                  powered by credits
+                <h1 className="mb-5 max-w-[10ch] text-[2.1rem] font-semibold leading-[0.92] tracking-[-0.05em] sm:mb-6 sm:max-w-[11.5ch] sm:text-[3.35rem] lg:text-[4.2rem]">
+                  <span className="block text-primary">AI Content Studio</span>
+                  <span className="mt-1 block text-text-main">powered by credits</span>
                 </h1>
-                <p className="lead mb-7 max-w-[62ch] text-base leading-7 text-text-muted sm:mb-8 sm:text-lg md:text-xl md:leading-relaxed">
+                <p className="lead mb-7 max-w-[58ch] text-[15px] leading-6 text-text-muted sm:mb-8 sm:text-lg sm:leading-7 md:text-[1.15rem] md:leading-relaxed">
                   Create, rewrite, summarize, and transcribe content with a
                   clear balance, predictable spend, and a complete order history
                   in your account.
@@ -649,7 +651,7 @@ export default function Landing() {
                   {user ? (
                     <button
                       onClick={goToDashboard}
-                      className="w-full rounded-xl bg-primary px-5 py-3 text-base font-medium text-white transition-colors hover:bg-primary-hover sm:w-auto sm:px-6"
+                      className="w-full rounded-xl bg-primary px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover sm:w-auto sm:px-6 sm:text-base"
                     >
                       Open dashboard
                     </button>
@@ -657,13 +659,13 @@ export default function Landing() {
                     <>
                       <button
                         onClick={() => goToAuth("signup")}
-                        className="w-full rounded-xl bg-primary px-5 py-3 text-base font-medium text-white transition-colors hover:bg-primary-hover sm:w-auto sm:px-6"
+                        className="w-full rounded-xl bg-primary px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover sm:w-auto sm:px-6 sm:text-base"
                       >
                         Create account
                       </button>
                       <button
                         onClick={() => goToAuth("signin")}
-                        className="w-full rounded-xl border border-outline-border px-5 py-3 text-base font-medium text-primary transition-colors hover:bg-outline-hover-bg hover:border-outline-hover-border hover:text-white sm:w-auto sm:px-6"
+                        className="w-full rounded-xl border border-outline-border px-5 py-3 text-sm font-medium text-primary transition-colors hover:bg-outline-hover-bg hover:border-outline-hover-border hover:text-white sm:w-auto sm:px-6 sm:text-base"
                       >
                         Sign in
                       </button>
@@ -671,19 +673,19 @@ export default function Landing() {
                   )}
                   <a
                     href="#how-credits-work"
-                    className="px-1 py-2 text-base font-medium text-primary/85 transition-colors hover:text-white sm:px-4 sm:py-3"
+                    className="px-1 py-2 text-sm font-medium text-white/72 transition-colors hover:text-white sm:px-4 sm:py-3 sm:text-base"
                   >
                     How credits work
                   </a>
                   <a
                     href="#pricing"
-                    className="px-1 py-2 text-base font-medium text-primary/85 transition-colors hover:text-white sm:px-4 sm:py-3"
+                    className="px-1 py-2 text-sm font-medium text-white/72 transition-colors hover:text-white sm:px-4 sm:py-3 sm:text-base"
                   >
                     Pricing
                   </a>
                   <a
                     href="#faq"
-                    className="px-1 py-2 text-base font-medium text-primary/85 transition-colors hover:text-white sm:px-4 sm:py-3"
+                    className="px-1 py-2 text-sm font-medium text-white/72 transition-colors hover:text-white sm:px-4 sm:py-3 sm:text-base"
                   >
                     FAQ
                   </a>
@@ -711,13 +713,13 @@ export default function Landing() {
 
         {/* Features Section */}
         <section id="features" className="features">
-          <div className="container max-w-6xl mx-auto px-4">
+          <div className="container max-w-6xl mx-auto px-5 sm:px-6">
             <div className="mb-12">
-              <h2 className="text-3xl font-semibold mb-4 tracking-tight sm:text-4xl">
+              <h2 className="text-[1.9rem] font-semibold mb-4 tracking-tight sm:text-4xl">
                 <span className="text-primary">Tools</span> designed for real
                 work
               </h2>
-              <p className="lead text-base text-text-muted sm:text-xl">
+              <p className="lead text-[15px] text-text-muted sm:text-xl">
                 A focused set of AI tools with predictable usage — powered by
                 your credit balance.
               </p>
@@ -776,12 +778,12 @@ export default function Landing() {
           id="how-credits-work"
           className="credits border-y border-border-main"
         >
-          <div className="container max-w-6xl mx-auto px-4 relative z-10">
+          <div className="container max-w-6xl mx-auto px-5 sm:px-6 relative z-10">
             <div className="mb-12">
-              <h2 className="text-3xl font-semibold mb-4 tracking-tight sm:text-4xl">
+              <h2 className="text-[1.9rem] font-semibold mb-4 tracking-tight sm:text-4xl">
                 <span className="text-primary">Simple</span> credit-based usage
               </h2>
-              <p className="lead text-base text-text-muted sm:text-xl">
+              <p className="lead text-[15px] text-text-muted sm:text-xl">
                 One balance. Transparent costs. Full control over your spending.
               </p>
             </div>
@@ -808,7 +810,13 @@ export default function Landing() {
               ].map((item, i) => (
                 <div
                   key={i}
-                  className="card bg-bg-card-solid border border-border-main rounded-2xl p-6 shadow-xl card-hover"
+                  className={`card credits-card rounded-2xl border border-border-main bg-bg-card-solid p-6 shadow-xl card-hover ${
+                    i === 0
+                      ? "credits-card-left"
+                      : i === 1
+                        ? "credits-card-center"
+                        : "credits-card-right"
+                  }`}
                 >
                   <div className="font-semibold mb-3 text-lg">
                     <span className="text-primary">{item.step}</span>{" "}
@@ -829,12 +837,12 @@ export default function Landing() {
 
         {/* Trust Section */}
         <section id="trust" className="trust">
-          <div className="container max-w-6xl mx-auto px-4 relative z-10">
+          <div className="container max-w-6xl mx-auto px-5 sm:px-6 relative z-10">
             <div className="mb-12">
-              <h2 className="text-3xl font-semibold mb-4 tracking-tight sm:text-4xl">
+              <h2 className="text-[1.9rem] font-semibold mb-4 tracking-tight sm:text-4xl">
                 <span className="text-primary">Reliable by</span> design
               </h2>
-              <p className="lead text-base text-text-muted sm:text-xl">
+              <p className="lead text-[15px] text-text-muted sm:text-xl">
                 Built for stability, transparency, and predictable results.
               </p>
             </div>
@@ -875,12 +883,12 @@ export default function Landing() {
 
         {/* Pricing Section */}
         <section id="pricing" className="pricing">
-          <div className="container max-w-6xl mx-auto px-4 relative z-10">
+          <div className="container max-w-6xl mx-auto px-5 sm:px-6 relative z-10">
             <div className="mb-12">
-              <h2 className="text-3xl font-semibold mb-4 tracking-tight sm:text-4xl">
+              <h2 className="text-[1.9rem] font-semibold mb-4 tracking-tight sm:text-4xl">
                 Credit packages
               </h2>
-              <p className="lead text-base text-text-muted sm:text-xl">
+              <p className="lead text-[15px] text-text-muted sm:text-xl">
                 Simple pricing based on prepaid usage credits.
               </p>
             </div>
@@ -960,12 +968,12 @@ export default function Landing() {
 
         {/* FAQ Section */}
         <section id="faq" className="faq">
-          <div className="container max-w-6xl mx-auto px-4 relative z-10">
+          <div className="container max-w-6xl mx-auto px-5 sm:px-6 relative z-10">
             <div className="mb-12">
-              <h2 className="text-3xl font-semibold mb-4 tracking-tight sm:text-4xl">
+              <h2 className="text-[1.9rem] font-semibold mb-4 tracking-tight sm:text-4xl">
                 <span className="text-primary">How</span> credits work
               </h2>
-              <p className="lead text-base text-text-muted sm:text-xl">
+              <p className="lead text-[15px] text-text-muted sm:text-xl">
                 Clear rules, transparent usage, no hidden limits.
               </p>
             </div>
@@ -1039,7 +1047,7 @@ export default function Landing() {
       </main>
 
       <footer className="border-t border-border-main py-8">
-        <div className="container max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="container max-w-6xl mx-auto px-5 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-text-muted text-sm">
             © 2026 AI Content Studio
           </div>

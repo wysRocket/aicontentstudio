@@ -1,18 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AudioLines,
+  Check,
   CheckCircle2,
   Coins,
+  Copy,
   FileAudio,
   Languages,
   Loader2,
   PenSquare,
   Plus,
   Save,
+  ScanText,
   Sparkles,
   Wand2,
   AlertTriangle,
-  ScanText,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { GoogleGenAI } from "@google/genai";
@@ -60,6 +62,22 @@ const OUTPUT_PANEL_ACCENTS = {
   translate: "from-[#2b1d12] via-[#5a3316] to-[#8b5a27]",
 } satisfies Record<WorkspaceToolMode, string>;
 
+const TOOL_ORDER: WorkspaceToolMode[] = [
+  "write_rewrite",
+  "summarize",
+  "transcribe",
+  "translate",
+];
+
+function createEmptyDraftsByMode() {
+  return {
+    write_rewrite: createWorkspaceRunDraft("write_rewrite"),
+    summarize: createWorkspaceRunDraft("summarize"),
+    transcribe: createWorkspaceRunDraft("transcribe"),
+    translate: createWorkspaceRunDraft("translate"),
+  } satisfies Record<WorkspaceToolMode, WorkspaceRunInput>;
+}
+
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
@@ -77,6 +95,16 @@ function getGeminiApiKey() {
 function formatUpdatedAt(run: WorkspaceRunRecord) {
   const date = run.updatedAt?.toDate();
   return date ? dateFormatter.format(date) : "Unsaved";
+}
+
+function formatStatus(status: string) {
+  if (status === "completed") return "Done";
+  if (status === "failed") return "Failed";
+  return "Draft";
+}
+
+function wordCount(text: string) {
+  return text.trim() ? text.trim().split(/\s+/).length : 0;
 }
 
 function readFileAsBase64(file: File) {
@@ -115,12 +143,12 @@ function toEditableRun(run: WorkspaceRunRecord): WorkspaceRunInput {
 function hasEditorContent(run: WorkspaceRunInput) {
   return Boolean(
     run.title.trim() ||
-      run.sourceText.trim() ||
-      run.instructions.trim() ||
-      run.outputText.trim() ||
-      run.targetLanguage.trim() ||
-      run.sourceFileName.trim() ||
-      run.lastError.trim(),
+    run.sourceText.trim() ||
+    run.instructions.trim() ||
+    run.outputText.trim() ||
+    run.targetLanguage.trim() ||
+    run.sourceFileName.trim() ||
+    run.lastError.trim(),
   );
 }
 
@@ -156,12 +184,19 @@ export default function Dashboard() {
   const [editor, setEditor] = useState<WorkspaceRunInput>(
     createWorkspaceRunDraft("write_rewrite"),
   );
+  const [draftsByMode, setDraftsByMode] = useState<
+    Record<WorkspaceToolMode, WorkspaceRunInput>
+  >(() => createEmptyDraftsByMode());
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [copiedOutput, setCopiedOutput] = useState(false);
+  const [showAllRuns, setShowAllRuns] = useState(false);
+  const autosaveHashRef = useRef("");
   const activeMode = normalizeWorkspaceToolMode(searchParams.get("tool"));
 
   useEffect(() => {
@@ -171,6 +206,8 @@ export default function Dashboard() {
         setCredits(0);
         setSelectedRunId("");
         setEditor(createWorkspaceRunDraft("write_rewrite"));
+        setDraftsByMode(createEmptyDraftsByMode());
+        setLastSavedAt(null);
         setIsLoading(false);
       }
       return;
@@ -215,7 +252,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (!runs.length) {
       if (!selectedRunId) {
-        setEditor(createWorkspaceRunDraft(activeMode));
+        const draft = draftsByMode[activeMode];
+        setEditor(draft);
       }
       return;
     }
@@ -226,9 +264,14 @@ export default function Dashboard() {
     const nextRun = runs.find((run) => run.mode === activeMode) ?? runs[0];
     if (!nextRun) return;
 
+    const editableRun = toEditableRun(nextRun);
     setSelectedRunId(nextRun.id);
-    setEditor(toEditableRun(nextRun));
-  }, [activeMode, runs, selectedRunId]);
+    setEditor(editableRun);
+    setDraftsByMode((current) => ({
+      ...current,
+      [nextRun.mode]: editableRun,
+    }));
+  }, [activeMode, draftsByMode, runs, selectedRunId]);
 
   const activeRun = useMemo(
     () => runs.find((run) => run.id === selectedRunId) ?? null,
@@ -239,6 +282,8 @@ export default function Dashboard() {
     () => runs.filter((run) => run.mode === activeMode),
     [activeMode, runs],
   );
+
+  const displayedRuns = showAllRuns ? runs : modeRuns;
 
   const modeMeta = WORKSPACE_TOOL_CONFIG[activeMode];
   const ModeIcon = MODE_ICONS[activeMode];
@@ -271,7 +316,12 @@ export default function Dashboard() {
   const selectRun = (run: WorkspaceRunRecord) => {
     setSearchParams({ tool: run.mode });
     setSelectedRunId(run.id);
-    setEditor(toEditableRun(run));
+    const editableRun = toEditableRun(run);
+    setEditor(editableRun);
+    setDraftsByMode((current) => ({
+      ...current,
+      [run.mode]: editableRun,
+    }));
     setSelectedFile(null);
     setError(null);
     setSuccessMessage(null);
@@ -280,49 +330,154 @@ export default function Dashboard() {
   const startNewRun = (mode: WorkspaceToolMode = activeMode) => {
     setSearchParams({ tool: mode });
     setSelectedRunId("");
-    setEditor(createWorkspaceRunDraft(mode));
+    const draft = createWorkspaceRunDraft(mode);
+    setEditor(draft);
+    setDraftsByMode((current) => ({
+      ...current,
+      [mode]: draft,
+    }));
+    setSelectedFile(null);
+    setError(null);
+    setSuccessMessage(null);
+  };
+
+  const switchMode = (mode: WorkspaceToolMode) => {
+    setSearchParams({ tool: mode });
+    const runForMode = runs.find((run) => run.mode === mode);
+
+    if (runForMode) {
+      const editableRun = toEditableRun(runForMode);
+      setSelectedRunId(runForMode.id);
+      setEditor(editableRun);
+      setDraftsByMode((current) => ({
+        ...current,
+        [mode]: editableRun,
+      }));
+    } else {
+      setSelectedRunId("");
+      setEditor(draftsByMode[mode]);
+    }
+
     setSelectedFile(null);
     setError(null);
     setSuccessMessage(null);
   };
 
   const updateEditor = (patch: Partial<WorkspaceRunInput>) => {
-    setEditor((current) => ({ ...current, ...patch }));
+    setEditor((current) => {
+      const next = { ...current, ...patch };
+      setDraftsByMode((drafts) => ({
+        ...drafts,
+        [activeMode]: next,
+      }));
+      return next;
+    });
   };
 
-  const persistRun = async (overrides: Partial<WorkspaceRunInput> = {}) => {
-    if (!user) return null;
+  const persistRun = useCallback(
+    async (overrides: Partial<WorkspaceRunInput> = {}) => {
+      if (!user) return null;
 
-    const nextMode = overrides.mode ?? activeMode;
-    const sourceText = overrides.sourceText ?? editor.sourceText;
-    const title =
-      (overrides.title ?? editor.title).trim() ||
-      getDefaultWorkspaceRunTitle(nextMode, sourceText);
+      const nextMode = overrides.mode ?? activeMode;
+      const sourceText = overrides.sourceText ?? editor.sourceText;
+      const title =
+        (overrides.title ?? editor.title).trim() ||
+        getDefaultWorkspaceRunTitle(nextMode, sourceText);
 
-    const payload: WorkspaceRunInput = {
-      mode: nextMode,
-      title,
-      sourceText,
-      instructions: overrides.instructions ?? editor.instructions,
-      outputText: overrides.outputText ?? editor.outputText,
-      targetLanguage: overrides.targetLanguage ?? editor.targetLanguage,
-      status: overrides.status ?? editor.status,
-      creditCost:
-        overrides.creditCost ?? editor.creditCost ?? WORKSPACE_TOOL_CONFIG[nextMode].cost,
-      sourceFileName: overrides.sourceFileName ?? editor.sourceFileName,
-      sourceMimeType: overrides.sourceMimeType ?? editor.sourceMimeType,
-      lastError: overrides.lastError ?? editor.lastError,
-    };
+      const payload: WorkspaceRunInput = {
+        mode: nextMode,
+        title,
+        sourceText,
+        instructions: overrides.instructions ?? editor.instructions,
+        outputText: overrides.outputText ?? editor.outputText,
+        targetLanguage: overrides.targetLanguage ?? editor.targetLanguage,
+        status: overrides.status ?? editor.status,
+        creditCost:
+          overrides.creditCost ??
+          editor.creditCost ??
+          WORKSPACE_TOOL_CONFIG[nextMode].cost,
+        sourceFileName: overrides.sourceFileName ?? editor.sourceFileName,
+        sourceMimeType: overrides.sourceMimeType ?? editor.sourceMimeType,
+        lastError: overrides.lastError ?? editor.lastError,
+      };
 
-    const runId = await saveWorkspaceRun(user.uid, {
-      id: selectedRunId || undefined,
-      ...payload,
+      const runId = await saveWorkspaceRun(user.uid, {
+        id: selectedRunId || undefined,
+        ...payload,
+      });
+
+      setSelectedRunId(runId);
+      setEditor(payload);
+      setDraftsByMode((current) => ({
+        ...current,
+        [nextMode]: payload,
+      }));
+      setLastSavedAt(new Date());
+      return runId;
+    },
+    [activeMode, editor, selectedRunId, user],
+  );
+
+  useEffect(() => {
+    if (!user || !isAuthReady || isSaving || isGenerating || !isDirty) return;
+
+    const sourceFileName = selectedFile?.name || editor.sourceFileName;
+    const sourceMimeType = selectedFile?.type || editor.sourceMimeType;
+    const nextAutosaveHash = JSON.stringify({
+      activeMode,
+      selectedRunId,
+      title: editor.title,
+      sourceText: editor.sourceText,
+      instructions: editor.instructions,
+      outputText: editor.outputText,
+      targetLanguage: editor.targetLanguage,
+      status: editor.status,
+      creditCost: editor.creditCost,
+      sourceFileName,
+      sourceMimeType,
+      lastError: editor.lastError,
     });
 
-    setSelectedRunId(runId);
-    setEditor(payload);
-    return runId;
-  };
+    if (autosaveHashRef.current === nextAutosaveHash) return;
+
+    const timeoutId = window.setTimeout(() => {
+      persistRun({ sourceFileName, sourceMimeType })
+        .then(() => {
+          autosaveHashRef.current = nextAutosaveHash;
+        })
+        .catch((autosaveError) => {
+          console.error("Autosave failed", autosaveError);
+        });
+    }, 2200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    activeMode,
+    editor,
+    isAuthReady,
+    isDirty,
+    isGenerating,
+    isSaving,
+    selectedFile,
+    selectedRunId,
+    user,
+    persistRun,
+  ]);
+
+  const inlineSourceValidation =
+    activeMode !== "transcribe" && !editor.sourceText.trim()
+      ? "Add source text to run this tool."
+      : null;
+  const inlineTranscribeValidation =
+    activeMode === "transcribe" && !selectedFile
+      ? "Select an audio file to transcribe."
+      : null;
+  const inlineTargetLanguageValidation =
+    activeMode === "translate" && !editor.targetLanguage.trim()
+      ? "Pick a target language before running translation."
+      : null;
 
   const handleSave = async () => {
     if (!user) return;
@@ -343,6 +498,13 @@ export default function Dashboard() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleCopyOutput = async () => {
+    if (!editor.outputText.trim()) return;
+    await navigator.clipboard.writeText(editor.outputText);
+    setCopiedOutput(true);
+    setTimeout(() => setCopiedOutput(false), 2000);
   };
 
   const handleGenerate = async () => {
@@ -379,7 +541,9 @@ export default function Dashboard() {
       if (activeMode === "transcribe") {
         const file = selectedFile;
         if (!file) {
-          throw new Error("Upload an audio file before requesting a transcript.");
+          throw new Error(
+            "Upload an audio file before requesting a transcript.",
+          );
         }
 
         const base64Audio = await readFileAsBase64(file);
@@ -470,90 +634,90 @@ export default function Dashboard() {
   return (
     <div className="min-h-full bg-[#f4ede4] px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
       <div className="mx-auto max-w-[1480px] space-y-4">
-        <section className="overflow-hidden rounded-[34px] border border-black/8 bg-[linear-gradient(135deg,#1a1623_0%,#2b2036_35%,#8a5d74_100%)] px-5 py-6 text-white shadow-[0_28px_80px_rgba(23,19,29,0.22)] sm:px-7 sm:py-7 lg:px-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f8dce6]">
-                <Sparkles className="h-3.5 w-3.5" />
-                Shared workspace
+        {/* Compact hero */}
+        <section className="overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(135deg,#1a1623_0%,#2b2036_35%,#8a5d74_100%)] px-5 py-4 text-white shadow-[0_20px_60px_rgba(23,19,29,0.18)] sm:px-7 lg:px-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f8dce6]">
+                <Sparkles className="h-3 w-3" />
+                Workspace
               </div>
-              <h2 className="mt-4 text-[30px] font-semibold leading-[1.02] tracking-[-0.05em] sm:text-[40px]">
-                One authenticated canvas for the real work
+              <h2 className="text-base font-semibold tracking-[-0.02em] text-white/90">
+                AI Content Studio
               </h2>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-[#ead9df] sm:text-[15px]">
-                Switch between rewriting, summaries, audio transcription, and
-                translation without leaving the dashboard. Every run is saved,
-                your credit cost stays visible, and the page reads like one
-                coherent workspace instead of stacked sections.
-              </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[520px]">
-              <div className="rounded-[24px] border border-white/10 bg-white/10 px-4 py-4 backdrop-blur-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">
-                  Active tool
+            <div className="flex gap-2.5">
+              <div className="rounded-[18px] border border-white/10 bg-white/10 px-4 py-2.5 backdrop-blur-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
+                  Credits
                 </p>
-                <div className="mt-3 flex items-center gap-3">
-                  <div className="rounded-2xl bg-white/12 p-3">
-                    <ModeIcon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-base font-semibold">{modeMeta.label}</p>
-                    <p className="text-sm text-white/70">{modeMeta.eyebrow}</p>
-                  </div>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <Coins className="h-3.5 w-3.5 text-[#f8dce6]" />
+                  <p className="text-sm font-semibold">
+                    {credits === null ? "..." : credits}
+                  </p>
                 </div>
               </div>
-
-              <div className="rounded-[24px] border border-white/10 bg-white/10 px-4 py-4 backdrop-blur-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">
-                  Available credits
+              <div className="rounded-[18px] border border-white/10 bg-white/10 px-4 py-2.5 backdrop-blur-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
+                  This run
                 </p>
-                <div className="mt-3 flex items-center gap-3">
-                  <div className="rounded-2xl bg-white/12 p-3">
-                    <Coins className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-base font-semibold">
-                      {credits === null ? "..." : credits}
-                    </p>
-                    <p className="text-sm text-white/70">live balance</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-[24px] border border-white/10 bg-white/10 px-4 py-4 backdrop-blur-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">
-                  Run cost
-                </p>
-                <div className="mt-3 flex items-center gap-3">
-                  <div className="rounded-2xl bg-white/12 p-3">
-                    <Wand2 className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-base font-semibold">{modeMeta.cost} credits</p>
-                    <p className="text-sm text-white/70">charged on successful runs</p>
-                  </div>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <ModeIcon className="h-3.5 w-3.5 text-[#f8dce6]" />
+                  <p className="text-sm font-semibold">
+                    {modeMeta.cost} credits
+                  </p>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
+        {/* Mode tab switcher */}
+        <div className="flex gap-1.5 rounded-[22px] border border-black/8 bg-white p-1.5 shadow-sm">
+          {TOOL_ORDER.map((mode) => {
+            const Icon = MODE_ICONS[mode];
+            const meta = WORKSPACE_TOOL_CONFIG[mode];
+            const isActive = mode === activeMode;
+            return (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => switchMode(mode)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-[18px] px-3 py-2.5 text-sm font-semibold transition ${
+                  isActive
+                    ? `border shadow-sm ${MODE_ACCENTS[mode]}`
+                    : "text-[#6e5e58] hover:bg-[#f9f6f2] hover:text-[#17131d]"
+                }`}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">{meta.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Banners */}
         {error && (
           <div className="rounded-[22px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
             {error}
           </div>
         )}
-
         {successMessage && (
           <div className="rounded-[22px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             {successMessage}
           </div>
         )}
 
+        {/* Main workspace grid */}
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.14fr)_minmax(360px,0.86fr)]">
+          {/* Left column: tool header + input form */}
           <div className="space-y-4">
-            <section className={`rounded-[30px] border p-5 shadow-sm ${MODE_ACCENTS[activeMode]}`}>
+            {/* Tool header with action buttons */}
+            <section
+              className={`rounded-[30px] border p-5 shadow-sm ${MODE_ACCENTS[activeMode]}`}
+            >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-2xl">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-current/75">
@@ -568,6 +732,14 @@ export default function Dashboard() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  <p className="w-full text-xs text-[#6e5e58] lg:w-auto lg:pr-2 lg:pt-3">
+                    {lastSavedAt
+                      ? `Last saved ${lastSavedAt.toLocaleTimeString([], {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}`
+                      : "Autosave keeps this run updated while you edit"}
+                  </p>
                   <button
                     type="button"
                     onClick={() => startNewRun(activeMode)}
@@ -592,7 +764,11 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={handleGenerate}
-                    disabled={isGenerating || isSaving}
+                    disabled={
+                      isGenerating ||
+                      isSaving ||
+                      Boolean(generationValidationMessage)
+                    }
                     className="inline-flex items-center gap-2 rounded-2xl bg-[#17131d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#2b2238] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isGenerating ? (
@@ -606,15 +782,20 @@ export default function Dashboard() {
               </div>
             </section>
 
+            {/* Input form */}
             <section className="rounded-[30px] border border-black/8 bg-white p-5 shadow-sm">
               <div className="grid gap-5">
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-[#17131d]">
+                  <label
+                    htmlFor="workspace-run-title"
+                    className="mb-2 block text-sm font-semibold text-[#17131d]"
+                  >
                     Run title
                   </label>
                   <input
+                    id="workspace-run-title"
                     value={editor.title}
-                    onChange={(event) => updateEditor({ title: event.target.value })}
+                    onChange={(e) => updateEditor({ title: e.target.value })}
                     placeholder={getDefaultWorkspaceRunTitle(activeMode)}
                     className="w-full rounded-2xl border border-black/10 bg-[#fcfaf7] px-4 py-3 text-sm text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
                   />
@@ -622,28 +803,42 @@ export default function Dashboard() {
 
                 {activeMode === "translate" && (
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-[#17131d]">
+                    <label
+                      htmlFor="workspace-target-language"
+                      className="mb-2 block text-sm font-semibold text-[#17131d]"
+                    >
                       Target language
                     </label>
                     <input
+                      id="workspace-target-language"
                       value={editor.targetLanguage}
-                      onChange={(event) =>
-                        updateEditor({ targetLanguage: event.target.value })
+                      onChange={(e) =>
+                        updateEditor({ targetLanguage: e.target.value })
                       }
                       placeholder="Spanish, German, Ukrainian, French..."
                       className="w-full rounded-2xl border border-black/10 bg-[#fcfaf7] px-4 py-3 text-sm text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
                     />
+                    {inlineTargetLanguageValidation && (
+                      <p className="mt-2 text-xs font-medium text-rose-700">
+                        {inlineTargetLanguageValidation}
+                      </p>
+                    )}
                   </div>
                 )}
 
                 <div>
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <label className="block text-sm font-semibold text-[#17131d]">
+                    <label
+                      htmlFor="workspace-source-input"
+                      className="block text-sm font-semibold text-[#17131d]"
+                    >
                       {modeMeta.inputLabel}
                     </label>
                     {activeMode !== "transcribe" && (
                       <span className="text-xs text-[#8d7d74]">
-                        Saved with every run
+                        {editor.sourceText.trim()
+                          ? `${wordCount(editor.sourceText).toLocaleString()} words`
+                          : "Saved with every run"}
                       </span>
                     )}
                   </div>
@@ -659,15 +854,16 @@ export default function Dashboard() {
                             Upload an audio file
                           </p>
                           <p className="mt-1 text-sm text-[#6e5e58]">
-                            MP3, WAV, M4A, or another browser-supported audio format.
+                            MP3, WAV, M4A, or another browser-supported audio
+                            format.
                           </p>
                         </div>
                         <input
                           type="file"
                           accept="audio/*"
                           className="hidden"
-                          onChange={(event) =>
-                            setSelectedFile(event.target.files?.[0] ?? null)
+                          onChange={(e) =>
+                            setSelectedFile(e.target.files?.[0] ?? null)
                           }
                         />
                       </label>
@@ -686,95 +882,80 @@ export default function Dashboard() {
                       )}
 
                       <textarea
+                        id="workspace-source-input"
                         value={editor.sourceText}
-                        onChange={(event) =>
-                          updateEditor({ sourceText: event.target.value })
+                        onChange={(e) =>
+                          updateEditor({ sourceText: e.target.value })
                         }
                         placeholder={modeMeta.inputPlaceholder}
                         className="min-h-[140px] w-full rounded-[28px] border border-black/10 bg-[#fcfaf7] px-4 py-4 text-sm leading-6 text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
                       />
+                      {inlineTranscribeValidation && (
+                        <p className="text-xs font-medium text-rose-700">
+                          {inlineTranscribeValidation}
+                        </p>
+                      )}
                     </div>
                   ) : (
-                    <textarea
-                      value={editor.sourceText}
-                      onChange={(event) =>
-                        updateEditor({ sourceText: event.target.value })
-                      }
-                      placeholder={modeMeta.inputPlaceholder}
-                      className="min-h-[260px] w-full rounded-[28px] border border-black/10 bg-[#fcfaf7] px-4 py-4 text-sm leading-6 text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
-                    />
+                    <>
+                      <textarea
+                        id="workspace-source-input"
+                        value={editor.sourceText}
+                        onChange={(e) =>
+                          updateEditor({ sourceText: e.target.value })
+                        }
+                        placeholder={modeMeta.inputPlaceholder}
+                        className="min-h-[260px] w-full rounded-[28px] border border-black/10 bg-[#fcfaf7] px-4 py-4 text-sm leading-6 text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
+                      />
+                      {inlineSourceValidation && (
+                        <p className="mt-2 text-xs font-medium text-rose-700">
+                          {inlineSourceValidation}
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-[#17131d]">
+                  <label
+                    htmlFor="workspace-instructions-input"
+                    className="mb-2 block text-sm font-semibold text-[#17131d]"
+                  >
                     {modeMeta.instructionsLabel}
                   </label>
                   <textarea
+                    id="workspace-instructions-input"
                     value={editor.instructions}
-                    onChange={(event) =>
-                      updateEditor({ instructions: event.target.value })
+                    onChange={(e) =>
+                      updateEditor({ instructions: e.target.value })
                     }
                     placeholder={modeMeta.instructionsPlaceholder}
                     className="min-h-[140px] w-full rounded-[28px] border border-black/10 bg-[#fcfaf7] px-4 py-4 text-sm leading-6 text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
                   />
                 </div>
-
-                <div className="grid gap-3 md:grid-cols-3">
-                  <div className="rounded-[24px] border border-black/8 bg-[#fcfaf7] px-4 py-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8c5f74]">
-                      Current mode
-                    </p>
-                    <p className="mt-3 text-base font-semibold text-[#17131d]">
-                      {modeMeta.label}
-                    </p>
-                  </div>
-                  <div className="rounded-[24px] border border-black/8 bg-[#fcfaf7] px-4 py-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8c5f74]">
-                      Run cost
-                    </p>
-                    <p className="mt-3 text-base font-semibold text-[#17131d]">
-                      {modeMeta.cost} credits
-                    </p>
-                  </div>
-                  <div className="rounded-[24px] border border-black/8 bg-[#fcfaf7] px-4 py-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8c5f74]">
-                      Saved state
-                    </p>
-                    <p className="mt-3 text-base font-semibold text-[#17131d]">
-                      {activeRun ? activeRun.status : "Draft only"}
-                    </p>
-                  </div>
-                </div>
               </div>
             </section>
           </div>
 
+          {/* Right column: output + history */}
           <div className="space-y-4 xl:sticky xl:top-[7.25rem] xl:self-start">
+            {/* Output panel */}
             <section className="overflow-hidden rounded-[30px] border border-black/8 bg-white shadow-sm">
               <div
                 className={`bg-gradient-to-br px-5 py-5 text-white ${OUTPUT_PANEL_ACCENTS[activeMode]}`}
               >
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">
-                        Output
-                      </p>
-                      <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em]">
-                        {modeMeta.outputLabel}
-                      </h3>
-                    </div>
-                    <div className="rounded-full border border-white/12 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/85">
-                      {editor.status}
-                    </div>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">
+                      Output
+                    </p>
+                    <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em]">
+                      {modeMeta.outputLabel}
+                    </h3>
                   </div>
-
-                  <p className="max-w-xl text-sm leading-6 text-white/75">
-                    Outputs stay attached to saved runs, so you can reopen prior
-                    drafts, summaries, transcripts, and translations without
-                    leaving the dashboard.
-                  </p>
+                  <div className="rounded-full border border-white/12 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/85">
+                    {formatStatus(editor.status)}
+                  </div>
                 </div>
               </div>
 
@@ -782,10 +963,13 @@ export default function Dashboard() {
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-black/6 bg-[#fcfaf7] px-4 py-4">
                   <div>
                     <p className="text-sm font-semibold text-[#17131d]">
-                      {editor.title.trim() || getDefaultWorkspaceRunTitle(activeMode)}
+                      {editor.title.trim() ||
+                        getDefaultWorkspaceRunTitle(activeMode)}
                     </p>
                     <p className="mt-1 text-sm text-[#6e5e58]">
-                      {activeRun ? `Updated ${formatUpdatedAt(activeRun)}` : "Not saved yet"}
+                      {activeRun
+                        ? `Updated ${formatUpdatedAt(activeRun)}`
+                        : "Not saved yet"}
                     </p>
                   </div>
 
@@ -797,36 +981,61 @@ export default function Dashboard() {
                     {editor.status === "completed" && (
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
                         <CheckCircle2 className="h-3.5 w-3.5" />
-                        Completed
+                        Done
                       </span>
                     )}
                     {editor.status === "failed" && (
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-100 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700">
                         <AlertTriangle className="h-3.5 w-3.5" />
-                        Needs another pass
+                        Failed
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="min-h-[420px] rounded-[28px] border border-black/8 bg-[#fffdf9] p-5">
+                <div className="min-h-[420px] overflow-hidden rounded-[28px] border border-black/8 bg-[#fffdf9]">
                   {isGenerating ? (
-                    <div className="flex h-full min-h-[320px] flex-col items-center justify-center text-center">
+                    <div className="flex h-full min-h-[420px] flex-col items-center justify-center p-5 text-center">
                       <Loader2 className="h-10 w-10 animate-spin text-[#8c5f74]" />
                       <p className="mt-4 text-base font-semibold text-[#17131d]">
                         Running {modeMeta.label.toLowerCase()}...
                       </p>
                       <p className="mt-2 max-w-sm text-sm leading-6 text-[#6e5e58]">
-                        The result will be saved into your workspace history as soon
-                        as the model responds.
+                        The result will be saved into your workspace history as
+                        soon as the model responds.
                       </p>
                     </div>
                   ) : editor.outputText.trim() ? (
-                    <pre className="whitespace-pre-wrap font-sans text-sm leading-7 text-[#17131d]">
-                      {editor.outputText}
-                    </pre>
+                    <>
+                      <div className="flex items-center justify-between gap-3 border-b border-black/6 px-5 py-3">
+                        <span className="text-xs text-[#8d7d74]">
+                          {wordCount(editor.outputText).toLocaleString()} words
+                          &middot; {editor.outputText.length.toLocaleString()}{" "}
+                          chars
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleCopyOutput}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2]"
+                        >
+                          {copiedOutput ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                          {copiedOutput ? "Copied!" : "Copy"}
+                        </button>
+                      </div>
+                      <textarea
+                        value={editor.outputText}
+                        onChange={(e) =>
+                          updateEditor({ outputText: e.target.value })
+                        }
+                        className="min-h-[360px] w-full resize-none bg-transparent p-5 font-sans text-sm leading-7 text-[#17131d] outline-none"
+                      />
+                    </>
                   ) : (
-                    <div className="flex h-full min-h-[320px] flex-col items-start justify-center">
+                    <div className="flex h-full min-h-[420px] flex-col items-start justify-center p-5">
                       <p className="text-sm font-semibold text-[#17131d]">
                         No output yet
                       </p>
@@ -846,6 +1055,7 @@ export default function Dashboard() {
               </div>
             </section>
 
+            {/* History panel */}
             <section className="rounded-[30px] border border-black/8 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3 border-b border-black/6 pb-4">
                 <div>
@@ -853,22 +1063,38 @@ export default function Dashboard() {
                     Saved history
                   </p>
                   <p className="mt-2 text-sm text-[#6e5e58]">
-                    {modeRuns.length} {modeRuns.length === 1 ? "run" : "runs"} in{" "}
-                    {modeMeta.label.toLowerCase()}
+                    {displayedRuns.length}{" "}
+                    {displayedRuns.length === 1 ? "run" : "runs"}
+                    {showAllRuns
+                      ? " across all tools"
+                      : ` in ${modeMeta.label.toLowerCase()}`}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => startNewRun(activeMode)}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-black/10 bg-[#17131d] text-white transition hover:bg-[#2c2438]"
-                  aria-label={`Start a new ${modeMeta.label.toLowerCase()} run`}
-                >
-                  <Plus className="h-5 w-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllRuns((v) => !v)}
+                    className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+                      showAllRuns
+                        ? "border-[#8c5f74]/25 bg-[#fff4f6] text-[#8c3857]"
+                        : "border-black/10 bg-[#fcfaf7] text-[#6e5e58] hover:bg-white hover:text-[#17131d]"
+                    }`}
+                  >
+                    {showAllRuns ? "This tool" : "All tools"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => startNewRun(activeMode)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-[#17131d] text-white transition hover:bg-[#2c2438]"
+                    aria-label={`Start a new ${modeMeta.label.toLowerCase()} run`}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="mt-4 space-y-3">
-                {modeRuns.map((run) => {
+                {displayedRuns.map((run) => {
                   const Icon = MODE_ICONS[run.mode];
                   const isSelected = run.id === selectedRunId;
 
@@ -898,7 +1124,7 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
+                          className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
                             run.status === "completed"
                               ? "bg-emerald-100 text-emerald-700"
                               : run.status === "failed"
@@ -906,7 +1132,7 @@ export default function Dashboard() {
                                 : "bg-slate-100 text-slate-700"
                           }`}
                         >
-                          {run.status}
+                          {formatStatus(run.status)}
                         </span>
                       </div>
 
@@ -919,10 +1145,11 @@ export default function Dashboard() {
                   );
                 })}
 
-                {!modeRuns.length && !isLoading && (
+                {!displayedRuns.length && !isLoading && (
                   <div className="rounded-[24px] border border-dashed border-black/10 bg-[#fcfaf7] px-4 py-6 text-sm text-[#6e5e58]">
-                    No saved runs for this tool yet. Start a new run and the
-                    history panel will fill automatically.
+                    {showAllRuns
+                      ? "No saved runs yet. Start a new run and the history will fill automatically."
+                      : "No saved runs for this tool yet. Start a new run and the history panel will fill automatically."}
                   </div>
                 )}
 

@@ -17,10 +17,10 @@ import {
   getUserCredits,
   type CreditTransactionRecord,
 } from "../../lib/firestore";
+import { formatCreditAmount } from "../../lib/formatting";
 
 const supportEmail = "support@aicontentstudio.net";
 
-const amountFormatter = new Intl.NumberFormat("en-US");
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
@@ -111,7 +111,9 @@ export function Billing() {
         "",
         "I want to top up my credits.",
         `Current balance: ${
-          credits === null ? "Still loading in app" : `${credits} credits`
+          credits === null
+            ? "Still loading in app"
+            : `${formatCreditAmount(credits)} credits`
         }`,
         "",
         "Please send me the next step.",
@@ -167,7 +169,7 @@ export function Billing() {
                       Loading...
                     </span>
                   ) : (
-                    amountFormatter.format(credits)
+                    formatCreditAmount(credits)
                   )}
                 </p>
                 <p className="text-sm text-gray-500">credits available right now</p>
@@ -189,7 +191,7 @@ export function Billing() {
             <Coins className="h-4 w-4 text-pink-600" />
           </div>
           <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-gray-950">
-            {credits === null ? "..." : amountFormatter.format(credits)}
+            {credits === null ? "..." : formatCreditAmount(credits)}
           </p>
         </div>
 
@@ -199,7 +201,7 @@ export function Billing() {
             <TrendingUp className="h-4 w-4 text-emerald-600" />
           </div>
           <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-gray-950">
-            {amountFormatter.format(stats.totalAdded)}
+            {formatCreditAmount(stats.totalAdded)}
           </p>
           <p className="mt-2 text-sm text-gray-500">from grants and top-ups</p>
         </div>
@@ -210,7 +212,7 @@ export function Billing() {
             <TrendingDown className="h-4 w-4 text-rose-600" />
           </div>
           <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-gray-950">
-            {amountFormatter.format(stats.totalSpent)}
+            {formatCreditAmount(stats.totalSpent)}
           </p>
           <p className="mt-2 text-sm text-gray-500">tracked usage deductions</p>
         </div>
@@ -221,7 +223,7 @@ export function Billing() {
             <History className="h-4 w-4 text-violet-600" />
           </div>
           <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-gray-950">
-            {amountFormatter.format(transactions.length)}
+            {formatCreditAmount(transactions.length)}
           </p>
           <p className="mt-2 text-sm text-gray-500">most recent ledger entries</p>
         </div>
@@ -307,7 +309,7 @@ export function Billing() {
                           <span>Source: {transaction.source}</span>
                           <span>
                             Balance after:{" "}
-                            {amountFormatter.format(transaction.balanceAfter)} credits
+                            {formatCreditAmount(transaction.balanceAfter)} credits
                           </span>
                         </div>
                       </div>
@@ -318,7 +320,7 @@ export function Billing() {
                         className={`text-lg font-semibold ${tone.amountClass}`}
                       >
                         {transaction.amount > 0 ? "+" : ""}
-                        {amountFormatter.format(transaction.amount)}
+                        {formatCreditAmount(transaction.amount)}
                       </div>
                       <div className="mt-1 text-xs uppercase tracking-[0.14em] text-gray-400">
                         credits

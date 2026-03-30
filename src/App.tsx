@@ -19,13 +19,16 @@ import { ContactPage, PrivacyPage, TermsPage } from "./pages/MarketingPages";
 import { FirebaseProvider } from "./contexts/FirebaseContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ScrollManager } from "./components/ScrollManager";
 import Dashboard from "./pages/Dashboard";
+import AdminPanel from "./pages/AdminPanel";
 
 export default function App() {
   return (
     <ErrorBoundary>
     <FirebaseProvider>
       <BrowserRouter>
+        <ScrollManager />
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/privacy" element={<PrivacyPage />} />
@@ -52,6 +55,7 @@ export default function App() {
             <Route path="coach" element={<Coach />} />
             <Route path="help" element={<Help />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="admin" element={<AdminPanel />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>

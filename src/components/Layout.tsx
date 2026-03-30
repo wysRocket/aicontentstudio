@@ -77,6 +77,11 @@ const routeMeta: Record<string, { eyebrow: string; title: string; description: s
     title: "Help",
     description: "Understand what each workspace section does and where to go next.",
   },
+  "/dashboard/admin": {
+    eyebrow: "Operations",
+    title: "Admin Panel",
+    description: "Review billing, account access, and workspace operations from one internal control surface.",
+  },
   "/dashboard/settings": {
     eyebrow: "Workspace config",
     title: "Settings",

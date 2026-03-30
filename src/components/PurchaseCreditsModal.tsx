@@ -1,11 +1,18 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Check,
   Coins,
+  Copy,
+  Clock3,
   Sparkles,
   X,
 } from "lucide-react";
+import {
+  formatCreditAmount,
+  formatEuroAmount,
+  formatEuroRatePerHundredCredits,
+} from "../lib/formatting";
 
 interface PurchaseCreditsModalProps {
   isOpen: boolean;
@@ -25,13 +32,6 @@ const pricingAnchors = [
   { credits: 2000, price: 50 },
   { credits: 5000, price: 110 },
 ] as const;
-
-const creditsFormatter = new Intl.NumberFormat("en-US");
-const euroFormatter = new Intl.NumberFormat("en-IE", {
-  style: "currency",
-  currency: "EUR",
-  maximumFractionDigits: 0,
-});
 
 function getInterpolatedPrice(credits: number) {
   if (credits <= pricingAnchors[0].credits) return pricingAnchors[0].price;
@@ -71,6 +71,7 @@ export default function PurchaseCreditsModal({
   currentCredits = null,
 }: PurchaseCreditsModalProps) {
   const [selectedCredits, setSelectedCredits] = useState<number>(500);
+  const [copiedRequest, setCopiedRequest] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -95,33 +96,55 @@ export default function PurchaseCreditsModal({
   const selectedPrice = getInterpolatedPrice(selectedCredits);
   const projectedBalance =
     currentCredits === null ? null : currentCredits + selectedCredits;
-  const supportSubject = `Credit Top Up Request - ${creditsFormatter.format(selectedCredits)} credits`;
+  const supportSubject = `Credit Top Up Request - ${formatCreditAmount(selectedCredits)} credits`;
   const supportBody = [
     "Hi AI Content Studio team,",
     "",
-    `I want to top up my account with ${creditsFormatter.format(selectedCredits)} credits.`,
-    `Approximate price: ${euroFormatter.format(selectedPrice)}`,
+    `I want to top up my account with ${formatCreditAmount(selectedCredits)} credits.`,
+    `Approximate price: ${formatEuroAmount(selectedPrice)}`,
     `Current balance: ${
-      currentCredits === null ? "Unknown" : `${currentCredits} credits`
+      currentCredits === null
+        ? "Unknown"
+        : `${formatCreditAmount(currentCredits)} credits`
     }`,
     "",
     "Please let me know the next step.",
   ].join("\n");
+  const requestSummary = [
+    `Top-up request: ${formatCreditAmount(selectedCredits)} credits`,
+    `Approximate price: ${formatEuroAmount(selectedPrice)}`,
+    `Current balance: ${
+      currentCredits === null
+        ? "Unknown"
+        : `${formatCreditAmount(currentCredits)} credits`
+    }`,
+    `Projected balance: ${
+      projectedBalance === null
+        ? "Unknown"
+        : `${formatCreditAmount(projectedBalance)} credits`
+    }`,
+  ].join("\n");
   const supportHref = `mailto:${supportEmail}?subject=${encodeURIComponent(supportSubject)}&body=${encodeURIComponent(supportBody)}`;
 
+  const handleCopyRequest = async () => {
+    await navigator.clipboard.writeText(requestSummary);
+    setCopiedRequest(true);
+    window.setTimeout(() => setCopiedRequest(false), 1800);
+  };
+
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-md sm:p-6"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+      <button
+        type="button"
+        aria-label="Close purchase credits modal"
+        onClick={onClose}
+        className="absolute inset-0 bg-slate-950/55 backdrop-blur-md"
+      />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="purchase-credits-title"
-        className="relative max-h-[90vh] w-full max-w-[1080px] overflow-y-auto rounded-[32px] border border-white/70 bg-[linear-gradient(180deg,#fffaf8_0%,#ffffff_55%,#fff7fb_100%)] shadow-[0_30px_120px_rgba(15,23,42,0.24)]"
-        onClick={(event) => event.stopPropagation()}
+        className="relative z-10 max-h-[90vh] w-full max-w-[1080px] overflow-y-auto rounded-[32px] border border-white/70 bg-[linear-gradient(180deg,#fffaf8_0%,#ffffff_55%,#fff7fb_100%)] shadow-[0_30px_120px_rgba(15,23,42,0.24)]"
       >
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(216,27,96,0.12),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(124,58,237,0.10),transparent_34%)]" />
 
@@ -146,12 +169,16 @@ export default function PurchaseCreditsModal({
                   id="purchase-credits-title"
                   className="mt-4 max-w-xl text-[2.2rem] font-semibold leading-[1.02] tracking-[-0.05em] text-slate-950"
                 >
-                  Choose the exact credit top-up you need.
+                  Configure your top-up and send it in one step.
                 </h2>
                 <p className="mt-3 max-w-2xl text-[15px] leading-7 text-slate-600">
                   Use the quick buttons for common amounts, fine-tune with the
                   slider, then preview the new balance before requesting it.
                 </p>
+                <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
+                  <Clock3 className="h-3.5 w-3.5 text-pink-600" />
+                  Manual requests are usually answered within one business day.
+                </div>
               </div>
 
               <div className="rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-[0_14px_35px_rgba(15,23,42,0.06)]">
@@ -166,7 +193,7 @@ export default function PurchaseCreditsModal({
                     <p className="text-3xl font-semibold tracking-[-0.05em] text-slate-950">
                       {currentCredits === null
                         ? "..."
-                        : creditsFormatter.format(currentCredits)}
+                        : formatCreditAmount(currentCredits)}
                     </p>
                     <p className="text-sm text-slate-500">credits</p>
                   </div>
@@ -174,20 +201,20 @@ export default function PurchaseCreditsModal({
               </div>
 
               <div className="rounded-[26px] border border-pink-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(255,243,249,0.92)_100%)] p-5 shadow-[0_14px_35px_rgba(216,27,96,0.08)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    After top-up
-                  </p>
-                  <div className="mt-4">
-                    <p className="text-3xl font-semibold tracking-[-0.05em] text-slate-950">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  After top-up
+                </p>
+                <div className="mt-4">
+                  <p className="text-3xl font-semibold tracking-[-0.05em] text-slate-950">
                     {projectedBalance === null
                       ? "..."
-                      : creditsFormatter.format(projectedBalance)}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      after adding {creditsFormatter.format(selectedCredits)} credits
-                    </p>
-                  </div>
+                      : formatCreditAmount(projectedBalance)}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    after adding {formatCreditAmount(selectedCredits)} credits
+                  </p>
                 </div>
+              </div>
             </div>
           </div>
 
@@ -217,6 +244,18 @@ export default function PurchaseCreditsModal({
                     Email support
                     <ArrowRight className="h-4 w-4" />
                   </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyRequest}
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-amber-200 bg-white px-5 py-3 text-sm font-semibold text-amber-900 transition-colors hover:bg-amber-50"
+                  >
+                    {copiedRequest ? (
+                      <Check className="h-4 w-4 text-emerald-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                    {copiedRequest ? "Copied" : "Copy request"}
+                  </button>
                 </div>
               </div>
             )}
@@ -229,7 +268,7 @@ export default function PurchaseCreditsModal({
                       Credit amount
                     </p>
                     <p className="mt-3 text-4xl font-semibold tracking-[-0.08em] text-slate-950">
-                      {creditsFormatter.format(selectedCredits)}
+                      {formatCreditAmount(selectedCredits)}
                     </p>
                     <p className="mt-2 text-sm text-slate-500">
                       Use a quick amount or fine-tune with the slider below.
@@ -254,7 +293,7 @@ export default function PurchaseCreditsModal({
                             : "border border-slate-200 bg-slate-50 text-slate-700 hover:border-pink-200 hover:bg-white"
                         }`}
                       >
-                        {creditsFormatter.format(amount)}
+                        {formatCreditAmount(amount)}
                       </button>
                     );
                   })}
@@ -271,23 +310,34 @@ export default function PurchaseCreditsModal({
                     max={5000}
                     step={100}
                     value={selectedCredits}
-                    onChange={(event) => setSelectedCredits(Number(event.target.value))}
+                    onChange={(event) =>
+                      setSelectedCredits(Number(event.target.value))
+                    }
                     className="mt-4 w-full accent-pink-600"
                   />
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                     <button
                       type="button"
-                      onClick={() => setSelectedCredits((current) => Math.max(100, current - 100))}
+                      onClick={() =>
+                        setSelectedCredits((current) =>
+                          Math.max(100, current - 100),
+                        )
+                      }
                       className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
                     >
                       -100
                     </button>
                     <p className="text-sm text-slate-500">
-                      Approx. {Math.floor(selectedCredits / 10)} premium generations at current video pricing.
+                      Approx. {Math.floor(selectedCredits / 10)} premium
+                      generations at current video pricing.
                     </p>
                     <button
                       type="button"
-                      onClick={() => setSelectedCredits((current) => Math.min(5000, current + 100))}
+                      onClick={() =>
+                        setSelectedCredits((current) =>
+                          Math.min(5000, current + 100),
+                        )
+                      }
                       className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
                     >
                       +100
@@ -303,16 +353,21 @@ export default function PurchaseCreditsModal({
                 <div className="mt-5 flex items-start justify-between gap-4">
                   <div>
                     <p className="text-4xl font-semibold tracking-[-0.08em] text-slate-950">
-                      {creditsFormatter.format(selectedCredits)}
+                      {formatCreditAmount(selectedCredits)}
                     </p>
                     <p className="mt-2 text-sm text-slate-500">credits</p>
                   </div>
                   <div className="text-right">
                     <p className="text-3xl font-semibold tracking-[-0.05em] text-slate-950">
-                      {euroFormatter.format(selectedPrice)}
+                      {formatEuroAmount(selectedPrice)}
                     </p>
                     <p className="mt-2 text-sm text-slate-500">
-                      approx. {euroFormatter.format(Number(((selectedPrice / selectedCredits) * 100).toFixed(2)))} / 100 credits
+                      approx.{" "}
+                      {formatEuroRatePerHundredCredits(
+                        selectedPrice,
+                        selectedCredits,
+                      )}{" "}
+                      / 100 credits
                     </p>
                   </div>
                 </div>
@@ -334,7 +389,16 @@ export default function PurchaseCreditsModal({
                     <span className="text-sm font-medium text-slate-700">
                       {projectedBalance === null
                         ? "..."
-                        : `${creditsFormatter.format(projectedBalance)} credits`}
+                        : `${formatCreditAmount(projectedBalance)} credits`}
+                    </span>
+                  </div>
+                  <div className="h-px bg-slate-200" />
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Next step
+                    </span>
+                    <span className="text-sm font-medium text-slate-700">
+                      Email confirmation
                     </span>
                   </div>
                   <div className="h-px bg-slate-200" />
@@ -358,23 +422,40 @@ export default function PurchaseCreditsModal({
                     Selected package
                   </p>
                   <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-                    {creditsFormatter.format(selectedCredits)} credits for approximately {euroFormatter.format(selectedPrice)}
+                    {formatCreditAmount(selectedCredits)} credits for
+                    approximately {formatEuroAmount(selectedPrice)}
                   </p>
                   <p className="mt-2 text-sm text-slate-500">
                     {projectedBalance === null
                       ? "Your projected balance will appear as soon as current credits load."
-                      : `Your balance will become ${creditsFormatter.format(projectedBalance)} credits after this top-up.`}
+                      : `Your balance will become ${formatCreditAmount(projectedBalance)} credits after this top-up.`}
                   </p>
                 </div>
 
                 {purchasesDisabled ? (
-                  <a
-                    href={supportHref}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-pink-600 px-6 py-4 text-sm font-semibold text-white transition-colors hover:bg-pink-700"
-                  >
-                    Request this top-up
-                    <ArrowRight className="h-4 w-4" />
-                  </a>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCopyRequest}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                    >
+                      {copiedRequest ? (
+                        <Check className="h-4 w-4 text-emerald-600" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                      {copiedRequest
+                        ? "Request copied"
+                        : "Copy request details"}
+                    </button>
+                    <a
+                      href={supportHref}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-pink-600 px-6 py-4 text-sm font-semibold text-white transition-colors hover:bg-pink-700"
+                    >
+                      Request this top-up
+                      <ArrowRight className="h-4 w-4" />
+                    </a>
+                  </div>
                 ) : (
                   <button
                     type="button"
@@ -384,7 +465,7 @@ export default function PurchaseCreditsModal({
                     }}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-pink-600 px-6 py-4 text-sm font-semibold text-white transition-colors hover:bg-pink-700"
                   >
-                    Buy {creditsFormatter.format(selectedCredits)} credits
+                    Buy {formatCreditAmount(selectedCredits)} credits
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 )}
