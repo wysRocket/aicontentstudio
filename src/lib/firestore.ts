@@ -172,11 +172,7 @@ export interface WorkspaceStats {
   failedCount: number;
 }
 
-export type CreditTransactionKind =
-  | "usage"
-  | "top_up"
-  | "grant"
-  | "adjustment";
+export type CreditTransactionKind = "usage" | "top_up" | "grant" | "adjustment";
 
 export type CreditTransactionStatus = "completed" | "pending";
 
@@ -208,12 +204,14 @@ type PromptSeed = {
 
 const MAX_PROMPT_CONTENT_LENGTH = 50000;
 
-const starterPrompts: PromptInput[] = (promptsData as PromptSeed[]).map((prompt) => ({
-  title: prompt.title,
-  description: prompt.description,
-  content: prompt.content,
-  type: prompt.type,
-}));
+const starterPrompts: PromptInput[] = (promptsData as PromptSeed[]).map(
+  (prompt) => ({
+    title: prompt.title,
+    description: prompt.description,
+    content: prompt.content,
+    type: prompt.type,
+  }),
+);
 
 const starterInspiration: InspirationInput[] = [
   {
@@ -295,7 +293,8 @@ const defaultWorkspaceSettings: WorkspaceSettings = {
   brandVoice: "Clear, practical, trustworthy, and slightly bold.",
   brandColors: "#D81B60, #7C3AED, #111827",
   brandKeywords: "AI video, workflow, automation, creator growth",
-  brandAudience: "Founders, operators, and content teams building repeatable growth systems.",
+  brandAudience:
+    "Founders, operators, and content teams building repeatable growth systems.",
   ctaStyle: "Direct, practical, and low-hype.",
   bannedPhrases: "game-changer, revolutionary, disrupt",
   preferredTextModel: "gemini-2.5-flash",
@@ -438,7 +437,9 @@ function mapSource(snapshot: QueryDocumentSnapshot): SourceRecord {
       ? data.analysisKeyPoints
       : [],
     analysisHooks: Array.isArray(data.analysisHooks) ? data.analysisHooks : [],
-    analysisQuotes: Array.isArray(data.analysisQuotes) ? data.analysisQuotes : [],
+    analysisQuotes: Array.isArray(data.analysisQuotes)
+      ? data.analysisQuotes
+      : [],
     analysisCtaIdeas: Array.isArray(data.analysisCtaIdeas)
       ? data.analysisCtaIdeas
       : [],
@@ -457,8 +458,7 @@ function mapCreditTransaction(
   return {
     id: snapshot.id,
     amount: typeof data.amount === "number" ? data.amount : 0,
-    balanceAfter:
-      typeof data.balanceAfter === "number" ? data.balanceAfter : 0,
+    balanceAfter: typeof data.balanceAfter === "number" ? data.balanceAfter : 0,
     kind: (data.kind ?? "adjustment") as CreditTransactionKind,
     status: (data.status ?? "completed") as CreditTransactionStatus,
     description: data.description ?? "",
@@ -471,18 +471,22 @@ function mapWorkspaceRun(snapshot: QueryDocumentSnapshot): WorkspaceRunRecord {
   const data = snapshot.data();
   return {
     id: snapshot.id,
-    ...createWorkspaceRunDraft((data.mode ?? "write_rewrite") as WorkspaceRunRecord["mode"], {
-      title: data.title ?? "",
-      sourceText: data.sourceText ?? "",
-      instructions: data.instructions ?? "",
-      outputText: data.outputText ?? "",
-      targetLanguage: data.targetLanguage ?? "",
-      status: data.status ?? "draft",
-      creditCost: typeof data.creditCost === "number" ? data.creditCost : undefined,
-      sourceFileName: data.sourceFileName ?? "",
-      sourceMimeType: data.sourceMimeType ?? "",
-      lastError: data.lastError ?? "",
-    }),
+    ...createWorkspaceRunDraft(
+      (data.mode ?? "write_rewrite") as WorkspaceRunRecord["mode"],
+      {
+        title: data.title ?? "",
+        sourceText: data.sourceText ?? "",
+        instructions: data.instructions ?? "",
+        outputText: data.outputText ?? "",
+        targetLanguage: data.targetLanguage ?? "",
+        status: data.status ?? "draft",
+        creditCost:
+          typeof data.creditCost === "number" ? data.creditCost : undefined,
+        sourceFileName: data.sourceFileName ?? "",
+        sourceMimeType: data.sourceMimeType ?? "",
+        lastError: data.lastError ?? "",
+      },
+    ),
     createdAt: data.createdAt ?? null,
     updatedAt: data.updatedAt ?? null,
   };
@@ -778,7 +782,11 @@ export function subscribeToWorkspaceRuns(
     workspaceRunsQuery,
     (snapshot) => onChange(snapshot.docs.map(mapWorkspaceRun)),
     (error) =>
-      handleFirestoreError(error, OperationType.LIST, `users/${uid}/workspaceRuns`),
+      handleFirestoreError(
+        error,
+        OperationType.LIST,
+        `users/${uid}/workspaceRuns`,
+      ),
   );
 }
 
@@ -827,11 +835,26 @@ export async function saveWorkspaceRun(
   }
 }
 
+export async function deleteWorkspaceRun(uid: string, runId: string) {
+  try {
+    await deleteDoc(doc(workspaceRunsCollection(uid), runId));
+  } catch (error) {
+    handleFirestoreError(
+      error,
+      OperationType.DELETE,
+      `users/${uid}/workspaceRuns/${runId}`,
+    );
+  }
+}
+
 export function subscribeToPrompts(
   uid: string,
   onChange: (records: PromptRecord[]) => void,
 ): Unsubscribe {
-  const promptsQuery = query(promptsCollection(uid), orderBy("updatedAt", "desc"));
+  const promptsQuery = query(
+    promptsCollection(uid),
+    orderBy("updatedAt", "desc"),
+  );
   return onSnapshot(
     promptsQuery,
     (snapshot) => onChange(snapshot.docs.map(mapPrompt)),
@@ -878,7 +901,9 @@ export async function savePrompt(
   }
 }
 
-export async function restoreDefaultPromptLibrary(uid: string): Promise<number> {
+export async function restoreDefaultPromptLibrary(
+  uid: string,
+): Promise<number> {
   try {
     const existingSnapshot = await getDocs(promptsCollection(uid));
     const existingKeys = new Set(
@@ -951,7 +976,11 @@ export function subscribeToInspiration(
     inspirationQuery,
     (snapshot) => onChange(snapshot.docs.map(mapInspiration)),
     (error) =>
-      handleFirestoreError(error, OperationType.LIST, `users/${uid}/inspiration`),
+      handleFirestoreError(
+        error,
+        OperationType.LIST,
+        `users/${uid}/inspiration`,
+      ),
   );
 }
 
@@ -1006,7 +1035,9 @@ export async function deleteInspiration(uid: string, inspirationId: string) {
 
 export async function getInspiration(uid: string, inspirationId: string) {
   try {
-    const snapshot = await getDoc(doc(inspirationCollection(uid), inspirationId));
+    const snapshot = await getDoc(
+      doc(inspirationCollection(uid), inspirationId),
+    );
     if (!snapshot.exists()) return null;
     return mapInspiration(snapshot as QueryDocumentSnapshot);
   } catch (error) {
@@ -1022,12 +1053,19 @@ export function subscribeToContentItems(
   uid: string,
   onChange: (records: ContentRecord[]) => void,
 ): Unsubscribe {
-  const contentQuery = query(contentCollection(uid), orderBy("updatedAt", "desc"));
+  const contentQuery = query(
+    contentCollection(uid),
+    orderBy("updatedAt", "desc"),
+  );
   return onSnapshot(
     contentQuery,
     (snapshot) => onChange(snapshot.docs.map(mapContent)),
     (error) =>
-      handleFirestoreError(error, OperationType.LIST, `users/${uid}/contentItems`),
+      handleFirestoreError(
+        error,
+        OperationType.LIST,
+        `users/${uid}/contentItems`,
+      ),
   );
 }
 
@@ -1062,7 +1100,10 @@ export async function saveContentItem(
         kind: content.kind,
         sourcePromptId: content.sourcePromptId || "",
         inspirationId: content.inspirationId || "",
-        sourceId: content.sourceId ?? (existing?.exists() ? existing.data().sourceId : "") ?? "",
+        sourceId:
+          content.sourceId ??
+          (existing?.exists() ? existing.data().sourceId : "") ??
+          "",
         remixMode:
           content.remixMode ??
           (existing?.exists() ? existing.data().remixMode : "") ??
@@ -1104,9 +1145,7 @@ export async function updateContentStatus(
     const existing = snapshot.exists()
       ? mapContent(snapshot as QueryDocumentSnapshot)
       : null;
-    const validationIssues = existing
-      ? validateContentDraft(existing)
-      : [];
+    const validationIssues = existing ? validateContentDraft(existing) : [];
 
     await updateDoc(contentRef, {
       status,
@@ -1218,7 +1257,10 @@ export function subscribeToSources(
   uid: string,
   onChange: (records: SourceRecord[]) => void,
 ): Unsubscribe {
-  const sourcesQuery = query(sourcesCollection(uid), orderBy("updatedAt", "desc"));
+  const sourcesQuery = query(
+    sourcesCollection(uid),
+    orderBy("updatedAt", "desc"),
+  );
   return onSnapshot(
     sourcesQuery,
     (snapshot) => onChange(snapshot.docs.map(mapSource)),
@@ -1261,7 +1303,9 @@ export async function saveSource(
           "",
         analysisKeyPoints:
           source.analysisKeyPoints ??
-          (existing?.exists() ? existing.data().analysisKeyPoints : undefined) ??
+          (existing?.exists()
+            ? existing.data().analysisKeyPoints
+            : undefined) ??
           [],
         analysisHooks:
           source.analysisHooks ??
@@ -1322,7 +1366,11 @@ export async function getSource(uid: string, sourceId: string) {
     if (!snapshot.exists()) return null;
     return mapSource(snapshot as QueryDocumentSnapshot);
   } catch (error) {
-    handleFirestoreError(error, OperationType.GET, `users/${uid}/sources/${sourceId}`);
+    handleFirestoreError(
+      error,
+      OperationType.GET,
+      `users/${uid}/sources/${sourceId}`,
+    );
   }
 }
 
@@ -1360,7 +1408,9 @@ export async function updateSourceAnalysis(
   }
 }
 
-export async function getWorkspaceSettings(uid: string): Promise<WorkspaceSettings> {
+export async function getWorkspaceSettings(
+  uid: string,
+): Promise<WorkspaceSettings> {
   try {
     const snapshot = await getDoc(workspaceSettingsDoc(uid));
     if (!snapshot.exists()) {
@@ -1381,7 +1431,8 @@ export async function getWorkspaceSettings(uid: string): Promise<WorkspaceSettin
       preferredTextModel:
         data.preferredTextModel ?? defaultWorkspaceSettings.preferredTextModel,
       preferredVideoModel:
-        data.preferredVideoModel ?? defaultWorkspaceSettings.preferredVideoModel,
+        data.preferredVideoModel ??
+        defaultWorkspaceSettings.preferredVideoModel,
       apiBaseUrl: data.apiBaseUrl ?? defaultWorkspaceSettings.apiBaseUrl,
       webhookUrl: data.webhookUrl ?? defaultWorkspaceSettings.webhookUrl,
       supportEmail: data.supportEmail ?? defaultWorkspaceSettings.supportEmail,
@@ -1439,15 +1490,23 @@ export async function getWorkspaceStats(uid: string): Promise<WorkspaceStats> {
         query(contentCollection(uid), where("workflowStatus", "==", "ready")),
       ),
       getCountFromServer(
-        query(contentCollection(uid), where("workflowStatus", "==", "approved")),
+        query(
+          contentCollection(uid),
+          where("workflowStatus", "==", "approved"),
+        ),
       ),
       getCountFromServer(
-        query(contentCollection(uid), where("workflowStatus", "==", "scheduled")),
+        query(
+          contentCollection(uid),
+          where("workflowStatus", "==", "scheduled"),
+        ),
       ),
       getCountFromServer(
         query(contentCollection(uid), where("status", "==", "published")),
       ),
-      getCountFromServer(query(contentCollection(uid), where("status", "==", "failed"))),
+      getCountFromServer(
+        query(contentCollection(uid), where("status", "==", "failed")),
+      ),
     ]);
 
     return {

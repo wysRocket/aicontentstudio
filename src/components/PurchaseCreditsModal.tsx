@@ -11,6 +11,7 @@ import {
 import {
   formatCreditAmount,
   formatEuroAmount,
+  formatPoundAmount,
   formatEuroRatePerHundredCredits,
 } from "../lib/formatting";
 
@@ -33,6 +34,10 @@ const pricingAnchors = [
   { credits: 5000, price: 110 },
 ] as const;
 
+const MIN_CREDITS = 100;
+const MAX_CREDITS = 5000;
+const EUR_TO_GBP_RATE = 0.86;
+
 function getInterpolatedPrice(credits: number) {
   if (credits <= pricingAnchors[0].credits) return pricingAnchors[0].price;
 
@@ -44,7 +49,7 @@ function getInterpolatedPrice(credits: number) {
       const ratio =
         (credits - previous.credits) / (current.credits - previous.credits);
       const price = previous.price + ratio * (current.price - previous.price);
-      return Math.round(price / 5) * 5;
+      return Number(price.toFixed(2));
     }
   }
 
@@ -52,7 +57,40 @@ function getInterpolatedPrice(credits: number) {
   const beforeLast = pricingAnchors[pricingAnchors.length - 2];
   const slope =
     (last.price - beforeLast.price) / (last.credits - beforeLast.credits);
-  return Math.round((last.price + (credits - last.credits) * slope) / 5) * 5;
+  return Number((last.price + (credits - last.credits) * slope).toFixed(2));
+}
+
+function getCreditsForAmount(amount: number) {
+  if (amount <= 0) return MIN_CREDITS;
+
+  if (amount <= pricingAnchors[0].price) {
+    return Math.max(
+      MIN_CREDITS,
+      Math.round(
+        (amount / pricingAnchors[0].price) * pricingAnchors[0].credits,
+      ),
+    );
+  }
+
+  for (let index = 1; index < pricingAnchors.length; index += 1) {
+    const previous = pricingAnchors[index - 1];
+    const current = pricingAnchors[index];
+
+    if (amount <= current.price) {
+      const ratio =
+        (amount - previous.price) / (current.price - previous.price);
+      return Math.round(
+        previous.credits + ratio * (current.credits - previous.credits),
+      );
+    }
+  }
+
+  const last = pricingAnchors[pricingAnchors.length - 1];
+  const beforeLast = pricingAnchors[pricingAnchors.length - 2];
+  const creditsPerEuro =
+    (last.credits - beforeLast.credits) / (last.price - beforeLast.price);
+
+  return Math.round(last.credits + (amount - last.price) * creditsPerEuro);
 }
 
 function getTopUpLabel(credits: number) {
@@ -71,7 +109,10 @@ export default function PurchaseCreditsModal({
   currentCredits = null,
 }: PurchaseCreditsModalProps) {
   const [selectedCredits, setSelectedCredits] = useState<number>(500);
+  const [creditsInputValue, setCreditsInputValue] = useState("500");
+  const [priceOverride, setPriceOverride] = useState<number | null>(null);
   const [copiedRequest, setCopiedRequest] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -93,7 +134,8 @@ export default function PurchaseCreditsModal({
 
   if (!isOpen) return null;
 
-  const selectedPrice = getInterpolatedPrice(selectedCredits);
+  const selectedPrice = priceOverride ?? getInterpolatedPrice(selectedCredits);
+  const selectedPriceGbp = Number((selectedPrice * EUR_TO_GBP_RATE).toFixed(2));
   const projectedBalance =
     currentCredits === null ? null : currentCredits + selectedCredits;
   const supportSubject = `Credit Top Up Request - ${formatCreditAmount(selectedCredits)} credits`;
@@ -102,6 +144,7 @@ export default function PurchaseCreditsModal({
     "",
     `I want to top up my account with ${formatCreditAmount(selectedCredits)} credits.`,
     `Approximate price: ${formatEuroAmount(selectedPrice)}`,
+    `Approximate GBP: ${formatPoundAmount(selectedPriceGbp)}`,
     `Current balance: ${
       currentCredits === null
         ? "Unknown"
@@ -113,6 +156,7 @@ export default function PurchaseCreditsModal({
   const requestSummary = [
     `Top-up request: ${formatCreditAmount(selectedCredits)} credits`,
     `Approximate price: ${formatEuroAmount(selectedPrice)}`,
+    `Approximate GBP: ${formatPoundAmount(selectedPriceGbp)}`,
     `Current balance: ${
       currentCredits === null
         ? "Unknown"
@@ -126,11 +170,49 @@ export default function PurchaseCreditsModal({
   ].join("\n");
   const supportHref = `mailto:${supportEmail}?subject=${encodeURIComponent(supportSubject)}&body=${encodeURIComponent(supportBody)}`;
 
+  const setCreditSelection = (nextCredits: number) => {
+    const normalizedCredits = Math.max(MIN_CREDITS, Math.round(nextCredits));
+    setSelectedCredits(normalizedCredits);
+    setCreditsInputValue(String(normalizedCredits));
+    setPriceOverride(null);
+  };
+
+  const adjustCredits = (delta: number) => {
+    setCreditSelection(selectedCredits + delta);
+  };
+
+  const handleCreditsInputChange = (value: string) => {
+    setCreditsInputValue(value);
+
+    const normalizedValue = value.replace(/\s/g, "").replace(",", ".");
+    const numericValue = Number(normalizedValue);
+    if (!Number.isFinite(numericValue)) return;
+
+    if (normalizedValue.includes(".")) {
+      setSelectedCredits(getCreditsForAmount(numericValue));
+      setPriceOverride(Number(numericValue.toFixed(2)));
+      return;
+    }
+
+    setCreditSelection(numericValue);
+  };
+
+  const sliderMax = Math.max(MAX_CREDITS, selectedCredits);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    window.setTimeout(() => setToastMessage(null), 2000);
+  };
+
   const handleCopyRequest = async () => {
     await navigator.clipboard.writeText(requestSummary);
     setCopiedRequest(true);
+    showToast("Request details copied.");
     window.setTimeout(() => setCopiedRequest(false), 1800);
   };
+
+  const euroPerCredit = selectedPrice / selectedCredits;
+  const gbpPerCredit = selectedPriceGbp / selectedCredits;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
@@ -146,6 +228,11 @@ export default function PurchaseCreditsModal({
         aria-labelledby="purchase-credits-title"
         className="relative z-10 max-h-[90vh] w-full max-w-[1080px] overflow-y-auto rounded-[32px] border border-white/70 bg-[linear-gradient(180deg,#fffaf8_0%,#ffffff_55%,#fff7fb_100%)] shadow-[0_30px_120px_rgba(15,23,42,0.24)]"
       >
+        {toastMessage && (
+          <div className="absolute right-4 top-4 z-30 rounded-2xl border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-700 shadow-lg">
+            {toastMessage}
+          </div>
+        )}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(216,27,96,0.12),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(124,58,237,0.10),transparent_34%)]" />
 
         <button
@@ -239,6 +326,7 @@ export default function PurchaseCreditsModal({
 
                   <a
                     href={supportHref}
+                    onClick={() => showToast("Opening support email draft...")}
                     className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-amber-950"
                   >
                     Email support
@@ -270,8 +358,9 @@ export default function PurchaseCreditsModal({
                     <p className="mt-3 text-4xl font-semibold tracking-[-0.08em] text-slate-950">
                       {formatCreditAmount(selectedCredits)}
                     </p>
-                    <p className="mt-2 text-sm text-slate-500">
-                      Use a quick amount or fine-tune with the slider below.
+                    <p className="mt-3 text-sm text-slate-500">
+                      Use a quick amount, the step buttons, or type exact
+                      credits or a EUR amount below.
                     </p>
                   </div>
                   <span className="rounded-full bg-pink-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-pink-700">
@@ -286,7 +375,7 @@ export default function PurchaseCreditsModal({
                       <button
                         key={amount}
                         type="button"
-                        onClick={() => setSelectedCredits(amount)}
+                        onClick={() => setCreditSelection(amount)}
                         className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                           isSelected
                             ? "bg-pink-600 text-white"
@@ -300,29 +389,89 @@ export default function PurchaseCreditsModal({
                 </div>
 
                 <div className="mt-8 rounded-[26px] border border-slate-200 bg-[linear-gradient(180deg,#fffdfd_0%,#fff5f9_100%)] px-5 py-5">
-                  <div className="flex items-center justify-between gap-4 text-sm font-medium text-slate-600">
-                    <span>100 credits</span>
-                    <span>5,000 credits</span>
+                  <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 md:flex-row md:items-end md:justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        Exact top-up value
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
+                        <input
+                          id="credit-top-up-amount"
+                          type="text"
+                          inputMode="decimal"
+                          value={creditsInputValue}
+                          onChange={(event) =>
+                            handleCreditsInputChange(event.target.value)
+                          }
+                          className="w-40 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-pink-300"
+                        />
+                        <span className="text-sm text-slate-500">
+                          credits or EUR
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500">
+                        Enter a whole number for credits, or a decimal like
+                        985,05 to treat it as a EUR amount.
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 text-sm font-medium text-slate-600 md:min-w-[280px]">
+                      <span>{formatCreditAmount(MIN_CREDITS)} credits</span>
+                      <span>{formatCreditAmount(sliderMax)} credits</span>
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min={100}
-                    max={5000}
-                    step={100}
-                    value={selectedCredits}
-                    onChange={(event) =>
-                      setSelectedCredits(Number(event.target.value))
-                    }
-                    className="mt-4 w-full accent-pink-600"
-                  />
+
+                  <div className="mt-4 grid items-center gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto]">
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => adjustCredits(-10)}
+                        className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+                      >
+                        -10
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => adjustCredits(-1)}
+                        className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+                      >
+                        -1
+                      </button>
+                    </div>
+
+                    <input
+                      type="range"
+                      min={MIN_CREDITS}
+                      max={sliderMax}
+                      step={1}
+                      value={selectedCredits}
+                      onChange={(event) =>
+                        setCreditSelection(Number(event.target.value))
+                      }
+                      className="w-full accent-pink-600"
+                    />
+
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => adjustCredits(1)}
+                        className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+                      >
+                        +1
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => adjustCredits(10)}
+                        className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+                      >
+                        +10
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                     <button
                       type="button"
-                      onClick={() =>
-                        setSelectedCredits((current) =>
-                          Math.max(100, current - 100),
-                        )
-                      }
+                      onClick={() => setCreditSelection(selectedCredits - 100)}
                       className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
                     >
                       -100
@@ -333,11 +482,7 @@ export default function PurchaseCreditsModal({
                     </p>
                     <button
                       type="button"
-                      onClick={() =>
-                        setSelectedCredits((current) =>
-                          Math.min(5000, current + 100),
-                        )
-                      }
+                      onClick={() => setCreditSelection(selectedCredits + 100)}
                       className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
                     >
                       +100
@@ -361,6 +506,9 @@ export default function PurchaseCreditsModal({
                     <p className="text-3xl font-semibold tracking-[-0.05em] text-slate-950">
                       {formatEuroAmount(selectedPrice)}
                     </p>
+                    <p className="mt-1 text-sm font-medium text-slate-600">
+                      {formatPoundAmount(selectedPriceGbp)}
+                    </p>
                     <p className="mt-2 text-sm text-slate-500">
                       approx.{" "}
                       {formatEuroRatePerHundredCredits(
@@ -368,6 +516,10 @@ export default function PurchaseCreditsModal({
                         selectedCredits,
                       )}{" "}
                       / 100 credits
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {formatEuroAmount(euroPerCredit)} and{" "}
+                      {formatPoundAmount(gbpPerCredit)} per credit
                     </p>
                   </div>
                 </div>
@@ -425,6 +577,10 @@ export default function PurchaseCreditsModal({
                     {formatCreditAmount(selectedCredits)} credits for
                     approximately {formatEuroAmount(selectedPrice)}
                   </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Equivalent GBP estimate:{" "}
+                    {formatPoundAmount(selectedPriceGbp)}
+                  </p>
                   <p className="mt-2 text-sm text-slate-500">
                     {projectedBalance === null
                       ? "Your projected balance will appear as soon as current credits load."
@@ -450,6 +606,9 @@ export default function PurchaseCreditsModal({
                     </button>
                     <a
                       href={supportHref}
+                      onClick={() =>
+                        showToast("Opening support email draft...")
+                      }
                       className="inline-flex items-center justify-center gap-2 rounded-2xl bg-pink-600 px-6 py-4 text-sm font-semibold text-white transition-colors hover:bg-pink-700"
                     >
                       Request this top-up

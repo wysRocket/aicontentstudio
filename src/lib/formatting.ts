@@ -15,6 +15,10 @@ export function formatEuroAmount(value: number) {
   return `EUR ${decimalFormatter.format(value)}`;
 }
 
+export function formatPoundAmount(value: number) {
+  return `GBP ${decimalFormatter.format(value)}`;
+}
+
 export function formatEuroRatePerHundredCredits(
   totalPrice: number,
   credits: number,

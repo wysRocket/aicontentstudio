@@ -190,7 +190,9 @@ async function analyzeSourceContent(input: {
     input.brandVoice ? `Brand voice: ${input.brandVoice}` : "",
     input.brandAudience ? `Target audience: ${input.brandAudience}` : "",
     input.ctaStyle ? `CTA style: ${input.ctaStyle}` : "",
-    input.bannedPhrases ? `Avoid these phrases in hooks and CTA ideas: ${input.bannedPhrases}` : "",
+    input.bannedPhrases
+      ? `Avoid these phrases in hooks and CTA ideas: ${input.bannedPhrases}`
+      : "",
     `Source title: ${sourceTitle}`,
     `Source type: ${input.type}`,
     `Source text:\n${sourceText}`,
@@ -218,12 +220,22 @@ async function analyzeSourceContent(input: {
   return {
     title: cleanText(parsed.title || sourceTitle || "Untitled source"),
     summary: cleanText(parsed.summary || ""),
-    keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints.map(cleanText).filter(Boolean) : [],
-    hooks: Array.isArray(parsed.hooks) ? parsed.hooks.map(cleanText).filter(Boolean) : [],
-    quotes: Array.isArray(parsed.quotes) ? parsed.quotes.map(cleanText).filter(Boolean) : [],
-    ctaIdeas: Array.isArray(parsed.ctaIdeas) ? parsed.ctaIdeas.map(cleanText).filter(Boolean) : [],
+    keyPoints: Array.isArray(parsed.keyPoints)
+      ? parsed.keyPoints.map(cleanText).filter(Boolean)
+      : [],
+    hooks: Array.isArray(parsed.hooks)
+      ? parsed.hooks.map(cleanText).filter(Boolean)
+      : [],
+    quotes: Array.isArray(parsed.quotes)
+      ? parsed.quotes.map(cleanText).filter(Boolean)
+      : [],
+    ctaIdeas: Array.isArray(parsed.ctaIdeas)
+      ? parsed.ctaIdeas.map(cleanText).filter(Boolean)
+      : [],
     audience: cleanText(parsed.audience || ""),
-    risks: Array.isArray(parsed.risks) ? parsed.risks.map(cleanText).filter(Boolean) : [],
+    risks: Array.isArray(parsed.risks)
+      ? parsed.risks.map(cleanText).filter(Boolean)
+      : [],
     cleanedText: cleanText(parsed.cleanedText || sourceText).slice(0, 2500),
   };
 }
@@ -238,7 +250,7 @@ async function startServer() {
   app.use(express.json({ limit: "2mb" }));
 
   // API routes FIRST
-  app.get("/api/health", (req, res) => {
+  app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });
   });
 
@@ -254,7 +266,9 @@ async function startServer() {
     } = req.body || {};
 
     if (type !== "url" && type !== "pasted_text") {
-      return res.status(400).json({ error: "type must be 'url' or 'pasted_text'" });
+      return res
+        .status(400)
+        .json({ error: "type must be 'url' or 'pasted_text'" });
     }
 
     if (type === "url" && typeof url !== "string") {
@@ -262,7 +276,9 @@ async function startServer() {
     }
 
     if (type === "pasted_text" && typeof rawText !== "string") {
-      return res.status(400).json({ error: "rawText is required for pasted_text sources" });
+      return res
+        .status(400)
+        .json({ error: "rawText is required for pasted_text sources" });
     }
 
     try {
@@ -578,8 +594,9 @@ async function startServer() {
 
   const distPath = path.join(process.cwd(), "dist");
   const hasProductionBuild = fs.existsSync(path.join(distPath, "index.html"));
+  const isProduction = process.env.NODE_ENV === "production";
 
-  if (!hasProductionBuild) {
+  if (!isProduction || !hasProductionBuild) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -587,7 +604,7 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
+    app.get("*", (_req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useMemo, useState, useEffect, type ElementType } from "react";
 import { cn } from "../../lib/utils";
 import {
   Twitter,
@@ -10,6 +10,10 @@ import {
   Hash, // Using Hash for TikTok
   Pin, // Using Pin for Pinterest
   Cloud, // Using Cloud for Bluesky
+  Link2,
+  Loader2,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { db } from "../../firebase";
 import {
@@ -23,32 +27,47 @@ import {
 import { useFirebase } from "../../contexts/FirebaseContext";
 
 interface SocialButtonProps {
-  icon: React.ElementType;
+  icon: ElementType;
   label: string;
   colorClass: string;
+  description: string;
   onClick?: () => void;
   disabled?: boolean;
+  isLoading?: boolean;
 }
 
 function SocialButton({
   icon: Icon,
   label,
   colorClass,
+  description,
   onClick,
   disabled,
+  isLoading,
 }: SocialButtonProps) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || isLoading}
       className={cn(
-        "flex items-center w-full max-w-[280px] px-4 py-3 rounded-lg text-white font-semibold text-sm transition-transform active:scale-95 hover:opacity-90",
+        "flex w-full items-start gap-3 rounded-2xl px-4 py-4 text-left text-white transition-transform active:scale-[0.99] hover:opacity-95",
         colorClass,
-        disabled && "opacity-50 cursor-not-allowed active:scale-100",
+        (disabled || isLoading) &&
+          "cursor-not-allowed opacity-60 active:scale-100",
       )}
     >
-      <Icon className="w-5 h-5 mr-3 flex-shrink-0" />
-      {label}
+      <div className="mt-0.5 rounded-xl bg-white/15 p-2">
+        {isLoading ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <Icon className="h-5 w-5" />
+        )}
+      </div>
+      <div>
+        <p className="text-sm font-semibold">{label}</p>
+        <p className="mt-1 text-xs leading-5 text-white/80">{description}</p>
+      </div>
     </button>
   );
 }
@@ -61,7 +80,7 @@ interface ConnectedAccount {
   profilePicture?: string;
 }
 
-const PLATFORM_ICONS: Record<string, React.ElementType> = {
+const PLATFORM_ICONS: Record<string, ElementType> = {
   twitter: Twitter,
   linkedin: Linkedin,
   facebook: Facebook,
@@ -87,20 +106,105 @@ const PLATFORM_COLORS: Record<string, string> = {
 
 export function Accounts() {
   const { user, isAuthReady } = useFirebase();
+  const userId = user?.uid ?? null;
   const [connectedAccounts, setConnectedAccounts] = useState<
     ConnectedAccount[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [isConnectingPlatform, setIsConnectingPlatform] = useState<
+    string | null
+  >(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [statusTone, setStatusTone] = useState<"success" | "error" | "info">(
+    "info",
+  );
+
+  const availablePlatforms = [
+    {
+      id: "twitter",
+      icon: Twitter,
+      label: "Login with Twitter",
+      description: "Publish and reuse X content from your workspace.",
+      colorClass: "bg-black",
+    },
+    {
+      id: "linkedin",
+      icon: Linkedin,
+      label: "Login with LinkedIn",
+      description: "Connect founder, brand, or company posting workflows.",
+      colorClass: "bg-[#0A66C2]",
+    },
+    {
+      id: "youtube",
+      icon: Youtube,
+      label: "Login with YouTube",
+      description: "Manage video publishing and channel workflow setup.",
+      colorClass: "bg-[#FF0000]",
+    },
+  ] as const;
+
+  const upcomingPlatforms = [
+    {
+      icon: Facebook,
+      label: "Login with Facebook",
+      colorClass: "bg-[#1877F2]",
+      description: "Page-level publishing support is planned.",
+    },
+    {
+      icon: Hash,
+      label: "Login with TikTok",
+      colorClass: "bg-black",
+      description: "Short-form publishing support is planned.",
+    },
+    {
+      icon: Instagram,
+      label: "Login with Instagram",
+      colorClass: "bg-[#E1306C]",
+      description: "Instagram workflow support is planned.",
+    },
+    {
+      icon: AtSign,
+      label: "Login with Threads",
+      colorClass: "bg-black",
+      description: "Threads publishing support is planned.",
+    },
+    {
+      icon: Pin,
+      label: "Login with Pinterest",
+      colorClass: "bg-[#E60023]",
+      description: "Pinterest distribution support is planned.",
+    },
+    {
+      icon: Cloud,
+      label: "Login with Bluesky",
+      colorClass: "bg-[#0085FF]",
+      description: "Bluesky workflow support is planned.",
+    },
+  ] as const;
+
+  const connectedCount = connectedAccounts.length;
+  const availableCount = availablePlatforms.length;
+  const statusBannerClass =
+    statusTone === "success"
+      ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+      : statusTone === "error"
+        ? "border-rose-100 bg-rose-50 text-rose-700"
+        : "border-blue-100 bg-blue-50 text-blue-700";
+
+  const connectedPlatformNames = useMemo(
+    () => connectedAccounts.map((account) => account.platform.toLowerCase()),
+    [connectedAccounts],
+  );
 
   // Wait for auth to be fully initialised before subscribing to Firestore.
   useEffect(() => {
-    if (!isAuthReady || !user) {
+    if (!isAuthReady || !userId) {
       if (isAuthReady) setLoading(false); // auth ready but not signed in
       return;
     }
 
     const unsubscribe = onSnapshot(
-      collection(db, `users/${user.uid}/connectedAccounts`),
+      collection(db, `users/${userId}/connectedAccounts`),
       (snapshot) => {
         const accounts = snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -116,7 +220,7 @@ export function Accounts() {
     );
 
     return () => unsubscribe();
-  }, [isAuthReady, user]);
+  }, [isAuthReady, userId]);
 
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
@@ -160,18 +264,24 @@ export function Accounts() {
           });
 
           console.log(`Successfully connected ${provider}`);
+          setStatusTone("success");
+          setStatusMessage(`${provider} connected successfully.`);
         } catch (error) {
           console.error("Error saving connected account:", error);
+          setStatusTone("error");
+          setStatusMessage(`We couldn't save the ${provider} connection.`);
         }
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  }, [user]);
 
   const handleConnect = async (provider: string) => {
     try {
+      setIsConnectingPlatform(provider);
+      setStatusMessage(null);
       const params = new URLSearchParams({ origin: window.location.origin });
       const response = await fetch(`/api/auth/${provider}/url?${params}`);
       if (!response.ok) {
@@ -186,11 +296,19 @@ export function Accounts() {
       );
 
       if (!authWindow) {
-        alert("Please allow popups for this site to connect your account.");
+        setStatusTone("error");
+        setStatusMessage(
+          "Please allow popups for this site to connect your account.",
+        );
       }
     } catch (error) {
       console.error(`Error connecting ${provider}:`, error);
-      alert(`Could not connect to ${provider}. Please try again later.`);
+      setStatusTone("error");
+      setStatusMessage(
+        `Could not connect to ${provider}. Please try again later.`,
+      );
+    } finally {
+      setIsConnectingPlatform(null);
     }
   };
 
@@ -200,159 +318,218 @@ export function Accounts() {
       await deleteDoc(
         doc(db, `users/${user.uid}/connectedAccounts`, accountId),
       );
+      setStatusTone("info");
+      setStatusMessage("Account disconnected.");
     } catch (error) {
       console.error("Error disconnecting account:", error);
+      setStatusTone("error");
+      setStatusMessage("We couldn't disconnect that account right now.");
     }
   };
 
   return (
-    <div className="space-y-12">
-      <section>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">
-          Add a new account
-        </h2>
-        <a
-          href="#"
-          className="text-sm text-gray-500 underline hover:text-gray-700 mb-6 inline-block"
+    <div className="space-y-8">
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-500">Connected now</p>
+            <Link2 className="h-4 w-4 text-[#8c3857]" />
+          </div>
+          <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-gray-950">
+            {connectedCount}
+          </p>
+          <p className="mt-2 text-sm text-gray-500">
+            active publishing integrations
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-500">Available today</p>
+            <Sparkles className="h-4 w-4 text-emerald-600" />
+          </div>
+          <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-gray-950">
+            {availableCount}
+          </p>
+          <p className="mt-2 text-sm text-gray-500">
+            providers ready for connection
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-500">Connection note</p>
+            <ShieldCheck className="h-4 w-4 text-blue-600" />
+          </div>
+          <p className="mt-4 text-base font-semibold tracking-[-0.02em] text-gray-950">
+            Connect from the right logged-in social account first
+          </p>
+          <p className="mt-2 text-sm text-gray-500">
+            This prevents mismatched OAuth sessions.
+          </p>
+        </div>
+      </div>
+
+      {statusMessage && (
+        <div
+          className={cn(
+            "rounded-2xl border px-4 py-3 text-sm font-medium",
+            statusBannerClass,
+          )}
         >
-          How do I connect my social account?
-        </a>
+          {statusMessage}
+        </div>
+      )}
 
-        <div className="bg-orange-50 rounded-lg p-5 mb-8 border border-orange-100">
-          <h3 className="text-orange-600 font-bold text-sm mb-2">Important</h3>
-          <ul className="list-disc pl-5 text-sm text-gray-800 space-y-1">
-            <li>
-              Log into your social account <strong>BEFORE</strong> connecting
-            </li>
-            <li>
-              Facebook: select each Page individually, <strong>do not</strong>{" "}
-              select "connect all pages"
-            </li>
-          </ul>
+      <section className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-gray-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold tracking-[-0.03em] text-gray-950">
+              Add a new account
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-gray-500">
+              Connect channels your team actively publishes to so the workspace
+              can route content where it needs to go.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Log into the social platform before starting the connection flow.
+          </div>
         </div>
 
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
-            Available today
-          </p>
-          <SocialButton
-            icon={Twitter}
-            label="Login with Twitter"
-            colorClass="bg-black"
-            onClick={() => handleConnect("twitter")}
-          />
-          <SocialButton
-            icon={Linkedin}
-            label="Login with LinkedIn"
-            colorClass="bg-[#0A66C2]"
-            onClick={() => handleConnect("linkedin")}
-          />
-          <SocialButton
-            icon={Youtube}
-            label="Login with YouTube"
-            colorClass="bg-[#FF0000]"
-            onClick={() => handleConnect("youtube")}
-          />
-        </div>
+        <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.9fr]">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+              Available today
+            </p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              {availablePlatforms.map((platform) => (
+                <SocialButton
+                  key={platform.id}
+                  icon={platform.icon}
+                  label={platform.label}
+                  description={platform.description}
+                  colorClass={platform.colorClass}
+                  onClick={() => handleConnect(platform.id)}
+                  isLoading={isConnectingPlatform === platform.id}
+                  disabled={connectedPlatformNames.includes(platform.id)}
+                />
+              ))}
+            </div>
+          </div>
 
-        <div className="space-y-3 mt-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
-            Coming soon
-          </p>
-          <SocialButton
-            icon={Facebook}
-            label="Login with Facebook"
-            colorClass="bg-[#1877F2]"
-            disabled
-          />
-          <SocialButton
-            icon={Hash}
-            label="Login with Tiktok"
-            colorClass="bg-black"
-            disabled
-          />
-          <SocialButton
-            icon={Instagram}
-            label="Login with Instagram"
-            colorClass="bg-[#E1306C]"
-            disabled
-          />
-          <SocialButton
-            icon={AtSign}
-            label="Login with Threads"
-            colorClass="bg-black"
-            disabled
-          />
-          <SocialButton
-            icon={Pin}
-            label="Login with Pinterest"
-            colorClass="bg-[#E60023]"
-            disabled
-          />
-          <SocialButton
-            icon={Cloud}
-            label="Login with Bluesky"
-            colorClass="bg-[#0085FF]"
-            disabled
-          />
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+              Coming soon
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {upcomingPlatforms.map((platform) => (
+                <SocialButton
+                  key={platform.label}
+                  icon={platform.icon}
+                  label={platform.label}
+                  description={platform.description}
+                  colorClass={platform.colorClass}
+                  disabled
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
-      <section>
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          Connected accounts
-        </h2>
-        {loading ? (
-          <p className="text-gray-500 text-sm">Loading connected accounts...</p>
-        ) : connectedAccounts.length > 0 ? (
-          <div className="space-y-4 max-w-2xl">
-            {connectedAccounts.map((account) => {
-              const Icon = PLATFORM_ICONS[account.platform] || Twitter;
-              const colorClass =
-                PLATFORM_COLORS[account.platform] || "text-gray-900";
-
-              return (
-                <div
-                  key={account.id}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white shadow-sm"
-                >
-                  <div className="flex items-center space-x-4">
-                    {account.profilePicture ? (
-                      <img
-                        src={account.profilePicture}
-                        alt={account.handle}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                        <Icon className="w-5 h-5 text-gray-400" />
-                      </div>
-                    )}
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <Icon className={cn("w-4 h-4", colorClass)} />
-                        <span className="font-semibold text-gray-900 capitalize">
-                          {account.platform}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-500">{account.handle}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDisconnect(account.id)}
-                    className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              );
-            })}
+      <section className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-gray-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold tracking-[-0.03em] text-gray-950">
+              Connected accounts
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-gray-500">
+              Review active identities connected to this workspace and
+              disconnect any account you no longer want to use.
+            </p>
           </div>
-        ) : (
-          <p className="text-gray-500 text-sm">
-            You have not connected any accounts yet.
-          </p>
-        )}
+          <div className="text-sm text-gray-500">
+            {loading ? "Syncing accounts..." : `${connectedCount} connected`}
+          </div>
+        </div>
+
+        <div className="mt-6">
+          {loading ? (
+            <div className="flex min-h-40 items-center justify-center rounded-3xl border border-dashed border-gray-200 bg-gray-50 text-sm text-gray-500">
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading connected accounts...
+              </span>
+            </div>
+          ) : connectedAccounts.length > 0 ? (
+            <div className="space-y-3">
+              {connectedAccounts.map((account) => {
+                const Icon = PLATFORM_ICONS[account.platform] || Twitter;
+                const colorClass =
+                  PLATFORM_COLORS[account.platform] || "text-gray-900";
+
+                return (
+                  <div
+                    key={account.id}
+                    className="flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex items-center gap-4">
+                      {account.profilePicture ? (
+                        <img
+                          src={account.profilePicture}
+                          alt={account.handle}
+                          className="h-12 w-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+                          <Icon className="h-5 w-5 text-gray-400" />
+                        </div>
+                      )}
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Icon className={cn("h-4 w-4", colorClass)} />
+                          <span className="font-semibold capitalize text-gray-900">
+                            {account.platform}
+                          </span>
+                          <span className="inline-flex rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-600">
+                            Active
+                          </span>
+                        </div>
+                        <p className="mt-1 text-sm font-medium text-gray-700">
+                          {account.name || account.handle}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {account.handle}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDisconnect(account.id)}
+                      className="rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-100"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-dashed border-gray-200 bg-gray-50 px-6 py-12 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#8c3857] shadow-sm">
+                <Link2 className="h-5 w-5" />
+              </div>
+              <h3 className="mt-4 text-lg font-semibold text-gray-900">
+                No accounts connected yet
+              </h3>
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-gray-500">
+                Connect at least one publishing account to start routing content
+                out of the workspace.
+              </p>
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );

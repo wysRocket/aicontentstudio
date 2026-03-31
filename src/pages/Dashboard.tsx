@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Coins,
   Copy,
+  Pencil,
   FileAudio,
   Languages,
   Loader2,
@@ -12,14 +13,18 @@ import {
   Plus,
   Save,
   ScanText,
+  Search,
   Sparkles,
+  Trash2,
   Wand2,
+  X,
   AlertTriangle,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { GoogleGenAI } from "@google/genai";
 import { useFirebase } from "../contexts/FirebaseContext";
 import {
+  deleteWorkspaceRun,
   deductCredits,
   ensureWorkspaceSeedData,
   saveWorkspaceRun,
@@ -191,11 +196,21 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isTransformingOutput, setIsTransformingOutput] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [copiedOutput, setCopiedOutput] = useState(false);
   const [showAllRuns, setShowAllRuns] = useState(false);
+  const [historySearchQuery, setHistorySearchQuery] = useState("");
+  const [historyStatusFilter, setHistoryStatusFilter] = useState<
+    "all" | "draft" | "completed" | "failed"
+  >("all");
+  const [renameTargetRun, setRenameTargetRun] =
+    useState<WorkspaceRunRecord | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [deleteTargetRun, setDeleteTargetRun] =
+    useState<WorkspaceRunRecord | null>(null);
   const autosaveHashRef = useRef("");
   const activeMode = normalizeWorkspaceToolMode(searchParams.get("tool"));
 
@@ -284,6 +299,22 @@ export default function Dashboard() {
   );
 
   const displayedRuns = showAllRuns ? runs : modeRuns;
+  const filteredDisplayedRuns = useMemo(() => {
+    const normalizedQuery = historySearchQuery.trim().toLowerCase();
+
+    return displayedRuns.filter((run) => {
+      const matchesStatus =
+        historyStatusFilter === "all" || run.status === historyStatusFilter;
+      if (!matchesStatus) return false;
+
+      if (!normalizedQuery) return true;
+
+      return [run.title, run.sourceText, run.outputText, run.lastError]
+        .join("\n")
+        .toLowerCase()
+        .includes(normalizedQuery);
+    });
+  }, [displayedRuns, historySearchQuery, historyStatusFilter]);
 
   const modeMeta = WORKSPACE_TOOL_CONFIG[activeMode];
   const ModeIcon = MODE_ICONS[activeMode];
@@ -628,6 +659,190 @@ export default function Dashboard() {
       }
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleOutputTransform = async (
+    transform: "shorten" | "expand" | "tone",
+  ) => {
+    if (!user) return;
+
+    const currentOutput = editor.outputText.trim();
+    if (!currentOutput) {
+      setError("Generate or add output text before using quick transforms.");
+      return;
+    }
+
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      setError(
+        "No Gemini API key found. Add VITE_GEMINI_API_KEY before running transforms.",
+      );
+      return;
+    }
+
+    const transformInstructionByType = {
+      shorten:
+        "Make this output around 30-40% shorter while preserving key meaning and action items.",
+      expand:
+        "Expand this output with practical detail, examples, and clearer structure while preserving the intent.",
+      tone: "Improve tone and readability so it sounds confident, practical, and natural without adding hype.",
+    } as const;
+
+    try {
+      setIsTransformingOutput(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: [
+                  "You are editing content inside AI Content Studio.",
+                  transformInstructionByType[transform],
+                  "Return only the transformed output with no extra commentary.",
+                  editor.instructions.trim()
+                    ? `Current guidance: ${editor.instructions.trim()}`
+                    : "",
+                  `Current output:\n${currentOutput}`,
+                ]
+                  .filter(Boolean)
+                  .join("\n\n"),
+              },
+            ],
+          },
+        ],
+      });
+
+      const transformedText = (response.text || "").trim();
+      if (!transformedText) {
+        throw new Error("The model returned an empty transformed output.");
+      }
+
+      await persistRun({
+        outputText: transformedText,
+        status: "completed",
+        lastError: "",
+      });
+
+      setSuccessMessage("Output transformed and saved.");
+    } catch (transformError) {
+      console.error("Failed to transform output", transformError);
+      setError(
+        transformError instanceof Error
+          ? transformError.message
+          : "We couldn't transform this output right now.",
+      );
+    } finally {
+      setIsTransformingOutput(false);
+    }
+  };
+
+  const handleDuplicateRun = async (run: WorkspaceRunRecord) => {
+    if (!user) return;
+
+    const duplicatedDraft = createWorkspaceRunDraft(run.mode, {
+      title: `${run.title} (Copy)`,
+      sourceText: run.sourceText,
+      instructions: run.instructions,
+      outputText: run.outputText,
+      targetLanguage: run.targetLanguage,
+      status: "draft",
+      creditCost: run.creditCost,
+      sourceFileName: run.sourceFileName,
+      sourceMimeType: run.sourceMimeType,
+      lastError: "",
+    });
+
+    try {
+      setIsSaving(true);
+      const duplicateRunId = await saveWorkspaceRun(user.uid, duplicatedDraft);
+      setSearchParams({ tool: run.mode });
+      setSelectedRunId(duplicateRunId);
+      setEditor(duplicatedDraft);
+      setDraftsByMode((current) => ({
+        ...current,
+        [run.mode]: duplicatedDraft,
+      }));
+      setSuccessMessage("Run duplicated into a new editable draft.");
+      setError(null);
+    } catch (duplicateError) {
+      console.error("Failed to duplicate run", duplicateError);
+      setError("We couldn't duplicate this run right now.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const openRenameDialog = (run: WorkspaceRunRecord) => {
+    setRenameTargetRun(run);
+    setRenameValue(run.title);
+  };
+
+  const handleRenameRun = async () => {
+    if (!user) return;
+    if (!renameTargetRun) return;
+
+    const nextTitle = renameValue.trim();
+    if (!nextTitle || nextTitle === renameTargetRun.title) {
+      setRenameTargetRun(null);
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await saveWorkspaceRun(user.uid, {
+        id: renameTargetRun.id,
+        ...toEditableRun(renameTargetRun),
+        title: nextTitle,
+      });
+
+      if (selectedRunId === renameTargetRun.id) {
+        updateEditor({ title: nextTitle });
+      }
+
+      setSuccessMessage("Run title updated.");
+      setError(null);
+      setRenameTargetRun(null);
+    } catch (renameError) {
+      console.error("Failed to rename run", renameError);
+      setError("We couldn't rename this run right now.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const openDeleteDialog = (run: WorkspaceRunRecord) => {
+    setDeleteTargetRun(run);
+  };
+
+  const handleDeleteRun = async () => {
+    if (!user) return;
+    if (!deleteTargetRun) return;
+
+    try {
+      setIsSaving(true);
+      await deleteWorkspaceRun(user.uid, deleteTargetRun.id);
+
+      if (selectedRunId === deleteTargetRun.id) {
+        setSelectedRunId("");
+        const fallbackDraft = createWorkspaceRunDraft(activeMode);
+        setEditor(fallbackDraft);
+      }
+
+      setSuccessMessage("Run deleted from history.");
+      setError(null);
+      setDeleteTargetRun(null);
+    } catch (deleteError) {
+      console.error("Failed to delete run", deleteError);
+      setError("We couldn't delete this run right now.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1013,18 +1228,57 @@ export default function Dashboard() {
                           &middot; {editor.outputText.length.toLocaleString()}{" "}
                           chars
                         </span>
-                        <button
-                          type="button"
-                          onClick={handleCopyOutput}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2]"
-                        >
-                          {copiedOutput ? (
-                            <Check className="h-3.5 w-3.5 text-emerald-600" />
-                          ) : (
-                            <Copy className="h-3.5 w-3.5" />
-                          )}
-                          {copiedOutput ? "Copied!" : "Copy"}
-                        </button>
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOutputTransform("shorten")}
+                            disabled={
+                              isGenerating || isSaving || isTransformingOutput
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isTransformingOutput ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Wand2 className="h-3.5 w-3.5" />
+                            )}
+                            Shorten
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOutputTransform("expand")}
+                            disabled={
+                              isGenerating || isSaving || isTransformingOutput
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            <Wand2 className="h-3.5 w-3.5" />
+                            Expand
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOutputTransform("tone")}
+                            disabled={
+                              isGenerating || isSaving || isTransformingOutput
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            <Wand2 className="h-3.5 w-3.5" />
+                            Improve tone
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCopyOutput}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2]"
+                          >
+                            {copiedOutput ? (
+                              <Check className="h-3.5 w-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                            {copiedOutput ? "Copied!" : "Copy"}
+                          </button>
+                        </div>
                       </div>
                       <textarea
                         value={editor.outputText}
@@ -1063,8 +1317,8 @@ export default function Dashboard() {
                     Saved history
                   </p>
                   <p className="mt-2 text-sm text-[#6e5e58]">
-                    {displayedRuns.length}{" "}
-                    {displayedRuns.length === 1 ? "run" : "runs"}
+                    {filteredDisplayedRuns.length}{" "}
+                    {filteredDisplayedRuns.length === 1 ? "run" : "runs"}
                     {showAllRuns
                       ? " across all tools"
                       : ` in ${modeMeta.label.toLowerCase()}`}
@@ -1093,16 +1347,47 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <label className="relative block">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d7d74]" />
+                  <input
+                    value={historySearchQuery}
+                    onChange={(event) =>
+                      setHistorySearchQuery(event.target.value)
+                    }
+                    placeholder="Search titles, source text, or output"
+                    className="w-full rounded-xl border border-black/10 bg-[#fcfaf7] py-2.5 pl-9 pr-3 text-sm text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
+                  />
+                </label>
+
+                <select
+                  value={historyStatusFilter}
+                  onChange={(event) =>
+                    setHistoryStatusFilter(
+                      event.target.value as
+                        | "all"
+                        | "draft"
+                        | "completed"
+                        | "failed",
+                    )
+                  }
+                  className="rounded-xl border border-black/10 bg-[#fcfaf7] px-3 py-2.5 text-sm text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
+                >
+                  <option value="all">All statuses</option>
+                  <option value="draft">Draft</option>
+                  <option value="completed">Done</option>
+                  <option value="failed">Failed</option>
+                </select>
+              </div>
+
               <div className="mt-4 space-y-3">
-                {displayedRuns.map((run) => {
+                {filteredDisplayedRuns.map((run) => {
                   const Icon = MODE_ICONS[run.mode];
                   const isSelected = run.id === selectedRunId;
 
                   return (
-                    <button
+                    <div
                       key={run.id}
-                      type="button"
-                      onClick={() => selectRun(run)}
                       className={`w-full rounded-[24px] border p-4 text-left transition ${
                         isSelected
                           ? `${MODE_ACCENTS[run.mode]} shadow-sm`
@@ -1110,7 +1395,11 @@ export default function Dashboard() {
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-start gap-3">
+                        <button
+                          type="button"
+                          onClick={() => selectRun(run)}
+                          className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                        >
                           <div className="rounded-2xl bg-white/80 p-2 text-current shadow-sm">
                             <Icon className="h-4 w-4" />
                           </div>
@@ -1122,34 +1411,72 @@ export default function Dashboard() {
                               {formatUpdatedAt(run)}
                             </p>
                           </div>
+                        </button>
+
+                        <div className="flex shrink-0 items-start gap-2">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
+                              run.status === "completed"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : run.status === "failed"
+                                  ? "bg-rose-100 text-rose-700"
+                                  : "bg-slate-100 text-slate-700"
+                            }`}
+                          >
+                            {formatStatus(run.status)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDuplicateRun(run)}
+                            className="rounded-lg border border-black/10 bg-white p-1.5 text-[#6e5e58] transition hover:text-[#17131d]"
+                            aria-label={`Duplicate ${run.title}`}
+                            title="Duplicate"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openRenameDialog(run)}
+                            className="rounded-lg border border-black/10 bg-white p-1.5 text-[#6e5e58] transition hover:text-[#17131d]"
+                            aria-label={`Rename ${run.title}`}
+                            title="Rename"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openDeleteDialog(run)}
+                            className="rounded-lg border border-black/10 bg-white p-1.5 text-[#6e5e58] transition hover:text-rose-700"
+                            aria-label={`Delete ${run.title}`}
+                            title="Delete"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
-                        <span
-                          className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
-                            run.status === "completed"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : run.status === "failed"
-                                ? "bg-rose-100 text-rose-700"
-                                : "bg-slate-100 text-slate-700"
-                          }`}
-                        >
-                          {formatStatus(run.status)}
-                        </span>
                       </div>
 
                       {(run.outputText || run.sourceText || run.lastError) && (
-                        <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#6e5e58]">
-                          {run.outputText || run.sourceText || run.lastError}
-                        </p>
+                        <button
+                          type="button"
+                          onClick={() => selectRun(run)}
+                          className="mt-3 block w-full text-left"
+                        >
+                          <p className="line-clamp-3 text-sm leading-6 text-[#6e5e58]">
+                            {run.outputText || run.sourceText || run.lastError}
+                          </p>
+                        </button>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
 
-                {!displayedRuns.length && !isLoading && (
+                {!filteredDisplayedRuns.length && !isLoading && (
                   <div className="rounded-[24px] border border-dashed border-black/10 bg-[#fcfaf7] px-4 py-6 text-sm text-[#6e5e58]">
-                    {showAllRuns
-                      ? "No saved runs yet. Start a new run and the history will fill automatically."
-                      : "No saved runs for this tool yet. Start a new run and the history panel will fill automatically."}
+                    {displayedRuns.length
+                      ? "No runs match your current search or status filter."
+                      : showAllRuns
+                        ? "No saved runs yet. Start a new run and the history will fill automatically."
+                        : "No saved runs for this tool yet. Start a new run and the history panel will fill automatically."}
                   </div>
                 )}
 
@@ -1163,6 +1490,136 @@ export default function Dashboard() {
             </section>
           </div>
         </section>
+
+        {renameTargetRun && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <button
+              type="button"
+              aria-label="Close rename dialog"
+              onClick={() => setRenameTargetRun(null)}
+              className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+            />
+            <div className="relative z-10 w-full max-w-md rounded-[28px] border border-black/8 bg-white p-6 shadow-[0_24px_80px_rgba(23,19,29,0.22)]">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8c5f74]">
+                    Rename run
+                  </p>
+                  <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[#17131d]">
+                    Update history label
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRenameTargetRun(null)}
+                  className="rounded-full border border-black/10 p-2 text-[#6e5e58] transition hover:text-[#17131d]"
+                  aria-label="Close rename dialog"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <p className="mt-3 text-sm leading-6 text-[#6e5e58]">
+                Give this run a clearer label so it is easier to find later in
+                history.
+              </p>
+
+              <label
+                htmlFor="rename-run-input"
+                className="mt-5 block text-sm font-semibold text-[#17131d]"
+              >
+                Run title
+              </label>
+              <input
+                id="rename-run-input"
+                value={renameValue}
+                onChange={(event) => setRenameValue(event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf7] px-4 py-3 text-sm text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
+                placeholder="Enter a run title"
+              />
+
+              <div className="mt-6 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRenameTargetRun(null)}
+                  className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-medium text-[#17131d] transition hover:bg-[#fcfaf7]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRenameRun}
+                  disabled={isSaving || !renameValue.trim()}
+                  className="rounded-2xl bg-[#17131d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#2b2238] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSaving ? "Saving..." : "Save title"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {deleteTargetRun && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <button
+              type="button"
+              aria-label="Close delete dialog"
+              onClick={() => setDeleteTargetRun(null)}
+              className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+            />
+            <div className="relative z-10 w-full max-w-md rounded-[28px] border border-rose-100 bg-white p-6 shadow-[0_24px_80px_rgba(23,19,29,0.22)]">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-2xl bg-rose-50 p-3 text-rose-700">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-700">
+                      Delete run
+                    </p>
+                    <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[#17131d]">
+                      Remove from history
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDeleteTargetRun(null)}
+                  className="rounded-full border border-black/10 p-2 text-[#6e5e58] transition hover:text-[#17131d]"
+                  aria-label="Close delete dialog"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <p className="mt-4 text-sm leading-6 text-[#6e5e58]">
+                Delete{" "}
+                <span className="font-semibold text-[#17131d]">
+                  {deleteTargetRun.title}
+                </span>{" "}
+                from history. This action cannot be undone.
+              </p>
+
+              <div className="mt-6 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTargetRun(null)}
+                  className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-medium text-[#17131d] transition hover:bg-[#fcfaf7]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteRun}
+                  disabled={isSaving}
+                  className="rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSaving ? "Deleting..." : "Delete run"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
