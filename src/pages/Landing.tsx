@@ -209,7 +209,7 @@ export default function Landing() {
 
       const playCardsDown = () => {
         const order = isDesktop()
-          ? [cards[0], cards[2], cards[1]].filter(Boolean)
+          ? [cards[2], cards[1], cards[0]].filter(Boolean)
           : cards;
         const step = isDesktop() ? 130 : 140;
         order.forEach((card, index) => {
@@ -638,8 +638,8 @@ export default function Landing() {
           <div className="container hero__content max-w-6xl mx-auto px-5 sm:px-6">
             <div className="grid lg:grid-cols-12 gap-8 items-center">
               <div className="lg:col-span-8">
-                <h1 className="mb-5 max-w-[10ch] text-[2.1rem] font-semibold leading-[0.92] tracking-[-0.05em] sm:mb-6 sm:max-w-[11.5ch] sm:text-[3.35rem] lg:text-[4.2rem]">
-                  <span className="block text-primary">AI Content Studio</span>
+                <h1 className="mb-5 text-[1.85rem] font-semibold leading-[0.95] tracking-[-0.05em] sm:mb-6 sm:text-[2.5rem] lg:text-[2.5rem]">
+                  <span className="block text-primary">AI Content Studio,</span>
                   <span className="mt-1 block text-text-main">powered by credits</span>
                 </h1>
                 <p className="lead mb-7 max-w-[58ch] text-[15px] leading-6 text-text-muted sm:mb-8 sm:text-lg sm:leading-7 md:text-[1.15rem] md:leading-relaxed">
@@ -699,7 +699,7 @@ export default function Landing() {
                   <div className="font-semibold mb-4 text-lg">
                     <span className="text-primary">In your</span> account
                   </div>
-                  <ul className="space-y-2 text-text-muted list-disc pl-5 marker:text-primary">
+                  <ul className="space-y-2 text-white/80 list-disc pl-5 marker:text-primary">
                     <li>Current credit balance</li>
                     <li>Fast credit purchase</li>
                     <li>Orders table with totals</li>
@@ -978,7 +978,7 @@ export default function Landing() {
               </p>
             </div>
             <div className="grid md:grid-cols-2 gap-x-12 gap-y-8 mb-12">
-              <div className="faq-item">
+              <div className="faq-item faq-item-left">
                 <h3 className="text-xl font-semibold mb-3">
                   What is a credit?
                 </h3>
@@ -988,7 +988,7 @@ export default function Landing() {
                   different number of credits.
                 </p>
               </div>
-              <div className="faq-item">
+              <div className="faq-item faq-item-right">
                 <h3 className="text-xl font-semibold mb-3">
                   Can I track usage?
                 </h3>
@@ -997,7 +997,7 @@ export default function Landing() {
                   per-operation statistics.
                 </p>
               </div>
-              <div className="faq-item">
+              <div className="faq-item faq-item-left">
                 <h3 className="text-xl font-semibold mb-3">
                   When are credits deducted?
                 </h3>
@@ -1006,7 +1006,7 @@ export default function Landing() {
                   or cancelled requests do not consume your balance.
                 </p>
               </div>
-              <div className="faq-item">
+              <div className="faq-item faq-item-right">
                 <h3 className="text-xl font-semibold mb-3">
                   What happens if I run out of credits?
                 </h3>
@@ -1015,7 +1015,7 @@ export default function Landing() {
                   balance. No unexpected charges or over-usage.
                 </p>
               </div>
-              <div className="faq-item">
+              <div className="faq-item faq-item-left">
                 <h3 className="text-xl font-semibold mb-3">
                   Do credits expire?
                 </h3>
@@ -1024,7 +1024,7 @@ export default function Landing() {
                   fully used.
                 </p>
               </div>
-              <div className="faq-item">
+              <div className="faq-item faq-item-right">
                 <h3 className="text-xl font-semibold mb-3">
                   Can I upgrade later?
                 </h3>

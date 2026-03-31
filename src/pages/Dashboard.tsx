@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { GoogleGenAI } from "@google/genai";
+import promptsData from "../prompts_data.json";
 import { useFirebase } from "../contexts/FirebaseContext";
 import {
   deleteWorkspaceRun,
@@ -202,6 +203,8 @@ export default function Dashboard() {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [copiedOutput, setCopiedOutput] = useState(false);
   const [showAllRuns, setShowAllRuns] = useState(false);
+  const [showPresetPicker, setShowPresetPicker] = useState(false);
+  const [presetSearch, setPresetSearch] = useState("");
   const [historySearchQuery, setHistorySearchQuery] = useState("");
   const [historyStatusFilter, setHistoryStatusFilter] = useState<
     "all" | "draft" | "completed" | "failed"
@@ -430,6 +433,7 @@ export default function Dashboard() {
         sourceFileName: overrides.sourceFileName ?? editor.sourceFileName,
         sourceMimeType: overrides.sourceMimeType ?? editor.sourceMimeType,
         lastError: overrides.lastError ?? editor.lastError,
+        tokenCount: overrides.tokenCount ?? editor.tokenCount,
       };
 
       const runId = await saveWorkspaceRun(user.uid, {
@@ -568,6 +572,7 @@ export default function Dashboard() {
     try {
       const ai = new GoogleGenAI({ apiKey });
       let outputText = "";
+      let tokenCount = 0;
 
       if (activeMode === "transcribe") {
         const file = selectedFile;
@@ -600,6 +605,7 @@ export default function Dashboard() {
           },
         });
         outputText = (response.text || "").trim();
+        tokenCount = response.usageMetadata?.totalTokenCount ?? 0;
       } else {
         const response = await ai.models.generateContent({
           model: "gemini-2.5-flash",
@@ -620,6 +626,7 @@ export default function Dashboard() {
           ],
         });
         outputText = (response.text || "").trim();
+        tokenCount = response.usageMetadata?.totalTokenCount ?? 0;
       }
 
       if (!outputText) {
@@ -631,6 +638,7 @@ export default function Dashboard() {
         status: "completed",
         lastError: "",
         creditCost: modeMeta.cost,
+        tokenCount,
         sourceFileName: selectedFile?.name || editor.sourceFileName,
         sourceMimeType: selectedFile?.type || editor.sourceMimeType,
       });
@@ -847,13 +855,13 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-full bg-[#f4ede4] px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+    <div className="min-h-full overflow-x-hidden bg-[#f4ede4] px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
       <div className="mx-auto max-w-[1480px] space-y-4">
         {/* Compact hero */}
-        <section className="overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(135deg,#1a1623_0%,#2b2036_35%,#8a5d74_100%)] px-5 py-4 text-white shadow-[0_20px_60px_rgba(23,19,29,0.18)] sm:px-7 lg:px-8">
+        <section className="overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(135deg,#1a1623_0%,#2b2036_35%,#7c5cff_100%)] px-5 py-4 text-white shadow-[0_20px_60px_rgba(23,19,29,0.18)] sm:px-7 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f8dce6]">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#d4c6ff]">
                 <Sparkles className="h-3 w-3" />
                 Workspace
               </div>
@@ -868,7 +876,7 @@ export default function Dashboard() {
                   Credits
                 </p>
                 <div className="mt-1 flex items-center gap-1.5">
-                  <Coins className="h-3.5 w-3.5 text-[#f8dce6]" />
+                  <Coins className="h-3.5 w-3.5 text-[#d4c6ff]" />
                   <p className="text-sm font-semibold">
                     {credits === null ? "..." : credits}
                   </p>
@@ -879,7 +887,7 @@ export default function Dashboard() {
                   This run
                 </p>
                 <div className="mt-1 flex items-center gap-1.5">
-                  <ModeIcon className="h-3.5 w-3.5 text-[#f8dce6]" />
+                  <ModeIcon className="h-3.5 w-3.5 text-[#d4c6ff]" />
                   <p className="text-sm font-semibold">
                     {modeMeta.cost} credits
                   </p>
@@ -958,7 +966,7 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => startNewRun(activeMode)}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-[#fff4f6] px-4 py-3 text-sm font-semibold text-[#8c3857] transition hover:bg-[#fdebef]"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-[#f0ecff] px-4 py-3 text-sm font-semibold text-[#5b3fc5] transition hover:bg-[#e8e2ff]"
                   >
                     <Plus className="h-4 w-4" />
                     New run
@@ -967,7 +975,7 @@ export default function Dashboard() {
                     type="button"
                     onClick={handleSave}
                     disabled={isSaving || isGenerating || !isDirty}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-medium text-[#17131d] transition hover:border-[#8c5f74]/20 hover:bg-[#fffaf7] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-medium text-[#17131d] transition hover:border-[#7c5cff]/20 hover:bg-[#fffaf7] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSaving ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1012,7 +1020,7 @@ export default function Dashboard() {
                     value={editor.title}
                     onChange={(e) => updateEditor({ title: e.target.value })}
                     placeholder={getDefaultWorkspaceRunTitle(activeMode)}
-                    className="w-full rounded-2xl border border-black/10 bg-[#fcfaf7] px-4 py-3 text-sm text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
+                    className="w-full rounded-2xl border border-black/10 bg-[#fcfaf7] px-4 py-3 text-sm text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
                   />
                 </div>
 
@@ -1031,7 +1039,7 @@ export default function Dashboard() {
                         updateEditor({ targetLanguage: e.target.value })
                       }
                       placeholder="Spanish, German, Ukrainian, French..."
-                      className="w-full rounded-2xl border border-black/10 bg-[#fcfaf7] px-4 py-3 text-sm text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
+                      className="w-full rounded-2xl border border-black/10 bg-[#fcfaf7] px-4 py-3 text-sm text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
                     />
                     {inlineTargetLanguageValidation && (
                       <p className="mt-2 text-xs font-medium text-rose-700">
@@ -1060,7 +1068,7 @@ export default function Dashboard() {
 
                   {activeMode === "transcribe" ? (
                     <div className="space-y-3">
-                      <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[28px] border border-dashed border-black/12 bg-[#fcfaf7] px-5 py-10 text-center transition hover:border-[#8c5f74]/35 hover:bg-white">
+                      <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[28px] border border-dashed border-black/12 bg-[#fcfaf7] px-5 py-10 text-center transition hover:border-[#7c5cff]/35 hover:bg-white">
                         <div className="rounded-full bg-[#17131d] p-4 text-white">
                           <FileAudio className="h-6 w-6" />
                         </div>
@@ -1103,7 +1111,7 @@ export default function Dashboard() {
                           updateEditor({ sourceText: e.target.value })
                         }
                         placeholder={modeMeta.inputPlaceholder}
-                        className="min-h-[140px] w-full rounded-[28px] border border-black/10 bg-[#fcfaf7] px-4 py-4 text-sm leading-6 text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
+                        className="min-h-[140px] w-full rounded-[28px] border border-black/10 bg-[#fcfaf7] px-4 py-4 text-sm leading-6 text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
                       />
                       {inlineTranscribeValidation && (
                         <p className="text-xs font-medium text-rose-700">
@@ -1120,7 +1128,7 @@ export default function Dashboard() {
                           updateEditor({ sourceText: e.target.value })
                         }
                         placeholder={modeMeta.inputPlaceholder}
-                        className="min-h-[260px] w-full rounded-[28px] border border-black/10 bg-[#fcfaf7] px-4 py-4 text-sm leading-6 text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
+                        className="min-h-[260px] w-full rounded-[28px] border border-black/10 bg-[#fcfaf7] px-4 py-4 text-sm leading-6 text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
                       />
                       {inlineSourceValidation && (
                         <p className="mt-2 text-xs font-medium text-rose-700">
@@ -1132,12 +1140,25 @@ export default function Dashboard() {
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="workspace-instructions-input"
-                    className="mb-2 block text-sm font-semibold text-[#17131d]"
-                  >
-                    {modeMeta.instructionsLabel}
-                  </label>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <label
+                      htmlFor="workspace-instructions-input"
+                      className="block text-sm font-semibold text-[#17131d]"
+                    >
+                      {modeMeta.instructionsLabel}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPresetSearch("");
+                        setShowPresetPicker(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-[#7c5cff]/25 bg-[#f6efff] px-3 py-1.5 text-xs font-semibold text-[#7c5cff] transition hover:bg-[#ede8ff]"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Presets
+                    </button>
+                  </div>
                   <textarea
                     id="workspace-instructions-input"
                     value={editor.instructions}
@@ -1145,9 +1166,77 @@ export default function Dashboard() {
                       updateEditor({ instructions: e.target.value })
                     }
                     placeholder={modeMeta.instructionsPlaceholder}
-                    className="min-h-[140px] w-full rounded-[28px] border border-black/10 bg-[#fcfaf7] px-4 py-4 text-sm leading-6 text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
+                    className="min-h-[140px] w-full rounded-[28px] border border-black/10 bg-[#fcfaf7] px-4 py-4 text-sm leading-6 text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
                   />
                 </div>
+
+                {/* Preset picker overlay */}
+                {showPresetPicker && (
+                  <div className="fixed inset-0 z-[80] flex items-end justify-center p-4 sm:items-center">
+                    <button
+                      type="button"
+                      aria-label="Close preset picker"
+                      onClick={() => setShowPresetPicker(false)}
+                      className="absolute inset-0 bg-black/35 backdrop-blur-sm"
+                    />
+                    <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
+                      <div className="border-b border-black/6 px-5 py-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <h3 className="text-base font-semibold text-[#17131d]">
+                            Choose a preset
+                          </h3>
+                          <button
+                            type="button"
+                            onClick={() => setShowPresetPicker(false)}
+                            className="rounded-xl border border-black/8 p-1.5 text-[#6e5e58] transition hover:bg-[#f9f6f2]"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="relative mt-3">
+                          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d7d74]" />
+                          <input
+                            autoFocus
+                            type="text"
+                            placeholder="Search presets..."
+                            value={presetSearch}
+                            onChange={(e) => setPresetSearch(e.target.value)}
+                            className="w-full rounded-2xl border border-black/10 bg-[#fcfaf7] py-2.5 pl-9 pr-4 text-sm text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-[60vh] overflow-y-auto p-3">
+                        {(promptsData as Array<{ id: string | number; title: string; description: string; content: string; type: string }>)
+                          .filter(
+                            (p) =>
+                              p.type === "TEXT" &&
+                              (presetSearch.trim() === "" ||
+                                p.title
+                                  .toLowerCase()
+                                  .includes(presetSearch.toLowerCase().trim())),
+                          )
+                          .map((preset) => (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => {
+                                updateEditor({ instructions: preset.content });
+                                setShowPresetPicker(false);
+                              }}
+                              className="w-full rounded-[20px] border border-transparent px-4 py-3 text-left transition hover:border-[#7c5cff]/15 hover:bg-[#f6efff]"
+                            >
+                              <p className="text-sm font-semibold text-[#17131d]">
+                                {preset.title}
+                              </p>
+                              <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-[#6e5e58]">
+                                {preset.description}
+                              </p>
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
           </div>
@@ -1190,7 +1279,7 @@ export default function Dashboard() {
 
                   <div className="flex flex-wrap gap-2">
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-black/8 bg-white px-3 py-1.5 text-xs font-medium text-[#6e5e58]">
-                      <Coins className="h-3.5 w-3.5 text-[#8c5f74]" />
+                      <Coins className="h-3.5 w-3.5 text-[#7c5cff]" />
                       {modeMeta.cost} credits
                     </span>
                     {editor.status === "completed" && (
@@ -1211,7 +1300,7 @@ export default function Dashboard() {
                 <div className="min-h-[420px] overflow-hidden rounded-[28px] border border-black/8 bg-[#fffdf9]">
                   {isGenerating ? (
                     <div className="flex h-full min-h-[420px] flex-col items-center justify-center p-5 text-center">
-                      <Loader2 className="h-10 w-10 animate-spin text-[#8c5f74]" />
+                      <Loader2 className="h-10 w-10 animate-spin text-[#7c5cff]" />
                       <p className="mt-4 text-base font-semibold text-[#17131d]">
                         Running {modeMeta.label.toLowerCase()}...
                       </p>
@@ -1227,6 +1316,12 @@ export default function Dashboard() {
                           {wordCount(editor.outputText).toLocaleString()} words
                           &middot; {editor.outputText.length.toLocaleString()}{" "}
                           chars
+                          {editor.tokenCount > 0 && (
+                            <>
+                              {" "}&middot;{" "}
+                              {editor.tokenCount.toLocaleString()} tokens
+                            </>
+                          )}
                         </span>
                         <div className="flex flex-wrap items-center justify-end gap-1.5">
                           <button
@@ -1313,7 +1408,7 @@ export default function Dashboard() {
             <section className="rounded-[30px] border border-black/8 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3 border-b border-black/6 pb-4">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8c5f74]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c5cff]">
                     Saved history
                   </p>
                   <p className="mt-2 text-sm text-[#6e5e58]">
@@ -1330,7 +1425,7 @@ export default function Dashboard() {
                     onClick={() => setShowAllRuns((v) => !v)}
                     className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
                       showAllRuns
-                        ? "border-[#8c5f74]/25 bg-[#fff4f6] text-[#8c3857]"
+                        ? "border-[#7c5cff]/25 bg-[#f0ecff] text-[#5b3fc5]"
                         : "border-black/10 bg-[#fcfaf7] text-[#6e5e58] hover:bg-white hover:text-[#17131d]"
                     }`}
                   >
@@ -1356,7 +1451,7 @@ export default function Dashboard() {
                       setHistorySearchQuery(event.target.value)
                     }
                     placeholder="Search titles, source text, or output"
-                    className="w-full rounded-xl border border-black/10 bg-[#fcfaf7] py-2.5 pl-9 pr-3 text-sm text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
+                    className="w-full rounded-xl border border-black/10 bg-[#fcfaf7] py-2.5 pl-9 pr-3 text-sm text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
                   />
                 </label>
 
@@ -1371,7 +1466,7 @@ export default function Dashboard() {
                         | "failed",
                     )
                   }
-                  className="rounded-xl border border-black/10 bg-[#fcfaf7] px-3 py-2.5 text-sm text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
+                  className="rounded-xl border border-black/10 bg-[#fcfaf7] px-3 py-2.5 text-sm text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
                 >
                   <option value="all">All statuses</option>
                   <option value="draft">Draft</option>
@@ -1391,7 +1486,7 @@ export default function Dashboard() {
                       className={`w-full rounded-[24px] border p-4 text-left transition ${
                         isSelected
                           ? `${MODE_ACCENTS[run.mode]} shadow-sm`
-                          : "border-black/8 bg-[#fcfaf7] hover:border-[#8c5f74]/20 hover:bg-white"
+                          : "border-black/8 bg-[#fcfaf7] hover:border-[#7c5cff]/20 hover:bg-white"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -1482,7 +1577,7 @@ export default function Dashboard() {
 
                 {isLoading && (
                   <div className="rounded-[24px] border border-dashed border-black/10 bg-[#fcfaf7] px-4 py-6 text-center text-sm text-[#6e5e58]">
-                    <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin text-[#8c5f74]" />
+                    <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin text-[#7c5cff]" />
                     Loading workspace history...
                   </div>
                 )}
@@ -1502,7 +1597,7 @@ export default function Dashboard() {
             <div className="relative z-10 w-full max-w-md rounded-[28px] border border-black/8 bg-white p-6 shadow-[0_24px_80px_rgba(23,19,29,0.22)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8c5f74]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c5cff]">
                     Rename run
                   </p>
                   <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[#17131d]">
@@ -1534,7 +1629,7 @@ export default function Dashboard() {
                 id="rename-run-input"
                 value={renameValue}
                 onChange={(event) => setRenameValue(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf7] px-4 py-3 text-sm text-[#17131d] outline-none transition focus:border-[#8c5f74] focus:bg-white"
+                className="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf7] px-4 py-3 text-sm text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
                 placeholder="Enter a run title"
               />
 

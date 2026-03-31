@@ -26,71 +26,19 @@ interface PurchaseCreditsModalProps {
 
 const supportEmail = "support@aicontentstudio.net";
 
-const quickAmounts = [100, 300, 500, 1000, 2500, 5000] as const;
-const pricingAnchors = [
-  { credits: 100, price: 5 },
-  { credits: 500, price: 20 },
-  { credits: 2000, price: 50 },
-  { credits: 5000, price: 110 },
-] as const;
-
+// Pricing model: 1 credit = €0.01 (1 euro cent). Simple linear rate.
+const CREDIT_PRICE_EUR = 0.01;
+const quickAmounts = [100, 500, 1000, 2500, 5000, 10000] as const;
 const MIN_CREDITS = 100;
-const MAX_CREDITS = 5000;
+const MAX_CREDITS = 10000;
 const EUR_TO_GBP_RATE = 0.86;
 
-function getInterpolatedPrice(credits: number) {
-  if (credits <= pricingAnchors[0].credits) return pricingAnchors[0].price;
-
-  for (let index = 1; index < pricingAnchors.length; index += 1) {
-    const previous = pricingAnchors[index - 1];
-    const current = pricingAnchors[index];
-
-    if (credits <= current.credits) {
-      const ratio =
-        (credits - previous.credits) / (current.credits - previous.credits);
-      const price = previous.price + ratio * (current.price - previous.price);
-      return Number(price.toFixed(2));
-    }
-  }
-
-  const last = pricingAnchors[pricingAnchors.length - 1];
-  const beforeLast = pricingAnchors[pricingAnchors.length - 2];
-  const slope =
-    (last.price - beforeLast.price) / (last.credits - beforeLast.credits);
-  return Number((last.price + (credits - last.credits) * slope).toFixed(2));
+function getLinearPrice(credits: number) {
+  return Number((credits * CREDIT_PRICE_EUR).toFixed(2));
 }
 
 function getCreditsForAmount(amount: number) {
-  if (amount <= 0) return MIN_CREDITS;
-
-  if (amount <= pricingAnchors[0].price) {
-    return Math.max(
-      MIN_CREDITS,
-      Math.round(
-        (amount / pricingAnchors[0].price) * pricingAnchors[0].credits,
-      ),
-    );
-  }
-
-  for (let index = 1; index < pricingAnchors.length; index += 1) {
-    const previous = pricingAnchors[index - 1];
-    const current = pricingAnchors[index];
-
-    if (amount <= current.price) {
-      const ratio =
-        (amount - previous.price) / (current.price - previous.price);
-      return Math.round(
-        previous.credits + ratio * (current.credits - previous.credits),
-      );
-    }
-  }
-
-  const last = pricingAnchors[pricingAnchors.length - 1];
-  const beforeLast = pricingAnchors[pricingAnchors.length - 2];
-  const creditsPerEuro =
-    (last.credits - beforeLast.credits) / (last.price - beforeLast.price);
-
-  return Math.round(last.credits + (amount - last.price) * creditsPerEuro);
+  return Math.max(MIN_CREDITS, Math.round(amount / CREDIT_PRICE_EUR));
 }
 
 function getTopUpLabel(credits: number) {
@@ -134,7 +82,7 @@ export default function PurchaseCreditsModal({
 
   if (!isOpen) return null;
 
-  const selectedPrice = priceOverride ?? getInterpolatedPrice(selectedCredits);
+  const selectedPrice = priceOverride ?? getLinearPrice(selectedCredits);
   const selectedPriceGbp = Number((selectedPrice * EUR_TO_GBP_RATE).toFixed(2));
   const projectedBalance =
     currentCredits === null ? null : currentCredits + selectedCredits;
@@ -477,8 +425,7 @@ export default function PurchaseCreditsModal({
                       -100
                     </button>
                     <p className="text-sm text-slate-500">
-                      Approx. {Math.floor(selectedCredits / 10)} premium
-                      generations at current video pricing.
+                      1 credit = €0.01 · linear pricing, no volume tiers.
                     </p>
                     <button
                       type="button"

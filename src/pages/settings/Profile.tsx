@@ -1,8 +1,35 @@
+import { useState } from "react";
+import { deleteUser } from "firebase/auth";
+import { LogOut, Trash2 } from "lucide-react";
 import { useFirebase } from "../../contexts/FirebaseContext";
-import { LogOut } from "lucide-react";
 
 export function Profile() {
   const { user, signOut } = useFirebase();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteUser(user);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to delete account.";
+      if (message.includes("requires-recent-login")) {
+        setDeleteError(
+          "For security, please sign out and sign back in before deleting your account.",
+        );
+      } else {
+        setDeleteError(message);
+      }
+      setShowDeleteConfirm(false);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
   const profileInitial = user?.email?.charAt(0).toUpperCase() || "U";
 
   return (
@@ -63,16 +90,58 @@ export function Profile() {
               Danger zone
             </h3>
             <p className="mb-4 text-sm text-gray-500">
-              Signing out will end this browser session for your account.
+              Signing out ends this browser session. Deleting your account is
+              permanent and cannot be undone.
             </p>
-            <button
-              type="button"
-              onClick={signOut}
-              className="flex items-center rounded-lg bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
-            </button>
+
+            {deleteError && (
+              <p className="mb-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">
+                {deleteError}
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={signOut}
+                className="flex items-center rounded-lg bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </button>
+
+              {!showDeleteConfirm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex items-center rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete account
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2">
+                  <span className="text-sm font-medium text-red-700">
+                    Are you sure? This cannot be undone.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleDeleteAccount}
+                    disabled={isDeleting}
+                    className="ml-1 rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
+                  >
+                    {isDeleting ? "Deleting…" : "Yes, delete"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="rounded-md bg-white px-3 py-1 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

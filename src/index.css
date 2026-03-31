@@ -179,8 +179,8 @@ button:not(:disabled),
 
 .landing section {
   position: relative;
-  padding-top: 2.5rem;
-  padding-bottom: 2.5rem;
+  padding-top: 5rem;
+  padding-bottom: 5rem;
 }
 
 .landing .lead {
@@ -550,6 +550,16 @@ button:not(:disabled),
   transform: translate3d(0, 28px, 0);
 }
 
+@media (min-width: 48rem) {
+  .landing .faq .faq-item-left.reveal-ready {
+    transform: translate3d(-60px, 0, 0);
+  }
+
+  .landing .faq .faq-item-right.reveal-ready {
+    transform: translate3d(60px, 0, 0);
+  }
+}
+
 .landing .faq .faq-cta.reveal-ready {
   transform: translateY(20px);
 }
@@ -571,8 +581,8 @@ button:not(:disabled),
 
 @media (max-width: 47.99875rem) {
   .landing section {
-    padding-top: 3.5rem;
-    padding-bottom: 3.5rem;
+    padding-top: 4rem;
+    padding-bottom: 4rem;
   }
 
   .landing .hero {
@@ -582,21 +592,21 @@ button:not(:disabled),
   }
 
   .landing .hero__content {
-    padding: 0.75rem 0.25rem 0;
+    padding-top: 0.75rem;
   }
 
   .landing .hero__art {
     background-position: center top;
     background-size: cover;
-    opacity: 0.34;
+    opacity: 0.55;
   }
 
   .landing .hero::before {
     background: linear-gradient(
       to bottom,
-      rgba(9, 10, 24, 0.24) 0%,
-      rgba(9, 10, 24, 0.76) 35%,
-      rgba(9, 10, 24, 0.96) 100%
+      rgba(9, 10, 24, 0.18) 0%,
+      rgba(9, 10, 24, 0.72) 35%,
+      rgba(9, 10, 24, 0.95) 100%
     );
   }
 
@@ -626,8 +636,8 @@ button:not(:disabled),
 
 @media (max-width: 36rem) {
   .landing section:not(.hero) {
-    padding-top: 3rem;
-    padding-bottom: 3rem;
+    padding-top: 3.5rem;
+    padding-bottom: 3.5rem;
   }
 
   .landing .hero {
@@ -636,6 +646,6 @@ button:not(:disabled),
   }
 
   .landing .hero__content {
-    padding: 0.5rem 0 0;
+    padding-top: 0.5rem;
   }
 }

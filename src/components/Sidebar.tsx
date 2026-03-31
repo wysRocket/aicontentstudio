@@ -56,7 +56,7 @@ function SidebarNav({
         to="/"
         onClick={onNavigate}
         className={cn(
-          "mb-8 mt-2 flex items-center text-white transition-colors hover:text-[#f2b4cb]",
+          "mb-4 mt-2 flex items-center text-white transition-colors hover:text-[#f2b4cb]",
           isExpanded ? "w-full justify-start px-4" : "justify-center",
         )}
       >
@@ -78,7 +78,7 @@ function SidebarNav({
         )}
       </Link>
 
-      <nav className="flex-1 space-y-4 overflow-y-auto overflow-x-hidden">
+      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden">
         {isExpanded && (
           <div className="px-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/38">
@@ -117,7 +117,7 @@ function SidebarNav({
         })}
       </nav>
 
-      <div className="mt-auto w-full space-y-2 border-t border-white/10 pt-4">
+      <div className="mt-auto w-full shrink-0 space-y-1 border-t border-white/10 pt-3">
         {bottomNavItems.map((item) => {
           const isActive = location.pathname.startsWith(item.href);
           return (
@@ -191,7 +191,7 @@ export function Sidebar({
       >
         <aside
           className={cn(
-            "flex h-full w-[min(84vw,320px)] flex-col border-r border-white/10 bg-[#17131d] px-4 py-4 text-white shadow-2xl transition-transform duration-300",
+            "flex h-full min-h-0 w-[min(84vw,320px)] flex-col border-r border-white/10 bg-[#17131d] px-4 py-4 text-white shadow-2xl transition-transform duration-300",
             isMobileOpen ? "translate-x-0" : "-translate-x-full",
           )}
           onClick={(event) => event.stopPropagation()}

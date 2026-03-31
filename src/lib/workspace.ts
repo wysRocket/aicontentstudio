@@ -20,6 +20,7 @@ export interface WorkspaceRunRecord {
   targetLanguage: string;
   status: WorkspaceRunStatus;
   creditCost: number;
+  tokenCount: number;
   sourceFileName: string;
   sourceMimeType: string;
   lastError: string;
@@ -157,6 +158,7 @@ export function createWorkspaceRunDraft(
     targetLanguage: overrides.targetLanguage ?? "",
     status: overrides.status ?? "draft",
     creditCost: overrides.creditCost ?? base.cost,
+    tokenCount: overrides.tokenCount ?? 0,
     sourceFileName: overrides.sourceFileName ?? "",
     sourceMimeType: overrides.sourceMimeType ?? "",
     lastError: overrides.lastError ?? "",
