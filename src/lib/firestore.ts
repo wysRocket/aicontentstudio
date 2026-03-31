@@ -305,6 +305,63 @@ const defaultWorkspaceSettings: WorkspaceSettings = {
   updatedAt: null,
 };
 
+type UserProfileSnapshotLike = Partial<{
+  uid: unknown;
+  email: unknown;
+  displayName: unknown;
+  photoURL: unknown;
+  role: unknown;
+  credits: unknown;
+  createdAt: unknown;
+}>;
+
+function normalizeOptionalString(value: string | null) {
+  return value || "";
+}
+
+export function buildUserProfilePayload(
+  uid: string,
+  email: string | null,
+  displayName: string | null,
+  photoURL: string | null,
+  existingData?: UserProfileSnapshotLike,
+) {
+  const normalizedEmail = normalizeOptionalString(email);
+  const normalizedDisplayName = normalizeOptionalString(displayName);
+  const normalizedPhotoURL = normalizeOptionalString(photoURL);
+  const existingCredits =
+    typeof existingData?.credits === "number"
+      ? existingData.credits
+      : existingData
+        ? 0
+        : 1000;
+
+  const data = {
+    uid,
+    email: normalizedEmail,
+    displayName: normalizedDisplayName,
+    photoURL: normalizedPhotoURL,
+    role:
+      existingData?.role === "admin" || existingData?.role === "user"
+        ? existingData.role
+        : "user",
+    credits: existingCredits,
+    createdAt: existingData?.createdAt,
+  };
+
+  const shouldWrite =
+    !existingData ||
+    existingData.uid !== data.uid ||
+    existingData.email !== data.email ||
+    existingData.displayName !== data.displayName ||
+    existingData.photoURL !== data.photoURL ||
+    existingData.role !== data.role ||
+    typeof existingData.credits !== "number" ||
+    !existingData.createdAt;
+
+  return { data, shouldWrite };
+}
+
 function userDoc(uid: string) {
   return doc(db, "users", uid);
 }
@@ -520,19 +577,14 @@ export async function createUserProfileIfNotExists(
   try {
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) {
-      const starterCredits = 1000;
+      const payload = buildUserProfilePayload(uid, email, displayName, photoURL);
       await setDoc(userRef, {
-        uid,
-        email: email || "",
-        displayName: displayName || "",
-        photoURL: photoURL || "",
-        role: "user",
-        credits: starterCredits,
+        ...payload.data,
         createdAt: serverTimestamp(),
       });
       await setDoc(doc(creditTransactionsCollection(uid)), {
-        amount: starterCredits,
-        balanceAfter: starterCredits,
+        amount: payload.data.credits,
+        balanceAfter: payload.data.credits,
         kind: "grant",
         status: "completed",
         description: "Starter credits for your new workspace",
@@ -543,22 +595,20 @@ export async function createUserProfileIfNotExists(
     }
 
     const existingData = userSnap.data();
-    const nextEmail = email || "";
-    const nextDisplayName = displayName || "";
-    const nextPhotoURL = photoURL || "";
+    const payload = buildUserProfilePayload(
+      uid,
+      email,
+      displayName,
+      photoURL,
+      existingData,
+    );
 
-    const shouldBackfillProfile =
-      (nextEmail && existingData.email !== nextEmail) ||
-      (nextDisplayName && existingData.displayName !== nextDisplayName) ||
-      (nextPhotoURL && existingData.photoURL !== nextPhotoURL);
-
-    if (shouldBackfillProfile) {
+    if (payload.shouldWrite) {
       await setDoc(
         userRef,
         {
-          email: nextEmail || existingData.email || "",
-          displayName: nextDisplayName || existingData.displayName || "",
-          photoURL: nextPhotoURL || existingData.photoURL || "",
+          ...payload.data,
+          createdAt: existingData.createdAt ?? serverTimestamp(),
         },
         { merge: true },
       );
