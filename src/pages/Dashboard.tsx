@@ -3,11 +3,17 @@ import {
   AudioLines,
   Check,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Coins,
   Copy,
+  Download,
+  FileText,
   Pencil,
   FileAudio,
+  ImageIcon,
   Languages,
+  Layers,
   Loader2,
   PenSquare,
   Plus,
@@ -20,6 +26,7 @@ import {
   X,
   AlertTriangle,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { useSearchParams } from "react-router-dom";
 import { GoogleGenAI } from "@google/genai";
 import promptsData from "../prompts_data.json";
@@ -43,11 +50,26 @@ import {
   type WorkspaceToolMode,
 } from "../lib/workspace";
 
+interface SlideData {
+  title: string;
+  content: string[];
+  notes: string;
+  layout: "title" | "content" | "two-column" | "quote" | "closing";
+}
+
+function extractJson(text: string): string {
+  const match = text.match(/```(?:json)?\s*([\s\S]+?)\s*```/);
+  return match ? match[1] : text;
+}
+
 const MODE_ICONS = {
   write_rewrite: PenSquare,
   summarize: ScanText,
   transcribe: AudioLines,
   translate: Languages,
+  generate_image: ImageIcon,
+  create_document: FileText,
+  create_presentation: Layers,
 } satisfies Record<WorkspaceToolMode, typeof PenSquare>;
 
 const MODE_ACCENTS = {
@@ -59,6 +81,12 @@ const MODE_ACCENTS = {
     "border-[#d8e6db] bg-[linear-gradient(180deg,#f5fff6_0%,#fffdf8_100%)] text-[#365947]",
   translate:
     "border-[#ead8c7] bg-[linear-gradient(180deg,#fffaf2_0%,#fffdf7_100%)] text-[#8a5a34]",
+  generate_image:
+    "border-[#c8d8ea] bg-[linear-gradient(180deg,#f4f9ff_0%,#fffdf9_100%)] text-[#244a6a]",
+  create_document:
+    "border-[#c8e8d4] bg-[linear-gradient(180deg,#f4fff8_0%,#fffef9_100%)] text-[#1f5435]",
+  create_presentation:
+    "border-[#e0c8ea] bg-[linear-gradient(180deg,#faf4ff_0%,#fffdf9_100%)] text-[#562070]",
 } satisfies Record<WorkspaceToolMode, string>;
 
 const OUTPUT_PANEL_ACCENTS = {
@@ -66,6 +94,9 @@ const OUTPUT_PANEL_ACCENTS = {
   summarize: "from-[#172236] via-[#253755] to-[#526d86]",
   transcribe: "from-[#14241c] via-[#1f3b30] to-[#53735f]",
   translate: "from-[#2b1d12] via-[#5a3316] to-[#8b5a27]",
+  generate_image: "from-[#0d1f35] via-[#183358] to-[#1e5a80]",
+  create_document: "from-[#0d2218] via-[#153826] to-[#2a6040]",
+  create_presentation: "from-[#1a0d32] via-[#2d1258] to-[#6a1a8a]",
 } satisfies Record<WorkspaceToolMode, string>;
 
 const TOOL_ORDER: WorkspaceToolMode[] = [
@@ -73,6 +104,9 @@ const TOOL_ORDER: WorkspaceToolMode[] = [
   "summarize",
   "transcribe",
   "translate",
+  "generate_image",
+  "create_document",
+  "create_presentation",
 ];
 
 function createEmptyDraftsByMode() {
@@ -81,6 +115,9 @@ function createEmptyDraftsByMode() {
     summarize: createWorkspaceRunDraft("summarize"),
     transcribe: createWorkspaceRunDraft("transcribe"),
     translate: createWorkspaceRunDraft("translate"),
+    generate_image: createWorkspaceRunDraft("generate_image"),
+    create_document: createWorkspaceRunDraft("create_document"),
+    create_presentation: createWorkspaceRunDraft("create_presentation"),
   } satisfies Record<WorkspaceToolMode, WorkspaceRunInput>;
 }
 
@@ -205,6 +242,11 @@ export default function Dashboard() {
   const [showAllRuns, setShowAllRuns] = useState(false);
   const [showPresetPicker, setShowPresetPicker] = useState(false);
   const [presetSearch, setPresetSearch] = useState("");
+  const [sessionImage, setSessionImage] = useState<{ runId: string; dataUrl: string } | null>(null);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [showSlideNotes, setShowSlideNotes] = useState(false);
+  const [docDownloading, setDocDownloading] = useState(false);
+  const [slideDownloading, setSlideDownloading] = useState(false);
   const [historySearchQuery, setHistorySearchQuery] = useState("");
   const [historyStatusFilter, setHistoryStatusFilter] = useState<
     "all" | "draft" | "completed" | "failed"
@@ -318,6 +360,16 @@ export default function Dashboard() {
         .includes(normalizedQuery);
     });
   }, [displayedRuns, historySearchQuery, historyStatusFilter]);
+
+  const parsedSlides = useMemo<SlideData[] | null>(() => {
+    if (activeMode !== "create_presentation" || !editor.outputText.trim()) return null;
+    try {
+      const parsed = JSON.parse(extractJson(editor.outputText));
+      return Array.isArray(parsed) ? (parsed as SlideData[]) : null;
+    } catch {
+      return null;
+    }
+  }, [activeMode, editor.outputText]);
 
   const modeMeta = WORKSPACE_TOOL_CONFIG[activeMode];
   const ModeIcon = MODE_ICONS[activeMode];
@@ -542,6 +594,139 @@ export default function Dashboard() {
     setTimeout(() => setCopiedOutput(false), 2000);
   };
 
+  const handleDownloadImage = () => {
+    if (!sessionImage) return;
+    const a = document.createElement("a");
+    a.href = sessionImage.dataUrl;
+    a.download = `${editor.title || "image"}.jpg`;
+    a.click();
+  };
+
+  const handleDownloadDocx = async () => {
+    setDocDownloading(true);
+    try {
+      const { Document, Packer, Paragraph, HeadingLevel } = await import("docx");
+      const lines = editor.outputText.split("\n");
+      const children = lines.map((line) => {
+        if (line.startsWith("# ")) return new Paragraph({ text: line.slice(2), heading: HeadingLevel.HEADING_1 });
+        if (line.startsWith("## ")) return new Paragraph({ text: line.slice(3), heading: HeadingLevel.HEADING_2 });
+        if (line.startsWith("### ")) return new Paragraph({ text: line.slice(4), heading: HeadingLevel.HEADING_3 });
+        if (line.startsWith("- ") || line.startsWith("* ")) return new Paragraph({ text: line.slice(2), bullet: { level: 0 } });
+        return new Paragraph({ text: line });
+      });
+      const doc = new Document({ sections: [{ properties: {}, children }] });
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${editor.title || "document"}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("DOCX download failed", err);
+    } finally {
+      setDocDownloading(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    setDocDownloading(true);
+    try {
+      const { jsPDF } = await import("jspdf");
+      const pdf = new jsPDF({ unit: "mm", format: "a4" });
+      const lines = editor.outputText.split("\n");
+      let y = 20;
+      const pageHeight = 277;
+
+      for (const line of lines) {
+        if (y > pageHeight) { pdf.addPage(); y = 20; }
+        if (line.startsWith("# ")) {
+          pdf.setFontSize(20); pdf.setFont("helvetica", "bold");
+          const wrapped = pdf.splitTextToSize(line.slice(2), 180);
+          pdf.text(wrapped, 15, y); y += wrapped.length * 9 + 4;
+        } else if (line.startsWith("## ")) {
+          pdf.setFontSize(15); pdf.setFont("helvetica", "bold");
+          const wrapped = pdf.splitTextToSize(line.slice(3), 180);
+          pdf.text(wrapped, 15, y); y += wrapped.length * 7 + 3;
+        } else if (line.startsWith("### ")) {
+          pdf.setFontSize(12); pdf.setFont("helvetica", "bold");
+          const wrapped = pdf.splitTextToSize(line.slice(4), 180);
+          pdf.text(wrapped, 15, y); y += wrapped.length * 6 + 2;
+        } else if (line.startsWith("- ") || line.startsWith("* ")) {
+          pdf.setFontSize(10); pdf.setFont("helvetica", "normal");
+          const wrapped = pdf.splitTextToSize(`\u2022 ${line.slice(2)}`, 172);
+          pdf.text(wrapped, 21, y); y += wrapped.length * 6;
+        } else if (line.trim()) {
+          pdf.setFontSize(10); pdf.setFont("helvetica", "normal");
+          const wrapped = pdf.splitTextToSize(line, 180);
+          pdf.text(wrapped, 15, y); y += wrapped.length * 6;
+        } else {
+          y += 4;
+        }
+      }
+
+      pdf.save(`${editor.title || "document"}.pdf`);
+    } catch (err) {
+      console.error("PDF download failed", err);
+    } finally {
+      setDocDownloading(false);
+    }
+  };
+
+  const handleDownloadPptx = async () => {
+    if (!parsedSlides) return;
+    setSlideDownloading(true);
+    try {
+      const PptxGenJS = (await import("pptxgenjs")).default;
+      const pptx = new PptxGenJS();
+      pptx.layout = "LAYOUT_WIDE";
+
+      for (const slide of parsedSlides) {
+        const pSlide = pptx.addSlide();
+        pSlide.background = { color: "1a1040" };
+
+        const isTitle = slide.layout === "title";
+        const isClosing = slide.layout === "closing";
+        const isQuote = slide.layout === "quote";
+
+        pSlide.addText(slide.title, {
+          x: 0.5, y: isTitle ? 2.2 : 0.35,
+          w: "90%", h: isTitle ? 1.5 : 1.0,
+          fontSize: isTitle ? 40 : 26,
+          bold: true, color: "FFFFFF",
+          fontFace: "Calibri",
+          align: isTitle || isClosing ? "center" : "left",
+        });
+
+        if (isQuote && slide.content.length > 0) {
+          pSlide.addText(`"${slide.content[0]}"`, {
+            x: 1.0, y: 2.0, w: "80%", h: 3.0,
+            fontSize: 22, italic: true, color: "C4B5FD",
+            fontFace: "Calibri", align: "center",
+          });
+        } else if (!isTitle && !isClosing && slide.content.length > 0) {
+          pSlide.addText(
+            slide.content.map((c) => ({ text: `${c}\n`, options: {} })),
+            { x: 0.5, y: 1.5, w: "90%", h: 5.5, fontSize: 18, color: "E0D8FF", fontFace: "Calibri" },
+          );
+        }
+
+        if (isClosing && slide.content.length > 0) {
+          pSlide.addText(slide.content[0], {
+            x: 0.5, y: 3.8, w: "90%", h: 1.0,
+            fontSize: 20, color: "A78BFA", fontFace: "Calibri", align: "center",
+          });
+        }
+      }
+
+      await pptx.writeFile({ fileName: `${editor.title || "presentation"}.pptx` });
+    } catch (err) {
+      console.error("PPTX download failed", err);
+    } finally {
+      setSlideDownloading(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!user) return;
 
@@ -571,84 +756,130 @@ export default function Dashboard() {
 
     try {
       const ai = new GoogleGenAI({ apiKey });
-      let outputText = "";
-      let tokenCount = 0;
 
-      if (activeMode === "transcribe") {
-        const file = selectedFile;
-        if (!file) {
-          throw new Error(
-            "Upload an audio file before requesting a transcript.",
-          );
+      if (activeMode === "generate_image") {
+        // Build a combined image prompt
+        const imagePrompt = [
+          editor.sourceText.trim(),
+          editor.instructions.trim() ? `Style: ${editor.instructions.trim()}` : "",
+        ]
+          .filter(Boolean)
+          .join(". ");
+
+        const imageResponse = await ai.models.generateImages({
+          model: "imagen-3.0-generate-001",
+          prompt: imagePrompt,
+          config: { numberOfImages: 1, aspectRatio: "1:1" },
+        });
+
+        const imageBytes = imageResponse.generatedImages?.[0]?.image?.imageBytes;
+        if (!imageBytes) {
+          throw new Error("No image was returned. Try refining your description.");
         }
 
-        const base64Audio = await readFileAsBase64(file);
-        const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: {
-            parts: [
-              {
-                inlineData: {
-                  mimeType: file.type,
-                  data: base64Audio,
-                },
-              },
-              {
-                text: buildWorkspacePrompt({
-                  mode: activeMode,
-                  sourceText: editor.sourceText,
-                  instructions: editor.instructions,
-                  sourceFileName: file.name,
-                }),
-              },
-            ],
-          },
+        const dataUrl = `data:image/jpeg;base64,${imageBytes}`;
+
+        const runId = await persistRun({
+          outputText: "[Generated image — download to save locally]",
+          status: "completed",
+          lastError: "",
+          creditCost: modeMeta.cost,
+          tokenCount: 0,
+          sourceFileName: editor.sourceFileName,
+          sourceMimeType: editor.sourceMimeType,
         });
-        outputText = (response.text || "").trim();
-        tokenCount = response.usageMetadata?.totalTokenCount ?? 0;
+
+        if (runId) setSessionImage({ runId, dataUrl });
+
+        await deductCredits(user.uid, modeMeta.cost, {
+          description: "Image generation run",
+          source: "workspace:generate_image",
+        });
+
+        setSuccessMessage("Image generated. Download it before leaving this session — images are not stored in history.");
       } else {
-        const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: [
-            {
-              role: "user",
+        let outputText = "";
+        let tokenCount = 0;
+
+        if (activeMode === "transcribe") {
+          const file = selectedFile;
+          if (!file) {
+            throw new Error("Upload an audio file before requesting a transcript.");
+          }
+
+          const base64Audio = await readFileAsBase64(file);
+          const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: {
               parts: [
+                {
+                  inlineData: {
+                    mimeType: file.type,
+                    data: base64Audio,
+                  },
+                },
                 {
                   text: buildWorkspacePrompt({
                     mode: activeMode,
                     sourceText: editor.sourceText,
                     instructions: editor.instructions,
-                    targetLanguage: editor.targetLanguage,
+                    sourceFileName: file.name,
                   }),
                 },
               ],
             },
-          ],
+          });
+          outputText = (response.text || "").trim();
+          tokenCount = response.usageMetadata?.totalTokenCount ?? 0;
+        } else {
+          const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  {
+                    text: buildWorkspacePrompt({
+                      mode: activeMode,
+                      sourceText: editor.sourceText,
+                      instructions: editor.instructions,
+                      targetLanguage: editor.targetLanguage,
+                    }),
+                  },
+                ],
+              },
+            ],
+          });
+          outputText = (response.text || "").trim();
+          tokenCount = response.usageMetadata?.totalTokenCount ?? 0;
+        }
+
+        if (!outputText) {
+          throw new Error("The model returned an empty result.");
+        }
+
+        // For presentations, reset slide index when new content arrives
+        if (activeMode === "create_presentation") {
+          setCurrentSlideIndex(0);
+        }
+
+        await persistRun({
+          outputText,
+          status: "completed",
+          lastError: "",
+          creditCost: modeMeta.cost,
+          tokenCount,
+          sourceFileName: selectedFile?.name || editor.sourceFileName,
+          sourceMimeType: selectedFile?.type || editor.sourceMimeType,
         });
-        outputText = (response.text || "").trim();
-        tokenCount = response.usageMetadata?.totalTokenCount ?? 0;
+
+        await deductCredits(user.uid, modeMeta.cost, {
+          description: `${modeMeta.label} run`,
+          source: `workspace:${activeMode}`,
+        });
+
+        setSuccessMessage(`${modeMeta.label} finished and was saved to history.`);
       }
-
-      if (!outputText) {
-        throw new Error("The model returned an empty result.");
-      }
-
-      await persistRun({
-        outputText,
-        status: "completed",
-        lastError: "",
-        creditCost: modeMeta.cost,
-        tokenCount,
-        sourceFileName: selectedFile?.name || editor.sourceFileName,
-        sourceMimeType: selectedFile?.type || editor.sourceMimeType,
-      });
-
-      await deductCredits(user.uid, modeMeta.cost, {
-        description: `${modeMeta.label} run`,
-        source: `workspace:${activeMode}`,
-      });
-
-      setSuccessMessage(`${modeMeta.label} finished and was saved to history.`);
     } catch (err) {
       console.error(`Failed to run ${activeMode}`, err);
       const message =
@@ -1297,19 +1528,220 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="min-h-[420px] overflow-hidden rounded-[28px] border border-black/8 bg-[#fffdf9]">
+                <div className="overflow-hidden rounded-[28px] border border-black/8 bg-[#fffdf9]">
                   {isGenerating ? (
-                    <div className="flex h-full min-h-[420px] flex-col items-center justify-center p-5 text-center">
+                    <div className="flex min-h-[420px] flex-col items-center justify-center p-5 text-center">
                       <Loader2 className="h-10 w-10 animate-spin text-[#7c5cff]" />
                       <p className="mt-4 text-base font-semibold text-[#17131d]">
                         Running {modeMeta.label.toLowerCase()}...
                       </p>
                       <p className="mt-2 max-w-sm text-sm leading-6 text-[#6e5e58]">
-                        The result will be saved into your workspace history as
-                        soon as the model responds.
+                        {activeMode === "generate_image"
+                          ? "Your image will be ready in a few seconds."
+                          : "The result will be saved into your workspace history as soon as the model responds."}
                       </p>
                     </div>
+
+                  ) : activeMode === "generate_image" ? (
+                    /* ── Image output ── */
+                    sessionImage?.runId === selectedRunId ? (
+                      <div>
+                        <img
+                          src={sessionImage.dataUrl}
+                          alt={editor.title || "Generated image"}
+                          className="w-full rounded-t-[28px] object-cover"
+                        />
+                        <div className="flex items-center justify-between gap-3 px-5 py-4">
+                          <p className="text-xs text-[#8d7d74]">
+                            Session only — download to keep this image.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleDownloadImage}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-[#17131d] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#2c2438]"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            Download JPG
+                          </button>
+                        </div>
+                      </div>
+                    ) : editor.status === "completed" ? (
+                      <div className="flex min-h-[420px] flex-col items-center justify-center p-5 text-center">
+                        <ImageIcon className="h-10 w-10 text-[#c8d8ea]" />
+                        <p className="mt-4 text-sm font-semibold text-[#17131d]">Image not available</p>
+                        <p className="mt-2 max-w-xs text-sm text-[#6e5e58]">
+                          Images aren't stored in history. Generate a new one or download immediately after generation.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex min-h-[420px] flex-col items-start justify-center p-5">
+                        <p className="text-sm font-semibold text-[#17131d]">No image yet</p>
+                        <p className="mt-2 max-w-md text-sm leading-6 text-[#6e5e58]">
+                          Describe what you want to see, then run the tool. Images are available for download during this session.
+                        </p>
+                      </div>
+                    )
+
+                  ) : activeMode === "create_document" && editor.outputText.trim() ? (
+                    /* ── Document output ── */
+                    <>
+                      <div className="flex items-center justify-between gap-3 border-b border-black/6 px-5 py-3">
+                        <span className="text-xs text-[#8d7d74]">
+                          {wordCount(editor.outputText).toLocaleString()} words
+                          &middot; {editor.outputText.length.toLocaleString()} chars
+                          {editor.tokenCount > 0 && <> &middot; {editor.tokenCount.toLocaleString()} tokens</>}
+                        </span>
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={handleCopyOutput}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2]"
+                          >
+                            {copiedOutput ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                            {copiedOutput ? "Copied!" : "Copy"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDownloadDocx}
+                            disabled={docDownloading}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2] disabled:opacity-60"
+                          >
+                            {docDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                            DOCX
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDownloadPdf}
+                            disabled={docDownloading}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2] disabled:opacity-60"
+                          >
+                            {docDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                            PDF
+                          </button>
+                        </div>
+                      </div>
+                      <div className="prose prose-sm max-w-none p-5 [&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-[#17131d] [&_h1]:mt-0 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-[#17131d] [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-[#17131d] [&_p]:text-sm [&_p]:leading-7 [&_p]:text-[#17131d] [&_ul]:text-sm [&_ul]:leading-7 [&_li]:text-[#17131d] [&_strong]:text-[#17131d]">
+                        <ReactMarkdown>{editor.outputText}</ReactMarkdown>
+                      </div>
+                    </>
+
+                  ) : activeMode === "create_presentation" && parsedSlides ? (
+                    /* ── Presentation slide viewer ── */
+                    (() => {
+                      const slide = parsedSlides[currentSlideIndex];
+                      const isFirst = currentSlideIndex === 0;
+                      const isLast = currentSlideIndex === parsedSlides.length - 1;
+                      return (
+                        <>
+                          {/* Slide canvas */}
+                          <div className="relative aspect-video overflow-hidden rounded-t-[28px] bg-gradient-to-br from-[#1a1040] via-[#2d1258] to-[#4a1a80]">
+                            {slide.layout === "title" || slide.layout === "closing" ? (
+                              <div className="flex h-full flex-col items-center justify-center px-10 text-center">
+                                <p className="text-4xl font-bold leading-tight text-white">{slide.title}</p>
+                                {slide.content.length > 0 && (
+                                  <p className="mt-4 text-lg text-purple-200">{slide.content[0]}</p>
+                                )}
+                              </div>
+                            ) : slide.layout === "quote" ? (
+                              <div className="flex h-full flex-col justify-center px-12">
+                                <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-purple-400">{slide.title}</p>
+                                <p className="text-2xl italic leading-relaxed text-purple-100">
+                                  &ldquo;{slide.content[0]}&rdquo;
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="flex h-full flex-col justify-start px-10 py-8">
+                                <p className="mb-5 text-xl font-bold text-white">{slide.title}</p>
+                                <ul className="space-y-2.5">
+                                  {slide.content.map((item, i) => (
+                                    <li key={i} className="flex items-start gap-2.5 text-sm leading-6 text-purple-100">
+                                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-purple-400" />
+                                      {item}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {/* Slide number badge */}
+                            <div className="absolute bottom-3 right-4 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/70">
+                              {currentSlideIndex + 1} / {parsedSlides.length}
+                            </div>
+                          </div>
+
+                          {/* Navigation row */}
+                          <div className="flex items-center justify-between gap-3 border-b border-black/6 px-4 py-3">
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setCurrentSlideIndex((i) => Math.max(0, i - 1))}
+                                disabled={isFirst}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-black/10 bg-white transition hover:bg-[#f9f6f2] disabled:opacity-40"
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCurrentSlideIndex((i) => Math.min(parsedSlides.length - 1, i + 1))}
+                                disabled={isLast}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-black/10 bg-white transition hover:bg-[#f9f6f2] disabled:opacity-40"
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                              </button>
+                              <span className="ml-1 text-xs text-[#8d7d74]">
+                                {parsedSlides.length} slides
+                                {editor.tokenCount > 0 && <> &middot; {editor.tokenCount.toLocaleString()} tokens</>}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setShowSlideNotes((v) => !v)}
+                                className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${showSlideNotes ? "border-[#7c5cff]/25 bg-[#f0ecff] text-[#5b3fc5]" : "border-black/10 bg-white text-[#6e5e58] hover:bg-[#f9f6f2]"}`}
+                              >
+                                Notes
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleDownloadPptx}
+                                disabled={slideDownloading}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-[#17131d] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#2c2438] disabled:opacity-60"
+                              >
+                                {slideDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                                PPTX
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Speaker notes */}
+                          {showSlideNotes && slide.notes && (
+                            <div className="border-b border-black/6 bg-[#faf8f5] px-5 py-3">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8d7d74]">Speaker notes</p>
+                              <p className="mt-1.5 text-sm leading-6 text-[#6e5e58]">{slide.notes}</p>
+                            </div>
+                          )}
+
+                          {/* Slide thumbnails strip */}
+                          <div className="flex gap-1.5 overflow-x-auto px-4 py-3">
+                            {parsedSlides.map((s, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => setCurrentSlideIndex(i)}
+                                className={`shrink-0 rounded-lg overflow-hidden border-2 transition ${i === currentSlideIndex ? "border-[#7c5cff]" : "border-transparent hover:border-black/15"}`}
+                                title={s.title}
+                              >
+                                <div className="flex h-10 w-16 items-center justify-center bg-gradient-to-br from-[#1a1040] to-[#4a1a80]">
+                                  <span className="truncate px-1 text-[7px] font-semibold text-white/80">{s.title}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      );
+                    })()
+
                   ) : editor.outputText.trim() ? (
+                    /* ── Default text output ── */
                     <>
                       <div className="flex items-center justify-between gap-3 border-b border-black/6 px-5 py-3">
                         <span className="text-xs text-[#8d7d74]">
@@ -1384,7 +1816,7 @@ export default function Dashboard() {
                       />
                     </>
                   ) : (
-                    <div className="flex h-full min-h-[420px] flex-col items-start justify-center p-5">
+                    <div className="flex min-h-[420px] flex-col items-start justify-center p-5">
                       <p className="text-sm font-semibold text-[#17131d]">
                         No output yet
                       </p>

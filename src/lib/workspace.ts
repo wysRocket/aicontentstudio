@@ -5,6 +5,9 @@ export const WORKSPACE_TOOL_MODES = [
   "summarize",
   "transcribe",
   "translate",
+  "generate_image",
+  "create_document",
+  "create_presentation",
 ] as const;
 
 export type WorkspaceToolMode = (typeof WORKSPACE_TOOL_MODES)[number];
@@ -107,6 +110,51 @@ export const WORKSPACE_TOOL_CONFIG: Record<WorkspaceToolMode, WorkspaceToolMeta>
     cost: 4,
     acceptsFile: false,
   },
+  generate_image: {
+    label: "Generate image",
+    eyebrow: "Image engine",
+    description:
+      "Turn a text description into a visual — illustrations, concepts, product mockups, and creative scenes.",
+    inputLabel: "Image description",
+    inputPlaceholder:
+      "Describe what you want to see — subject, setting, mood, and composition.",
+    instructionsLabel: "Style guidance",
+    instructionsPlaceholder:
+      "Example: flat vector illustration, soft pastel palette, minimal detail, no text in image.",
+    outputLabel: "Generated image",
+    cost: 10,
+    acceptsFile: false,
+  },
+  create_document: {
+    label: "Create document",
+    eyebrow: "Document engine",
+    description:
+      "Generate polished Word and PDF documents from briefs, notes, or templates.",
+    inputLabel: "Document brief",
+    inputPlaceholder:
+      "Describe the document you need — topic, purpose, and key sections to include.",
+    instructionsLabel: "Format and style",
+    instructionsPlaceholder:
+      "Example: formal business report, 5 sections with headers, include an executive summary.",
+    outputLabel: "Document draft",
+    cost: 8,
+    acceptsFile: false,
+  },
+  create_presentation: {
+    label: "Create presentation",
+    eyebrow: "Slides engine",
+    description:
+      "Generate a structured, visually designed presentation from any content or brief.",
+    inputLabel: "Presentation brief",
+    inputPlaceholder:
+      "Paste your notes, outline, or topic — we'll turn it into a complete slide deck.",
+    instructionsLabel: "Design and structure",
+    instructionsPlaceholder:
+      "Example: 10 slides, executive audience, dark theme, include a summary slide.",
+    outputLabel: "Slide deck",
+    cost: 12,
+    acceptsFile: false,
+  },
 };
 
 function compactWhitespace(value: string) {
@@ -139,6 +187,12 @@ export function getDefaultWorkspaceRunTitle(
       return "Untitled Transcript";
     case "translate":
       return "Untitled Translation";
+    case "generate_image":
+      return "Untitled Image";
+    case "create_document":
+      return "Untitled Document";
+    case "create_presentation":
+      return "Untitled Presentation";
   }
 }
 
@@ -221,6 +275,46 @@ export function buildWorkspacePrompt(input: {
       ]
         .filter(Boolean)
         .join("\n\n");
+
+    case "generate_image":
+      return [
+        "Create an optimized prompt for an AI image generator based on the description below.",
+        "Make it vivid and specific — describe subject, composition, lighting, style, and color palette.",
+        "Return only the refined image prompt, nothing else.",
+        instructions ? `Style guidance: ${instructions}` : "",
+        `Description: ${sourceText}`,
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+    case "create_document":
+      return [
+        "You are an expert business document writer.",
+        "Create a complete, professional document in clean markdown format.",
+        "Use proper structure: title (# heading), sections (## heading), subsections (### heading).",
+        "Include bullet points, numbered lists, and formatted tables where relevant.",
+        "The document should be publication-ready and well-organized.",
+        "Return only the document content in markdown — no meta-commentary or code fences.",
+        instructions ? `Document requirements: ${instructions}` : "",
+        `Document brief:\n${sourceText}`,
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+    case "create_presentation":
+      return [
+        "You are an expert presentation designer.",
+        "Generate a complete slide deck as a valid JSON array.",
+        'Each slide object must have exactly these fields: "title" (string), "content" (array of 1-5 strings), "notes" (string with speaker notes), "layout" (one of: "title", "content", "two-column", "quote", "closing").',
+        'Layout rules: first slide must use "title" layout, last slide must use "closing" layout, use "quote" for single impactful statements, use "two-column" for comparisons.',
+        "Aim for 8–12 slides unless instructed otherwise.",
+        'Return ONLY the raw JSON array — no markdown code fences, no explanation, no comments.',
+        'Example: [{"title":"Intro","content":["Point one","Point two"],"notes":"Welcome the audience","layout":"title"}]',
+        instructions ? `Presentation requirements: ${instructions}` : "",
+        `Presentation brief:\n${sourceText}`,
+      ]
+        .filter(Boolean)
+        .join("\n\n");
   }
 }
 
@@ -279,6 +373,9 @@ export function countWorkspaceRunsByMode(
       summarize: 0,
       transcribe: 0,
       translate: 0,
+      generate_image: 0,
+      create_document: 0,
+      create_presentation: 0,
     } as Record<WorkspaceToolMode, number>,
   );
 }
