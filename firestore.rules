@@ -130,40 +130,76 @@ service cloud.firestore {
     }
 
     function isValidContentItem(data) {
-      return hasOnlyAllowedFields(['title', 'body', 'platforms', 'status', 'kind', 'sourcePromptId', 'inspirationId', 'scheduledFor', 'createdAt', 'updatedAt']) &&
+      return hasOnlyAllowedFields(['title', 'body', 'platforms', 'status', 'workflowStatus', 'kind', 'sourcePromptId', 'inspirationId', 'sourceId', 'remixMode', 'validationIssues', 'publishFailureReason', 'scheduledFor', 'createdAt', 'updatedAt']) &&
              data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
              data.body is string && data.body.size() > 0 && data.body.size() <= 20000 &&
              data.platforms is list && data.platforms.size() > 0 && data.platforms.size() <= 10 &&
              data.status in ['draft', 'published', 'failed'] &&
+             (!('workflowStatus' in data) || data.workflowStatus in ['draft', 'ready', 'approved', 'scheduled', 'published', 'failed']) &&
              data.kind in ['post_draft', 'video_generation', 'coach_analysis'] &&
              data.sourcePromptId is string && data.sourcePromptId.size() <= 100 &&
              data.inspirationId is string && data.inspirationId.size() <= 100 &&
+             (!('sourceId' in data) || (data.sourceId is string && data.sourceId.size() <= 100)) &&
+             (!('remixMode' in data) || (data.remixMode is string && data.remixMode.size() <= 120)) &&
+             (!('validationIssues' in data) || (data.validationIssues is list && data.validationIssues.size() <= 20)) &&
+             (!('publishFailureReason' in data) || (data.publishFailureReason is string && data.publishFailureReason.size() <= 2000)) &&
              (!('scheduledFor' in data) || data.scheduledFor == null || data.scheduledFor is timestamp) &&
              data.createdAt is timestamp &&
              data.updatedAt is timestamp;
     }
 
     function isValidSource(data) {
-      return hasOnlyAllowedFields(['title', 'type', 'url', 'description', 'createdAt', 'updatedAt']) &&
+      return hasOnlyAllowedFields(['title', 'type', 'url', 'description', 'status', 'sourceTypeDetail', 'contentText', 'analysisSummary', 'analysisKeyPoints', 'analysisHooks', 'analysisQuotes', 'analysisCtaIdeas', 'analysisAudience', 'analysisRisks', 'lastProcessedAt', 'createdAt', 'updatedAt']) &&
              data.title is string && data.title.size() > 0 && data.title.size() <= 160 &&
              data.type in ['website', 'brief', 'transcript', 'notion', 'drive', 'other'] &&
              data.url is string && data.url.size() <= 2048 &&
              data.description is string && data.description.size() <= 4000 &&
+             (!('status' in data) || data.status in ['raw', 'processing', 'ready', 'failed']) &&
+             (!('sourceTypeDetail' in data) || data.sourceTypeDetail in ['url', 'pasted_text', 'youtube', 'pdf', 'transcript', 'manual']) &&
+             (!('contentText' in data) || (data.contentText is string && data.contentText.size() <= 50000)) &&
+             (!('analysisSummary' in data) || (data.analysisSummary is string && data.analysisSummary.size() <= 12000)) &&
+             (!('analysisKeyPoints' in data) || (data.analysisKeyPoints is list && data.analysisKeyPoints.size() <= 50)) &&
+             (!('analysisHooks' in data) || (data.analysisHooks is list && data.analysisHooks.size() <= 50)) &&
+             (!('analysisQuotes' in data) || (data.analysisQuotes is list && data.analysisQuotes.size() <= 50)) &&
+             (!('analysisCtaIdeas' in data) || (data.analysisCtaIdeas is list && data.analysisCtaIdeas.size() <= 50)) &&
+             (!('analysisAudience' in data) || (data.analysisAudience is string && data.analysisAudience.size() <= 4000)) &&
+             (!('analysisRisks' in data) || (data.analysisRisks is list && data.analysisRisks.size() <= 50)) &&
+             (!('lastProcessedAt' in data) || data.lastProcessedAt == null || data.lastProcessedAt is timestamp) &&
              data.createdAt is timestamp &&
              data.updatedAt is timestamp;
     }
 
     function isValidWorkspaceSettings(data) {
-      return hasOnlyAllowedFields(['brandName', 'brandVoice', 'brandColors', 'brandKeywords', 'preferredTextModel', 'preferredVideoModel', 'apiBaseUrl', 'webhookUrl', 'supportEmail', 'updatedAt']) &&
+      return hasOnlyAllowedFields(['brandName', 'brandVoice', 'brandColors', 'brandKeywords', 'brandAudience', 'ctaStyle', 'bannedPhrases', 'preferredTextModel', 'preferredVideoModel', 'apiBaseUrl', 'webhookUrl', 'supportEmail', 'updatedAt']) &&
              data.brandName is string && data.brandName.size() <= 120 &&
              data.brandVoice is string && data.brandVoice.size() <= 4000 &&
              data.brandColors is string && data.brandColors.size() <= 1000 &&
              data.brandKeywords is string && data.brandKeywords.size() <= 1000 &&
+             data.brandAudience is string && data.brandAudience.size() <= 4000 &&
+             data.ctaStyle is string && data.ctaStyle.size() <= 1000 &&
+             data.bannedPhrases is string && data.bannedPhrases.size() <= 2000 &&
              data.preferredTextModel is string && data.preferredTextModel.size() <= 200 &&
              data.preferredVideoModel is string && data.preferredVideoModel.size() <= 200 &&
              data.apiBaseUrl is string && data.apiBaseUrl.size() <= 2048 &&
              data.webhookUrl is string && data.webhookUrl.size() <= 2048 &&
              data.supportEmail is string && data.supportEmail.size() <= 320 &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidWorkspaceRun(data) {
+      return hasOnlyAllowedFields(['mode', 'title', 'sourceText', 'instructions', 'outputText', 'targetLanguage', 'status', 'creditCost', 'sourceFileName', 'sourceMimeType', 'lastError', 'createdAt', 'updatedAt']) &&
+             data.mode in ['write_rewrite', 'summarize', 'transcribe', 'translate'] &&
+             data.title is string && data.title.size() <= 160 &&
+             data.sourceText is string && data.sourceText.size() <= 50000 &&
+             data.instructions is string && data.instructions.size() <= 12000 &&
+             data.outputText is string && data.outputText.size() <= 50000 &&
+             data.targetLanguage is string && data.targetLanguage.size() <= 120 &&
+             data.status in ['draft', 'completed', 'failed'] &&
+             data.creditCost is int && data.creditCost >= 0 &&
+             data.sourceFileName is string && data.sourceFileName.size() <= 260 &&
+             data.sourceMimeType is string && data.sourceMimeType.size() <= 200 &&
+             data.lastError is string && data.lastError.size() <= 4000 &&
+             data.createdAt is timestamp &&
              data.updatedAt is timestamp;
     }
 
@@ -294,6 +330,20 @@ service cloud.firestore {
                       isValidCreditTransaction(request.resource.data);
 
         allow update, delete: if isAdmin();
+      }
+
+      match /workspaceRuns/{runId} {
+        allow read, delete: if isOwner(userId) || isAdmin();
+
+        allow create: if isAuthenticated() &&
+                      isOwner(userId) &&
+                      hasRequiredFields(['mode', 'title', 'sourceText', 'instructions', 'outputText', 'targetLanguage', 'status', 'creditCost', 'sourceFileName', 'sourceMimeType', 'lastError', 'createdAt', 'updatedAt']) &&
+                      isValidWorkspaceRun(request.resource.data);
+
+        allow update: if isAuthenticated() &&
+                      isOwner(userId) &&
+                      isValidWorkspaceRun(request.resource.data) &&
+                      request.resource.data.createdAt == resource.data.createdAt;
       }
     }
   }
