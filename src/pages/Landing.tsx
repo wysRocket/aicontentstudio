@@ -673,19 +673,19 @@ export default function Landing() {
                   )}
                   <a
                     href="#how-credits-work"
-                    className="px-1 py-2 text-sm font-medium text-white/72 transition-colors hover:text-white sm:px-4 sm:py-3 sm:text-base"
+                    className="hero-link px-1 py-2 transition-colors hover:text-white sm:px-4 sm:py-3"
                   >
                     How credits work
                   </a>
                   <a
                     href="#pricing"
-                    className="px-1 py-2 text-sm font-medium text-white/72 transition-colors hover:text-white sm:px-4 sm:py-3 sm:text-base"
+                    className="hero-link px-1 py-2 transition-colors hover:text-white sm:px-4 sm:py-3"
                   >
                     Pricing
                   </a>
                   <a
                     href="#faq"
-                    className="px-1 py-2 text-sm font-medium text-white/72 transition-colors hover:text-white sm:px-4 sm:py-3 sm:text-base"
+                    className="hero-link px-1 py-2 transition-colors hover:text-white sm:px-4 sm:py-3"
                   >
                     FAQ
                   </a>

@@ -131,7 +131,7 @@ export function Layout() {
   }, [searchParams, setSearchParams]);
 
   return (
-    <div className="flex min-h-screen bg-[#f4ede4] font-sans text-[#17131d]">
+    <div className="flex min-h-screen overflow-x-hidden bg-[#0c0a18] font-sans text-[#17131d]">
       <Sidebar
         isMobileOpen={isMobileNavOpen}
         onMobileClose={() => setIsMobileNavOpen(false)}
@@ -141,48 +141,48 @@ export function Layout() {
 
       <main
         className={cn(
-          "flex min-h-screen min-w-0 flex-1 flex-col transition-[margin] duration-300",
+          "flex min-h-screen min-w-0 flex-1 flex-col overflow-x-hidden transition-[margin] duration-300",
           isDesktopSidebarExpanded ? "lg:ml-64" : "lg:ml-16",
         )}
       >
-        <div className="sticky top-0 z-[55] border-b border-black/6 bg-[#fffaf6]/92 backdrop-blur-xl">
+        <div className="sticky top-0 z-[55] border-b border-white/8 bg-[#0d0b18]/95 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl flex-col gap-3 px-3 py-3 sm:px-6 lg:px-10">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex items-start gap-3">
                 <button
                   type="button"
                   onClick={() => setIsMobileNavOpen((current) => !current)}
-                  className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-black/8 bg-white text-[#17131d] shadow-sm lg:hidden"
+                  className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-white shadow-sm lg:hidden"
                   aria-label={isMobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
                 >
                   {isMobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                 </button>
 
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#8c5f74] sm:text-[11px]">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#7c5cff] sm:text-[11px]">
                     {headerMeta.eyebrow}
                   </p>
                   <div className="mt-1 flex items-center gap-2">
-                    <h1 className="truncate text-base font-semibold tracking-[-0.03em] text-[#17131d] sm:text-xl">
+                    <h1 className="truncate text-base font-semibold tracking-[-0.03em] text-white sm:text-xl">
                       {headerMeta.title}
                     </h1>
                     <Link
                       to="/"
-                      className="hidden rounded-full border border-black/8 bg-white px-3 py-1 text-xs font-medium text-[#6e5e58] transition hover:border-[#8c5f74]/25 hover:text-[#17131d] sm:inline-flex"
+                      className="hidden rounded-full border border-white/12 bg-white/6 px-3 py-1 text-xs font-medium text-white/65 transition hover:border-white/22 hover:text-white sm:inline-flex"
                     >
                       View Home
                     </Link>
                   </div>
-                  <p className="mt-1 hidden max-w-3xl text-sm leading-6 text-[#6e5e58] md:block">
+                  <p className="mt-1 hidden max-w-3xl text-sm leading-6 text-white/50 md:block">
                     {headerMeta.description}
                   </p>
                 </div>
               </div>
 
               <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-                <div className="flex h-10 items-center gap-2 rounded-2xl border border-black/8 bg-white px-3 text-sm text-[#6e5e58] shadow-sm">
-                  <Coins className="h-4 w-4 text-[#8c5f74]" />
-                  <span className="font-medium text-[#17131d]">
+                <div className="flex h-10 items-center gap-2 rounded-2xl border border-white/10 bg-white/6 px-3 text-sm shadow-sm">
+                  <Coins className="h-4 w-4 text-[#7c5cff]" />
+                  <span className="font-medium text-white">
                     {credits === null ? "..." : credits}
                   </span>
                 </div>
@@ -190,7 +190,7 @@ export function Layout() {
                 <button
                   type="button"
                   onClick={() => setIsPurchaseModalOpen(true)}
-                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-2xl border border-[#d7b6c5] bg-[#f8e8ee] px-3 text-sm font-medium text-[#8c3857] transition hover:bg-[#f4dbe5] sm:px-4"
+                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-2xl border border-[#7c5cff]/35 bg-[#7c5cff]/15 px-3 text-sm font-medium text-[#c4b5fd] transition hover:bg-[#7c5cff]/25 hover:text-white sm:px-4"
                 >
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">Add credits</span>
@@ -199,14 +199,14 @@ export function Layout() {
 
                 <Link
                   to="/dashboard/settings?tab=profile"
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-[#17131d] text-sm font-semibold text-white shadow-sm transition hover:bg-[#2a2238]"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-[#7c5cff] text-sm font-semibold text-white shadow-sm transition hover:bg-[#5b3fc5]"
                 >
                   {profileInitial}
                 </Link>
               </div>
             </div>
 
-            <p className="pl-[3.25rem] text-[13px] leading-5 text-[#6e5e58] md:hidden">
+            <p className="pl-[3.25rem] text-[13px] leading-5 text-white/45 md:hidden">
               {headerMeta.description}
             </p>
           </div>

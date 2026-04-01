@@ -218,7 +218,15 @@ button:not(:disabled),
   background-image: var(--landing-hero-url);
   background-repeat: no-repeat;
   background-position: center center;
+  background-size: cover;
   animation: heroArtDrift 14s ease-in-out infinite alternate;
+}
+
+.landing .hero-link {
+  color: rgba(180, 165, 255, 0.85);
+  font-size: 1.25rem;
+  line-height: 1.5;
+  font-weight: 500;
 }
 
 .landing .hero::before {
@@ -455,15 +463,15 @@ button:not(:disabled),
 }
 
 .landing .credits .credits-card-left.reveal-ready {
-  transform: translateX(-80px);
+  transform: translateX(-52px);
 }
 
 .landing .credits .credits-card-center.reveal-ready {
-  transform: translateY(34px);
+  transform: translateX(-52px);
 }
 
 .landing .credits .credits-card-right.reveal-ready {
-  transform: translateX(80px);
+  transform: translateX(-52px);
 }
 
 .landing .credits .credits-alert.reveal-ready {
@@ -585,8 +593,33 @@ button:not(:disabled),
     padding-bottom: 4rem;
   }
 
+  /* Reduce h2 heading sizes in all non-hero sections on mobile */
+  .landing section:not(.hero) h2 {
+    font-size: 1.55rem !important;
+    line-height: 1.15 !important;
+  }
+
+  /* Reduce lead paragraph sizes on mobile */
+  .landing section:not(.hero) p.lead {
+    font-size: 0.9375rem !important;
+  }
+
+  /* Reduce FAQ h3 sizes on mobile */
+  .landing .faq h3 {
+    font-size: 1.05rem !important;
+  }
+
+  /* Reduce FAQ body text on mobile */
+  .landing .faq .text-text-muted,
+  .landing .trust .text-text-muted,
+  .landing .features .text-text-muted,
+  .landing .pricing .text-text-muted {
+    font-size: 0.9rem !important;
+    line-height: 1.65 !important;
+  }
+
   .landing .hero {
-    min-height: auto;
+    min-height: 88vh;
     padding-top: calc(4.25rem + 1.5rem);
     padding-bottom: 4rem;
   }
@@ -596,9 +629,9 @@ button:not(:disabled),
   }
 
   .landing .hero__art {
-    background-position: center top;
+    background-position: 70% top;
     background-size: cover;
-    opacity: 0.55;
+    opacity: 0.6;
   }
 
   .landing .hero::before {
