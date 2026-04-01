@@ -10,7 +10,14 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import { motion } from "framer-motion";
-import { AlertTriangle, CheckCircle2, Coins, Loader2, RefreshCw, X } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Coins,
+  Loader2,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import { db } from "../firebase";
 import { addCredits } from "../lib/firestore";
 
@@ -63,17 +70,32 @@ function DonutRing({ inflow, outflow }: { inflow: number; outflow: number }) {
   const outDash = (outflow / total) * DONUT_C;
   return (
     <svg viewBox="0 0 120 120" className="h-full w-full">
-      <circle cx="60" cy="60" r={DONUT_R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="14" />
       <circle
-        cx="60" cy="60" r={DONUT_R} fill="none"
-        stroke="#f59e0b" strokeWidth="14"
+        cx="60"
+        cy="60"
+        r={DONUT_R}
+        fill="none"
+        stroke="rgba(255,255,255,0.06)"
+        strokeWidth="14"
+      />
+      <circle
+        cx="60"
+        cy="60"
+        r={DONUT_R}
+        fill="none"
+        stroke="#f59e0b"
+        strokeWidth="14"
         strokeDasharray={`${outDash} ${DONUT_C}`}
         strokeDashoffset={-inDash}
         transform="rotate(-90 60 60)"
       />
       <circle
-        cx="60" cy="60" r={DONUT_R} fill="none"
-        stroke="#10b981" strokeWidth="14"
+        cx="60"
+        cy="60"
+        r={DONUT_R}
+        fill="none"
+        stroke="#10b981"
+        strokeWidth="14"
         strokeDasharray={`${inDash} ${DONUT_C}`}
         strokeDashoffset={0}
         transform="rotate(-90 60 60)"
@@ -82,7 +104,11 @@ function DonutRing({ inflow, outflow }: { inflow: number; outflow: number }) {
   );
 }
 
-function AcquisitionChart({ data }: { data: { month: string; count: number }[] }) {
+function AcquisitionChart({
+  data,
+}: {
+  data: { month: string; count: number }[];
+}) {
   if (!data.length) return <div className="h-28 rounded-xl bg-white/5" />;
   const max = Math.max(...data.map((d) => d.count), 1);
   const barW = 18;
@@ -102,10 +128,21 @@ function AcquisitionChart({ data }: { data: { month: string; count: number }[] }
         const x = i * (barW + gap);
         return (
           <g key={d.month}>
-            <rect x={x} y={h - barH} width={barW} height={barH} rx="3"
-              fill={d.count > 0 ? "url(#barGrad)" : "rgba(255,255,255,0.05)"} />
-            <text x={x + barW / 2} y={h + 12} textAnchor="middle"
-              fontSize="8" fill="rgba(255,255,255,0.3)">
+            <rect
+              x={x}
+              y={h - barH}
+              width={barW}
+              height={barH}
+              rx="3"
+              fill={d.count > 0 ? "url(#barGrad)" : "rgba(255,255,255,0.05)"}
+            />
+            <text
+              x={x + barW / 2}
+              y={h + 12}
+              textAnchor="middle"
+              fontSize="8"
+              fill="rgba(255,255,255,0.3)"
+            >
               {d.month.slice(5)}
             </text>
           </g>
@@ -124,22 +161,34 @@ const DATE_RANGES = [
   { value: "90d", label: "90d" },
   { value: "all", label: "All" },
 ] as const;
-type DateRange = typeof DATE_RANGES[number]["value"];
+type DateRange = (typeof DATE_RANGES)[number]["value"];
 
 const TX_PAGE_SIZE = 10;
 
-const isCredit = (kind: TxRecord["kind"]) => kind === "top_up" || kind === "grant";
+const isCredit = (kind: TxRecord["kind"]) =>
+  kind === "top_up" || kind === "grant";
 
 function tsToIso(ts: Timestamp | null | undefined): string {
   if (!ts) return "";
-  try { return (typeof ts.toDate === "function" ? ts.toDate() : new Date(ts.seconds * 1000)).toISOString(); }
-  catch { return ""; }
+  try {
+    return (
+      typeof ts.toDate === "function"
+        ? ts.toDate()
+        : new Date(ts.seconds * 1000)
+    ).toISOString();
+  } catch {
+    return "";
+  }
 }
 
 function fmtDate(ts: Timestamp | null | undefined): string {
   const iso = tsToIso(ts);
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -153,7 +202,9 @@ export default function AdminPanel() {
   // Filters
   const [dateRange, setDateRange] = useState<DateRange>("all");
   const [txSearch, setTxSearch] = useState("");
-  const [txTypeFilter, setTxTypeFilter] = useState<"all" | "credit" | "debit">("all");
+  const [txTypeFilter, setTxTypeFilter] = useState<"all" | "credit" | "debit">(
+    "all",
+  );
   const [txPage, setTxPage] = useState(0);
 
   // Grant modal
@@ -161,7 +212,9 @@ export default function AdminPanel() {
   const [grantAmount, setGrantAmount] = useState("");
   const [grantNote, setGrantNote] = useState("");
   const [grantConfirm, setGrantConfirm] = useState(false);
-  const [grantState, setGrantState] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [grantState, setGrantState] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
   const [grantError, setGrantError] = useState<string | null>(null);
 
   // ─── Load data ───────────────────────────────────────────────────────────────
@@ -171,8 +224,20 @@ export default function AdminPanel() {
     setError("");
     try {
       const [usersSnap, txSnap] = await Promise.all([
-        getDocs(query(collection(db, "users"), orderBy("createdAt", "desc"), limit(100))),
-        getDocs(query(collectionGroup(db, "creditTransactions"), orderBy("createdAt", "desc"), limit(300))),
+        getDocs(
+          query(
+            collection(db, "users"),
+            orderBy("createdAt", "desc"),
+            limit(100),
+          ),
+        ),
+        getDocs(
+          query(
+            collectionGroup(db, "creditTransactions"),
+            orderBy("createdAt", "desc"),
+            limit(300),
+          ),
+        ),
       ]);
 
       const loadedUsers: UserRecord[] = usersSnap.docs.map((d) => {
@@ -194,7 +259,9 @@ export default function AdminPanel() {
           id: d.id,
           uid: parentUid,
           amount: typeof data.amount === "number" ? data.amount : 0,
-          kind: (["top_up", "grant", "usage", "adjustment"].includes(data.kind) ? data.kind : "adjustment") as TxRecord["kind"],
+          kind: (["top_up", "grant", "usage", "adjustment"].includes(data.kind)
+            ? data.kind
+            : "adjustment") as TxRecord["kind"],
           status: data.status === "completed" ? "completed" : "pending",
           description: data.description ?? "",
           source: data.source ?? "",
@@ -205,13 +272,17 @@ export default function AdminPanel() {
       setUsers(loadedUsers);
       setTransactions(loadedTx);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load backoffice data.");
+      setError(
+        err instanceof Error ? err.message : "Unable to load backoffice data.",
+      );
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { void loadData(); }, [loadData]);
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   // ─── Date cutoff ──────────────────────────────────────────────────────────────
 
@@ -226,7 +297,10 @@ export default function AdminPanel() {
   }, [dateRange]);
 
   const rangeTransactions = useMemo(
-    () => !dateCutoff ? transactions : transactions.filter((tx) => tsToIso(tx.createdAt) >= dateCutoff),
+    () =>
+      !dateCutoff
+        ? transactions
+        : transactions.filter((tx) => tsToIso(tx.createdAt) >= dateCutoff),
     [transactions, dateCutoff],
   );
 
@@ -236,13 +310,22 @@ export default function AdminPanel() {
   const adminUsers = users.filter((u) => u.role === "admin").length;
   const currentMonth = new Date().toISOString().slice(0, 7);
 
-  const creditsIn = rangeTransactions.filter((tx) => isCredit(tx.kind)).reduce((s, tx) => s + tx.amount, 0);
-  const creditsOut = rangeTransactions.filter((tx) => !isCredit(tx.kind)).reduce((s, tx) => s + tx.amount, 0);
+  const creditsIn = rangeTransactions
+    .filter((tx) => isCredit(tx.kind))
+    .reduce((s, tx) => s + tx.amount, 0);
+  const creditsOut = rangeTransactions
+    .filter((tx) => !isCredit(tx.kind))
+    .reduce((s, tx) => s + tx.amount, 0);
   const netCredits = creditsIn - creditsOut;
   const monthlyBurn = transactions
-    .filter((tx) => !isCredit(tx.kind) && tsToIso(tx.createdAt).startsWith(currentMonth))
+    .filter(
+      (tx) =>
+        !isCredit(tx.kind) && tsToIso(tx.createdAt).startsWith(currentMonth),
+    )
     .reduce((s, tx) => s + tx.amount, 0);
-  const riskFlags = transactions.filter((tx) => tx.status !== "completed").length;
+  const riskFlags = transactions.filter(
+    (tx) => tx.status !== "completed",
+  ).length;
 
   // ─── Cashflow series (6 months) ──────────────────────────────────────────────
 
@@ -253,8 +336,16 @@ export default function AdminPanel() {
       return d.toISOString().slice(0, 7);
     });
     return months.map((month) => {
-      const inTotal = transactions.filter((tx) => isCredit(tx.kind) && tsToIso(tx.createdAt).startsWith(month)).reduce((s, tx) => s + tx.amount, 0);
-      const outTotal = transactions.filter((tx) => !isCredit(tx.kind) && tsToIso(tx.createdAt).startsWith(month)).reduce((s, tx) => s + tx.amount, 0);
+      const inTotal = transactions
+        .filter(
+          (tx) => isCredit(tx.kind) && tsToIso(tx.createdAt).startsWith(month),
+        )
+        .reduce((s, tx) => s + tx.amount, 0);
+      const outTotal = transactions
+        .filter(
+          (tx) => !isCredit(tx.kind) && tsToIso(tx.createdAt).startsWith(month),
+        )
+        .reduce((s, tx) => s + tx.amount, 0);
       return { month, inTotal, outTotal, net: inTotal - outTotal };
     });
   }, [transactions]);
@@ -280,9 +371,9 @@ export default function AdminPanel() {
 
   const topSpenders = useMemo(() => {
     const map = new Map<string, number>();
-    rangeTransactions.filter((tx) => !isCredit(tx.kind)).forEach((tx) =>
-      map.set(tx.uid, (map.get(tx.uid) ?? 0) + tx.amount),
-    );
+    rangeTransactions
+      .filter((tx) => !isCredit(tx.kind))
+      .forEach((tx) => map.set(tx.uid, (map.get(tx.uid) ?? 0) + tx.amount));
     return Array.from(map.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
@@ -306,20 +397,30 @@ export default function AdminPanel() {
         !q ||
         tx.description.toLowerCase().includes(q) ||
         tx.uid.toLowerCase().includes(q) ||
-        (users.find((u) => u.uid === tx.uid)?.email ?? "").toLowerCase().includes(q);
+        (users.find((u) => u.uid === tx.uid)?.email ?? "")
+          .toLowerCase()
+          .includes(q);
       return matchesType && matchesSearch;
     });
   }, [rangeTransactions, txTypeFilter, txSearch, users]);
 
   const txPageCount = Math.ceil(filteredTx.length / TX_PAGE_SIZE);
-  const paginatedTx = filteredTx.slice(txPage * TX_PAGE_SIZE, (txPage + 1) * TX_PAGE_SIZE);
+  const paginatedTx = filteredTx.slice(
+    txPage * TX_PAGE_SIZE,
+    (txPage + 1) * TX_PAGE_SIZE,
+  );
 
   const recentUsers = users.slice(0, 8);
 
   // ─── Grant handlers ───────────────────────────────────────────────────────────
 
   const openGrant = (u: UserRecord) => {
-    setGrantModal({ uid: u.uid, email: u.email, displayName: u.displayName, currentCredits: u.credits });
+    setGrantModal({
+      uid: u.uid,
+      email: u.email,
+      displayName: u.displayName,
+      currentCredits: u.credits,
+    });
     setGrantAmount("");
     setGrantNote("");
     setGrantConfirm(false);
@@ -350,7 +451,9 @@ export default function AdminPanel() {
       // Refresh data to reflect new balance
       void loadData();
     } catch (err) {
-      setGrantError(err instanceof Error ? err.message : "Failed to grant credits.");
+      setGrantError(
+        err instanceof Error ? err.message : "Failed to grant credits.",
+      );
       setGrantState("error");
       setGrantConfirm(false);
     }
@@ -370,7 +473,6 @@ export default function AdminPanel() {
 
   return (
     <div className="space-y-6">
-
       {/* ── Header ── */}
       <div className="rounded-[28px] border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#0b1220] p-6 md:p-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -382,28 +484,38 @@ export default function AdminPanel() {
               FinOps Command Center
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-white/55 md:text-base">
-              Unified signal for users, role posture, and credit cashflow health.
+              Unified signal for users, role posture, and credit cashflow
+              health.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex overflow-hidden rounded-lg border border-white/10">
               {DATE_RANGES.map((r) => (
-                <button key={r.value} type="button" onClick={() => setDateRange(r.value)}
+                <button
+                  key={r.value}
+                  type="button"
+                  onClick={() => setDateRange(r.value)}
                   className={`px-3 py-1.5 text-xs font-medium transition ${
                     dateRange === r.value
                       ? "bg-cyan-600 text-white"
                       : "bg-white/5 text-white/45 hover:bg-white/10 hover:text-white"
-                  }`}>
+                  }`}
+                >
                   {r.label}
                 </button>
               ))}
             </div>
-            <Link to="/dashboard"
-              className="rounded-lg border border-white/10 px-3 py-2 text-sm text-white/60 transition hover:bg-white/5 hover:text-white">
+            <Link
+              to="/dashboard"
+              className="rounded-lg border border-white/10 px-3 py-2 text-sm text-white/60 transition hover:bg-white/5 hover:text-white"
+            >
               User View
             </Link>
-            <button type="button" onClick={loadData}
-              className="flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-cyan-500">
+            <button
+              type="button"
+              onClick={loadData}
+              className="flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-cyan-500"
+            >
               <RefreshCw className="h-3.5 w-3.5" />
               Refresh
             </button>
@@ -418,17 +530,46 @@ export default function AdminPanel() {
       )}
 
       {/* ── KPI Strip ── */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {[
-          { label: "Total Users",       value: totalUsers,  sub: `${adminUsers} admin${adminUsers !== 1 ? "s" : ""}`, tone: "text-white" },
-          { label: "Credits Inflow",    value: creditsIn,   sub: dateRange === "all" ? "All time" : `Last ${dateRange}`,        tone: "text-emerald-300" },
-          { label: "Credits Outflow",   value: creditsOut,  sub: `${monthlyBurn.toLocaleString()} this month`,                  tone: "text-amber-300" },
-          { label: "Net Position",      value: netCredits,  sub: netCredits >= 0 ? "Positive balance" : "Deficit",              tone: netCredits >= 0 ? "text-emerald-300" : "text-red-400" },
-          { label: "Risk Flags",        value: riskFlags,   sub: "Non-completed tx",                                            tone: riskFlags > 0 ? "text-red-400" : "text-white/40" },
+          {
+            label: "Total Users",
+            value: totalUsers,
+            sub: `${adminUsers} admin${adminUsers !== 1 ? "s" : ""}`,
+            tone: "text-white",
+          },
+          {
+            label: "Credits Inflow",
+            value: creditsIn,
+            sub: dateRange === "all" ? "All time" : `Last ${dateRange}`,
+            tone: "text-emerald-300",
+          },
+          {
+            label: "Credits Outflow",
+            value: creditsOut,
+            sub: `${monthlyBurn.toLocaleString()} this month`,
+            tone: "text-amber-300",
+          },
+          {
+            label: "Net Position",
+            value: netCredits,
+            sub: netCredits >= 0 ? "Positive balance" : "Deficit",
+            tone: netCredits >= 0 ? "text-emerald-300" : "text-red-400",
+          },
+          {
+            label: "Risk Flags",
+            value: riskFlags,
+            sub: "Non-completed tx",
+            tone: riskFlags > 0 ? "text-red-400" : "text-white/40",
+          },
         ].map((card, i) => (
-          <motion.div key={card.label}
-            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-            className="rounded-[20px] border border-white/10 bg-[#0d1527] p-4">
+          <motion.div
+            key={card.label}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className={`rounded-[20px] border border-white/10 bg-[#0d1527] p-4${i === 4 ? " col-span-2 lg:col-span-1" : ""}`}
+          >
             <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/35">
               {card.label}
             </p>
@@ -446,15 +587,21 @@ export default function AdminPanel() {
         <div className="rounded-[20px] border border-white/10 bg-[#0d1527] p-5 xl:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="font-bold text-lg text-white">Cashflow Signal (6 months)</h2>
-              <p className="text-xs text-white/35">Inflow vs outflow credit trend</p>
+              <h2 className="font-bold text-lg text-white">
+                Cashflow Signal (6 months)
+              </h2>
+              <p className="text-xs text-white/35">
+                Inflow vs outflow credit trend
+              </p>
             </div>
             <div className="flex gap-4 text-xs text-white/40">
               <span className="flex items-center gap-1.5">
-                <span className="inline-block h-0.5 w-3 rounded bg-emerald-400" /> Inflow
+                <span className="inline-block h-0.5 w-3 rounded bg-emerald-400" />{" "}
+                Inflow
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="inline-block h-0.5 w-3 rounded bg-amber-400" /> Outflow
+                <span className="inline-block h-0.5 w-3 rounded bg-amber-400" />{" "}
+                Outflow
               </span>
             </div>
           </div>
@@ -471,21 +618,36 @@ export default function AdminPanel() {
                 </linearGradient>
               </defs>
               {outflowPoints && (
-                <polyline fill="none" stroke="url(#outflowGrad)" strokeWidth="2"
-                  strokeDasharray="4 2" points={outflowPoints} />
+                <polyline
+                  fill="none"
+                  stroke="url(#outflowGrad)"
+                  strokeWidth="2"
+                  strokeDasharray="4 2"
+                  points={outflowPoints}
+                />
               )}
               {inflowPoints && (
-                <polyline fill="none" stroke="url(#inflowGrad)" strokeWidth="3"
-                  points={inflowPoints} />
+                <polyline
+                  fill="none"
+                  stroke="url(#inflowGrad)"
+                  strokeWidth="3"
+                  points={inflowPoints}
+                />
               )}
             </svg>
           </div>
-          <div className="mt-3 grid grid-cols-6 gap-1">
+          <div className="mt-3 grid grid-cols-3 gap-1 sm:grid-cols-6">
             {cashflowSeries.map((pt) => (
-              <div key={pt.month} className="rounded-lg border border-white/5 bg-white/5 p-2 text-center">
+              <div
+                key={pt.month}
+                className="rounded-lg border border-white/5 bg-white/5 p-2 text-center"
+              >
                 <p className="text-[10px] text-white/30">{pt.month.slice(5)}</p>
-                <p className={`text-xs font-semibold ${pt.net >= 0 ? "text-emerald-300" : "text-red-400"}`}>
-                  {pt.net >= 0 ? "+" : "-"}{Math.abs(pt.net).toLocaleString()}
+                <p
+                  className={`text-xs font-semibold ${pt.net >= 0 ? "text-emerald-300" : "text-red-400"}`}
+                >
+                  {pt.net >= 0 ? "+" : "-"}
+                  {Math.abs(pt.net).toLocaleString()}
                 </p>
               </div>
             ))}
@@ -495,34 +657,60 @@ export default function AdminPanel() {
         {/* Donut */}
         <div className="rounded-[20px] border border-white/10 bg-[#0d1527] p-5">
           <h2 className="font-bold text-lg text-white">Credit Distribution</h2>
-          <p className="mb-4 text-xs text-white/35">Inflow vs outflow breakdown</p>
+          <p className="mb-4 text-xs text-white/35">
+            Inflow vs outflow breakdown
+          </p>
           <div className="flex items-center gap-4">
             <div className="relative h-28 w-28 shrink-0">
               <DonutRing inflow={creditsIn} outflow={creditsOut} />
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
                   <p className="text-[10px] leading-none text-white/35">Net</p>
-                  <p className={`text-sm font-bold leading-tight ${netCredits >= 0 ? "text-emerald-300" : "text-red-400"}`}>
-                    {netCredits >= 0 ? "+" : ""}{netCredits.toLocaleString()}
+                  <p
+                    className={`text-sm font-bold leading-tight ${netCredits >= 0 ? "text-emerald-300" : "text-red-400"}`}
+                  >
+                    {netCredits >= 0 ? "+" : ""}
+                    {netCredits.toLocaleString()}
                   </p>
                 </div>
               </div>
             </div>
             <div className="min-w-0 flex-1 space-y-3">
               {[
-                { label: "Inflow", value: creditsIn, color: "bg-emerald-500", tone: "text-emerald-300", dot: "bg-emerald-400" },
-                { label: "Outflow", value: creditsOut, color: "bg-amber-500", tone: "text-amber-300", dot: "bg-amber-400" },
+                {
+                  label: "Inflow",
+                  value: creditsIn,
+                  color: "bg-emerald-500",
+                  tone: "text-emerald-300",
+                  dot: "bg-emerald-400",
+                },
+                {
+                  label: "Outflow",
+                  value: creditsOut,
+                  color: "bg-amber-500",
+                  tone: "text-amber-300",
+                  dot: "bg-amber-400",
+                },
               ].map((row) => (
                 <div key={row.label}>
                   <div className="mb-1 flex justify-between text-xs">
                     <span className={`flex items-center gap-1 ${row.tone}`}>
-                      <span className={`inline-block h-2 w-2 rounded-full ${row.dot}`} /> {row.label}
+                      <span
+                        className={`inline-block h-2 w-2 rounded-full ${row.dot}`}
+                      />{" "}
+                      {row.label}
                     </span>
-                    <span className="text-white/55">{row.value.toLocaleString()}</span>
+                    <span className="text-white/55">
+                      {row.value.toLocaleString()}
+                    </span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
-                    <div className={`h-full rounded-full ${row.color}`}
-                      style={{ width: `${creditsIn + creditsOut > 0 ? (row.value / (creditsIn + creditsOut)) * 100 : 0}%` }} />
+                    <div
+                      className={`h-full rounded-full ${row.color}`}
+                      style={{
+                        width: `${creditsIn + creditsOut > 0 ? (row.value / (creditsIn + creditsOut)) * 100 : 0}%`,
+                      }}
+                    />
                   </div>
                 </div>
               ))}
@@ -543,10 +731,14 @@ export default function AdminPanel() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="font-bold text-lg text-white">User Acquisition</h2>
-              <p className="text-xs text-white/35">New signups per month (12 months)</p>
+              <p className="text-xs text-white/35">
+                New signups per month (12 months)
+              </p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-white">{totalUsers.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-white">
+                {totalUsers.toLocaleString()}
+              </p>
               <p className="text-[11px] text-white/35">total users</p>
             </div>
           </div>
@@ -557,31 +749,43 @@ export default function AdminPanel() {
           <div className="mb-4">
             <h2 className="font-bold text-lg text-white">Top Spenders</h2>
             <p className="mt-0.5 text-xs text-white/35">
-              Highest credit consumption{dateRange !== "all" ? ` · last ${dateRange}` : ""}
+              Highest credit consumption
+              {dateRange !== "all" ? ` · last ${dateRange}` : ""}
             </p>
           </div>
           {topSpenders.length === 0 ? (
-            <p className="text-sm text-white/35">No debit activity in this period.</p>
+            <p className="text-sm text-white/35">
+              No debit activity in this period.
+            </p>
           ) : (
             <div className="space-y-3">
               {topSpenders.map((s, rank) => {
                 const maxSpend = topSpenders[0]?.total ?? 1;
                 return (
                   <div key={s.uid} className="flex items-center gap-3">
-                    <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                      rank === 0 ? "bg-amber-500/20 text-amber-300" : "bg-white/5 text-white/35"}`}>
+                    <div
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                        rank === 0
+                          ? "bg-amber-500/20 text-amber-300"
+                          : "bg-white/5 text-white/35"
+                      }`}
+                    >
                       {rank + 1}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex justify-between text-xs">
-                        <span className="truncate text-white/55">{s.email}</span>
+                        <span className="truncate text-white/55">
+                          {s.email}
+                        </span>
                         <span className="ml-2 shrink-0 font-semibold text-amber-300">
                           {s.total.toLocaleString()}
                         </span>
                       </div>
                       <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
-                        <div className="h-full rounded-full bg-amber-500/60 transition-all duration-500"
-                          style={{ width: `${(s.total / maxSpend) * 100}%` }} />
+                        <div
+                          className="h-full rounded-full bg-amber-500/60 transition-all duration-500"
+                          style={{ width: `${(s.total / maxSpend) * 100}%` }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -595,21 +799,32 @@ export default function AdminPanel() {
       {/* ── Role Distribution + Recent Users ── */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="rounded-[20px] border border-white/10 bg-[#0d1527] p-5">
-          <h2 className="mb-4 font-bold text-lg text-white">Role Distribution</h2>
+          <h2 className="mb-4 font-bold text-lg text-white">
+            Role Distribution
+          </h2>
           <div className="space-y-3">
             {[
               { name: "Admin", count: adminUsers, color: "bg-cyan-500" },
-              { name: "Standard", count: Math.max(totalUsers - adminUsers, 0), color: "bg-white/40" },
+              {
+                name: "Standard",
+                count: Math.max(totalUsers - adminUsers, 0),
+                color: "bg-white/40",
+              },
             ].map((row) => {
               const pct = totalUsers ? (row.count / totalUsers) * 100 : 0;
               return (
                 <div key={row.name}>
                   <div className="mb-1 flex justify-between text-xs text-white/40">
                     <span>{row.name}</span>
-                    <span>{row.count} ({pct.toFixed(0)}%)</span>
+                    <span>
+                      {row.count} ({pct.toFixed(0)}%)
+                    </span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-white/5">
-                    <div className={`h-full ${row.color}`} style={{ width: `${pct}%` }} />
+                    <div
+                      className={`h-full ${row.color}`}
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
                 </div>
               );
@@ -632,25 +847,47 @@ export default function AdminPanel() {
               <div className="p-6 text-sm text-white/35">No users yet.</div>
             )}
             {recentUsers.map((u) => (
-              <div key={u.uid} className="flex items-center gap-3 p-3 transition hover:bg-white/[0.02]">
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                  u.role === "admin" ? "bg-cyan-500/20 text-cyan-300" : "bg-white/5 text-white/40"}`}>
+              <div
+                key={u.uid}
+                className="flex items-center gap-3 p-3 transition hover:bg-white/[0.02]"
+              >
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                    u.role === "admin"
+                      ? "bg-cyan-500/20 text-cyan-300"
+                      : "bg-white/5 text-white/40"
+                  }`}
+                >
                   {(u.email?.[0] ?? "?").toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-white">{u.email || "No email"}</p>
-                  <p className="truncate font-mono text-xs text-white/30">{u.uid}</p>
+                  <p className="truncate text-sm text-white">
+                    {u.email || "No email"}
+                  </p>
+                  <p className="truncate font-mono text-xs text-white/30">
+                    {u.uid}
+                  </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <div className="text-right">
-                    <p className="text-xs text-white/35">{fmtDate(u.createdAt)}</p>
-                    <span className={`mt-0.5 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                      u.role === "admin" ? "bg-cyan-500/20 text-cyan-300" : "bg-white/5 text-white/35"}`}>
+                    <p className="text-xs text-white/35">
+                      {fmtDate(u.createdAt)}
+                    </p>
+                    <span
+                      className={`mt-0.5 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                        u.role === "admin"
+                          ? "bg-cyan-500/20 text-cyan-300"
+                          : "bg-white/5 text-white/35"
+                      }`}
+                    >
                       {u.role}
                     </span>
                   </div>
-                  <button type="button" onClick={() => openGrant(u)}
-                    className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-white/55 transition hover:bg-[#7c5cff]/20 hover:text-[#a78bfa] hover:border-[#7c5cff]/30">
+                  <button
+                    type="button"
+                    onClick={() => openGrant(u)}
+                    className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-white/55 transition hover:bg-[#7c5cff]/20 hover:text-[#a78bfa] hover:border-[#7c5cff]/30"
+                  >
                     <Coins className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -667,27 +904,44 @@ export default function AdminPanel() {
             <div>
               <h2 className="font-bold text-white">Financial Events</h2>
               <p className="mt-0.5 text-xs text-white/35">
-                {filteredTx.length} transactions{dateRange !== "all" ? ` · last ${dateRange}` : ""}
+                {filteredTx.length} transactions
+                {dateRange !== "all" ? ` · last ${dateRange}` : ""}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <div className="flex overflow-hidden rounded-lg border border-white/10">
-                {[["all","All"],["credit","Inflow"],["debit","Outflow"]].map(([val, label]) => (
-                  <button key={val} type="button"
-                    onClick={() => { setTxTypeFilter(val as typeof txTypeFilter); setTxPage(0); }}
+                {[
+                  ["all", "All"],
+                  ["credit", "Inflow"],
+                  ["debit", "Outflow"],
+                ].map(([val, label]) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => {
+                      setTxTypeFilter(val as typeof txTypeFilter);
+                      setTxPage(0);
+                    }}
                     className={`px-3 py-1.5 text-xs font-medium transition ${
                       txTypeFilter === val
                         ? "bg-cyan-600 text-white"
                         : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white"
-                    }`}>
+                    }`}
+                  >
                     {label}
                   </button>
                 ))}
               </div>
-              <input type="text" placeholder="Search description or user ID…"
+              <input
+                type="text"
+                placeholder="Search description or user ID…"
                 value={txSearch}
-                onChange={(e) => { setTxSearch(e.target.value); setTxPage(0); }}
-                className="w-52 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white placeholder-white/25 outline-none transition focus:border-cyan-500/50" />
+                onChange={(e) => {
+                  setTxSearch(e.target.value);
+                  setTxPage(0);
+                }}
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white placeholder-white/25 outline-none transition focus:border-cyan-500/50 sm:w-52"
+              />
             </div>
           </div>
         </div>
@@ -704,27 +958,46 @@ export default function AdminPanel() {
         <div className="divide-y divide-white/5">
           {paginatedTx.length === 0 ? (
             <div className="py-10 text-center text-sm text-white/35">
-              {txSearch || txTypeFilter !== "all" ? "No matching transactions." : "No transactions found."}
+              {txSearch || txTypeFilter !== "all"
+                ? "No matching transactions."
+                : "No transactions found."}
             </div>
           ) : (
             paginatedTx.map((tx) => {
               const credit = isCredit(tx.kind);
-              const userEmail = users.find((u) => u.uid === tx.uid)?.email ?? tx.uid;
+              const userEmail =
+                users.find((u) => u.uid === tx.uid)?.email ?? tx.uid;
               return (
-                <div key={tx.id}
-                  className="grid grid-cols-1 gap-1 px-4 py-3 transition hover:bg-white/[0.02] sm:grid-cols-[1fr_1fr_80px_72px_100px] sm:items-center sm:gap-4">
-                  <p className="truncate text-sm text-white">{tx.description || tx.source || "—"}</p>
-                  <p className="truncate font-mono text-xs text-white/40">{userEmail}</p>
-                  <p className={`text-sm font-semibold sm:text-right ${credit ? "text-emerald-300" : "text-amber-300"}`}>
-                    {credit ? "+" : "−"}{tx.amount.toLocaleString()}
+                <div
+                  key={tx.id}
+                  className="grid grid-cols-1 gap-1 px-4 py-3 transition hover:bg-white/[0.02] sm:grid-cols-[1fr_1fr_80px_72px_100px] sm:items-center sm:gap-4"
+                >
+                  <p className="truncate text-sm text-white">
+                    {tx.description || tx.source || "—"}
+                  </p>
+                  <p className="truncate font-mono text-xs text-white/40">
+                    {userEmail}
+                  </p>
+                  <p
+                    className={`text-sm font-semibold sm:text-right ${credit ? "text-emerald-300" : "text-amber-300"}`}
+                  >
+                    {credit ? "+" : "−"}
+                    {tx.amount.toLocaleString()}
                   </p>
                   <div className="sm:text-center">
-                    <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                      credit ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}>
+                    <span
+                      className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                        credit
+                          ? "bg-emerald-500/15 text-emerald-300"
+                          : "bg-amber-500/15 text-amber-300"
+                      }`}
+                    >
                       {tx.kind}
                     </span>
                   </div>
-                  <p className="text-xs text-white/35 sm:text-right">{fmtDate(tx.createdAt)}</p>
+                  <p className="text-xs text-white/35 sm:text-right">
+                    {fmtDate(tx.createdAt)}
+                  </p>
                 </div>
               );
             })
@@ -737,27 +1010,43 @@ export default function AdminPanel() {
               Page {txPage + 1} of {txPageCount} · {filteredTx.length} results
             </p>
             <div className="flex gap-1">
-              <button type="button" onClick={() => setTxPage((p) => Math.max(p - 1, 0))} disabled={txPage === 0}
-                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/40 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-30">
+              <button
+                type="button"
+                onClick={() => setTxPage((p) => Math.max(p - 1, 0))}
+                disabled={txPage === 0}
+                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/40 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+              >
                 ← Prev
               </button>
               {Array.from({ length: Math.min(txPageCount, 5) }, (_, i) => {
-                const start = Math.max(0, Math.min(txPage - 2, txPageCount - 5));
+                const start = Math.max(
+                  0,
+                  Math.min(txPage - 2, txPageCount - 5),
+                );
                 const page = start + i;
                 return (
-                  <button key={page} type="button" onClick={() => setTxPage(page)}
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setTxPage(page)}
                     className={`h-8 w-8 rounded-lg border text-xs font-medium transition ${
                       txPage === page
                         ? "border-cyan-500 bg-cyan-500/20 text-cyan-300"
                         : "border-white/10 text-white/40 hover:bg-white/5 hover:text-white"
-                    }`}>
+                    }`}
+                  >
                     {page + 1}
                   </button>
                 );
               })}
-              <button type="button" onClick={() => setTxPage((p) => Math.min(p + 1, txPageCount - 1))}
+              <button
+                type="button"
+                onClick={() =>
+                  setTxPage((p) => Math.min(p + 1, txPageCount - 1))
+                }
                 disabled={txPage >= txPageCount - 1}
-                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/40 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-30">
+                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/40 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+              >
                 Next →
               </button>
             </div>
@@ -768,20 +1057,30 @@ export default function AdminPanel() {
       {/* ── Grant Credits Modal ── */}
       {grantModal && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-          <button type="button" aria-label="Close grant modal"
+          <button
+            type="button"
+            aria-label="Close grant modal"
             onClick={closeGrant}
-            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" />
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+          />
           <div className="relative z-10 w-full max-w-sm rounded-[24px] border border-white/10 bg-[#0d1527] p-6 shadow-[0_32px_80px_rgba(0,0,0,0.6)]">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300/70">
                   Admin action
                 </p>
-                <h3 className="mt-1 text-lg font-bold text-white">Grant Credits</h3>
-                <p className="mt-1 truncate text-sm text-white/45">{grantModal.displayName || grantModal.email}</p>
+                <h3 className="mt-1 text-lg font-bold text-white">
+                  Grant Credits
+                </h3>
+                <p className="mt-1 truncate text-sm text-white/45">
+                  {grantModal.displayName || grantModal.email}
+                </p>
               </div>
-              <button type="button" onClick={closeGrant}
-                className="rounded-full border border-white/10 p-1.5 text-white/40 transition hover:text-white">
+              <button
+                type="button"
+                onClick={closeGrant}
+                className="rounded-full border border-white/10 p-1.5 text-white/40 transition hover:text-white"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -790,10 +1089,15 @@ export default function AdminPanel() {
               <div className="rounded-xl border border-emerald-700/40 bg-emerald-950/50 px-4 py-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  <p className="font-semibold text-emerald-300 text-sm">Credits granted successfully</p>
+                  <p className="font-semibold text-emerald-300 text-sm">
+                    Credits granted successfully
+                  </p>
                 </div>
-                <button type="button" onClick={closeGrant}
-                  className="mt-3 text-xs font-semibold text-emerald-400 underline underline-offset-2 hover:text-emerald-300">
+                <button
+                  type="button"
+                  onClick={closeGrant}
+                  className="mt-3 text-xs font-semibold text-emerald-400 underline underline-offset-2 hover:text-emerald-300"
+                >
                   Close
                 </button>
               </div>
@@ -801,57 +1105,98 @@ export default function AdminPanel() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between rounded-xl border border-white/8 bg-white/5 px-3 py-2">
                   <span className="text-xs text-white/45">Current balance</span>
-                  <span className="font-bold text-white">{grantModal.currentCredits.toLocaleString()}</span>
+                  <span className="font-bold text-white">
+                    {grantModal.currentCredits.toLocaleString()}
+                  </span>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-white/45">Credits to add</label>
-                  <input type="number" min={1} step={1} value={grantAmount}
-                    onChange={(e) => { setGrantAmount(e.target.value); setGrantConfirm(false); setGrantError(null); }}
+                  <label className="mb-1 block text-xs font-semibold text-white/45">
+                    Credits to add
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={grantAmount}
+                    onChange={(e) => {
+                      setGrantAmount(e.target.value);
+                      setGrantConfirm(false);
+                      setGrantError(null);
+                    }}
                     placeholder="e.g. 500"
-                    className="w-full rounded-xl border border-white/10 bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-500/50" />
+                    className="w-full rounded-xl border border-white/10 bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-500/50"
+                  />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-white/45">Internal note (optional)</label>
-                  <input type="text" value={grantNote}
+                  <label className="mb-1 block text-xs font-semibold text-white/45">
+                    Internal note (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={grantNote}
                     onChange={(e) => setGrantNote(e.target.value)}
                     placeholder="Reason for grant"
-                    className="w-full rounded-xl border border-white/10 bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-500/50" />
+                    className="w-full rounded-xl border border-white/10 bg-[#0b1220] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-500/50"
+                  />
                 </div>
 
                 {grantError && (
                   <p className="flex items-center gap-1.5 text-xs text-red-400">
-                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {grantError}
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />{" "}
+                    {grantError}
                   </p>
                 )}
 
                 {grantConfirm ? (
                   <div className="rounded-xl border border-amber-700/40 bg-amber-950/50 p-3">
                     <p className="text-xs font-semibold text-amber-300">
-                      Grant {parseInt(grantAmount, 10).toLocaleString()} credits?
+                      Grant {parseInt(grantAmount, 10).toLocaleString()}{" "}
+                      credits?
                     </p>
                     <p className="mt-0.5 text-xs text-amber-400/70">
-                      New balance: <strong>{(grantModal.currentCredits + parseInt(grantAmount, 10)).toLocaleString()}</strong>
+                      New balance:{" "}
+                      <strong>
+                        {(
+                          grantModal.currentCredits + parseInt(grantAmount, 10)
+                        ).toLocaleString()}
+                      </strong>
                     </p>
                     <div className="mt-3 flex gap-2">
-                      <button type="button" onClick={handleGrant} disabled={grantState === "loading"}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-500 disabled:opacity-60">
-                        {grantState === "loading" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      <button
+                        type="button"
+                        onClick={handleGrant}
+                        disabled={grantState === "loading"}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-500 disabled:opacity-60"
+                      >
+                        {grantState === "loading" && (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        )}
                         Confirm
                       </button>
-                      <button type="button" onClick={() => setGrantConfirm(false)}
-                        className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:text-white">
+                      <button
+                        type="button"
+                        onClick={() => setGrantConfirm(false)}
+                        className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:text-white"
+                      >
                         Cancel
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <button type="button" disabled={!grantAmount}
+                  <button
+                    type="button"
+                    disabled={!grantAmount}
                     onClick={() => {
                       const n = parseInt(grantAmount, 10);
-                      if (!Number.isInteger(n) || n <= 0) { setGrantError("Enter a positive whole number."); return; }
-                      setGrantError(null); setGrantConfirm(true);
+                      if (!Number.isInteger(n) || n <= 0) {
+                        setGrantError("Enter a positive whole number.");
+                        return;
+                      }
+                      setGrantError(null);
+                      setGrantConfirm(true);
                     }}
-                    className="w-full rounded-xl bg-[#7c5cff] py-2.5 text-sm font-semibold text-white transition hover:bg-[#6f50f0] disabled:cursor-not-allowed disabled:opacity-50">
+                    className="w-full rounded-xl bg-[#7c5cff] py-2.5 text-sm font-semibold text-white transition hover:bg-[#6f50f0] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
                     Grant credits
                   </button>
                 )}
@@ -860,7 +1205,6 @@ export default function AdminPanel() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

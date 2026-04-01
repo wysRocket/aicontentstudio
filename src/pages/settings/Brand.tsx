@@ -87,8 +87,8 @@ export function Brand() {
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500">
-        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-violet-500" />
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/50">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-[#7c5cff]" />
         Loading brand settings...
       </div>
     );
@@ -96,12 +96,12 @@ export function Brand() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
         <div className="flex items-start gap-3 mb-6">
-          <Palette className="w-5 h-5 text-violet-600 mt-1" />
+          <Palette className="w-5 h-5 text-[#7c5cff] mt-1" />
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">My Brand</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="text-lg font-semibold text-white">My Brand</h2>
+            <p className="text-sm text-white/60 mt-1">
               These settings shape the tone and positioning used across your
               workspace.
             </p>
@@ -112,7 +112,7 @@ export function Brand() {
           <div>
             <label
               htmlFor="brand-name"
-              className="block text-sm font-medium text-gray-800 mb-1.5"
+              className="block text-sm font-medium text-white/80 mb-1.5"
             >
               Brand name
             </label>
@@ -120,14 +120,14 @@ export function Brand() {
               id="brand-name"
               value={form.brandName}
               onChange={(e) => setForm({ ...form, brandName: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#7c5cff]"
             />
           </div>
 
           <div>
             <label
               htmlFor="brand-voice"
-              className="block text-sm font-medium text-gray-800 mb-1.5"
+              className="block text-sm font-medium text-white/80 mb-1.5"
             >
               Brand voice
             </label>
@@ -135,7 +135,7 @@ export function Brand() {
               id="brand-voice"
               value={form.brandVoice}
               onChange={(e) => setForm({ ...form, brandVoice: e.target.value })}
-              className="w-full min-h-[140px] rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full min-h-[140px] rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#7c5cff]"
             />
           </div>
 
@@ -143,7 +143,7 @@ export function Brand() {
             <div>
               <label
                 htmlFor="brand-colors"
-                className="block text-sm font-medium text-gray-800 mb-1.5"
+                className="block text-sm font-medium text-white/80 mb-1.5"
               >
                 Brand colors
               </label>
@@ -153,13 +153,13 @@ export function Brand() {
                 onChange={(e) =>
                   setForm({ ...form, brandColors: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#7c5cff]"
               />
             </div>
             <div>
               <label
                 htmlFor="brand-keywords"
-                className="block text-sm font-medium text-gray-800 mb-1.5"
+                className="block text-sm font-medium text-white/80 mb-1.5"
               >
                 Brand keywords
               </label>
@@ -169,7 +169,7 @@ export function Brand() {
                 onChange={(e) =>
                   setForm({ ...form, brandKeywords: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#7c5cff]"
               />
             </div>
           </div>
@@ -177,7 +177,7 @@ export function Brand() {
           <div>
             <label
               htmlFor="brand-audience"
-              className="block text-sm font-medium text-gray-800 mb-1.5"
+              className="block text-sm font-medium text-white/80 mb-1.5"
             >
               Brand audience
             </label>
@@ -187,7 +187,7 @@ export function Brand() {
               onChange={(e) =>
                 setForm({ ...form, brandAudience: e.target.value })
               }
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#7c5cff]"
             />
           </div>
 
@@ -195,7 +195,7 @@ export function Brand() {
             <div>
               <label
                 htmlFor="brand-cta-style"
-                className="block text-sm font-medium text-gray-800 mb-1.5"
+                className="block text-sm font-medium text-white/80 mb-1.5"
               >
                 CTA style
               </label>
@@ -203,13 +203,13 @@ export function Brand() {
                 id="brand-cta-style"
                 value={form.ctaStyle}
                 onChange={(e) => setForm({ ...form, ctaStyle: e.target.value })}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#7c5cff]"
               />
             </div>
             <div>
               <label
                 htmlFor="brand-banned-phrases"
-                className="block text-sm font-medium text-gray-800 mb-1.5"
+                className="block text-sm font-medium text-white/80 mb-1.5"
               >
                 Banned phrases
               </label>
@@ -219,7 +219,7 @@ export function Brand() {
                 onChange={(e) =>
                   setForm({ ...form, bannedPhrases: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#7c5cff]"
               />
             </div>
           </div>
@@ -230,7 +230,7 @@ export function Brand() {
             type="button"
             onClick={save}
             disabled={isSaving || !hasChanges}
-            className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-70"
+            className="rounded-xl bg-[#7c5cff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#6b4ef0] disabled:opacity-70"
           >
             {isSaving ? "Saving..." : "Save Brand"}
           </button>
@@ -238,14 +238,14 @@ export function Brand() {
             type="button"
             onClick={reset}
             disabled={!hasChanges || isSaving}
-            className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/10 disabled:opacity-60"
           >
             Reset
           </button>
           {hasChanges && !message && (
-            <p className="text-sm text-amber-700">Unsaved changes</p>
+            <p className="text-sm text-amber-400">Unsaved changes</p>
           )}
-          {message && <p className="text-sm text-emerald-600">{message}</p>}
+          {message && <p className="text-sm text-emerald-400">{message}</p>}
         </div>
       </div>
     </div>

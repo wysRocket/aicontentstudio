@@ -652,15 +652,15 @@ nav ul li a:hover {
   .landing .hero__art {
     background-position: center top;
     background-size: cover;
-    opacity: 0.55;
+    opacity: 0.72;
   }
 
   .landing .hero::before {
     background: linear-gradient(
       to bottom,
-      rgba(9, 10, 24, 0.18) 0%,
-      rgba(9, 10, 24, 0.72) 35%,
-      rgba(9, 10, 24, 0.95) 100%
+      rgba(9, 10, 24, 0.12) 0%,
+      rgba(9, 10, 24, 0.55) 45%,
+      rgba(9, 10, 24, 0.88) 100%
     );
   }
 

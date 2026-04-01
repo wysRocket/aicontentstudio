@@ -88,8 +88,8 @@ export function Api() {
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500">
-        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-blue-500" />
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/50">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-[#7c5cff]" />
         Loading API settings...
       </div>
     );
@@ -99,7 +99,7 @@ export function Api() {
     <div className="max-w-3xl space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
         <div
-          className={`rounded-2xl border p-5 ${hasGeminiKey() ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-amber-100 bg-amber-50 text-amber-800"}`}
+          className={`rounded-2xl border p-5 ${hasGeminiKey() ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-amber-500/30 bg-amber-500/10 text-amber-400"}`}
         >
           <KeyRound className="w-5 h-5" />
           <p className="mt-3 text-sm font-semibold">Gemini key</p>
@@ -107,16 +107,16 @@ export function Api() {
             {hasGeminiKey() ? "Configured" : "Missing"}
           </p>
         </div>
-        <div className="rounded-2xl border border-violet-100 bg-violet-50 p-5 text-violet-800">
+        <div className="rounded-2xl border border-[#7c5cff]/30 bg-[#7c5cff]/10 p-5 text-[#a78bfa]">
           <Server className="w-5 h-5" />
           <p className="mt-3 text-sm font-semibold">Backend</p>
           <p className="mt-1 text-2xl font-bold">server.ts</p>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900">API Preferences</h2>
-        <p className="text-sm text-gray-500 mt-1">
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+        <h2 className="text-lg font-semibold text-white">API Preferences</h2>
+        <p className="text-sm text-white/60 mt-1">
           Store the non-secret integration preferences your team uses inside the
           workspace.
         </p>
@@ -126,7 +126,7 @@ export function Api() {
             <div>
               <label
                 htmlFor="api-preferred-text-model"
-                className="block text-sm font-medium text-gray-800 mb-1.5"
+                className="block text-sm font-medium text-white/80 mb-1.5"
               >
                 Preferred text model
               </label>
@@ -136,13 +136,13 @@ export function Api() {
                 onChange={(e) =>
                   setForm({ ...form, preferredTextModel: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#7c5cff]"
               />
             </div>
             <div>
               <label
                 htmlFor="api-preferred-video-model"
-                className="block text-sm font-medium text-gray-800 mb-1.5"
+                className="block text-sm font-medium text-white/80 mb-1.5"
               >
                 Preferred video model
               </label>
@@ -152,7 +152,7 @@ export function Api() {
                 onChange={(e) =>
                   setForm({ ...form, preferredVideoModel: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#7c5cff]"
               />
             </div>
           </div>
@@ -160,7 +160,7 @@ export function Api() {
           <div>
             <label
               htmlFor="api-base-url"
-              className="block text-sm font-medium text-gray-800 mb-1.5"
+              className="block text-sm font-medium text-white/80 mb-1.5"
             >
               API base URL
             </label>
@@ -168,7 +168,7 @@ export function Api() {
               id="api-base-url"
               value={form.apiBaseUrl}
               onChange={(e) => setForm({ ...form, apiBaseUrl: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#7c5cff]"
             />
           </div>
 
@@ -176,7 +176,7 @@ export function Api() {
             <div>
               <label
                 htmlFor="api-webhook-url"
-                className="block text-sm font-medium text-gray-800 mb-1.5"
+                className="block text-sm font-medium text-white/80 mb-1.5"
               >
                 Webhook URL
               </label>
@@ -186,13 +186,13 @@ export function Api() {
                 onChange={(e) =>
                   setForm({ ...form, webhookUrl: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#7c5cff]"
               />
             </div>
             <div>
               <label
                 htmlFor="api-support-email"
-                className="block text-sm font-medium text-gray-800 mb-1.5"
+                className="block text-sm font-medium text-white/80 mb-1.5"
               >
                 Support email
               </label>
@@ -202,7 +202,7 @@ export function Api() {
                 onChange={(e) =>
                   setForm({ ...form, supportEmail: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#7c5cff]"
               />
             </div>
           </div>
@@ -213,7 +213,7 @@ export function Api() {
             type="button"
             onClick={save}
             disabled={isSaving || !hasChanges}
-            className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-70"
+            className="rounded-xl bg-[#7c5cff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#6b4ef0] disabled:opacity-70"
           >
             {isSaving ? "Saving..." : "Save API Settings"}
           </button>
@@ -221,14 +221,14 @@ export function Api() {
             type="button"
             onClick={reset}
             disabled={!hasChanges || isSaving}
-            className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/10 disabled:opacity-60"
           >
             Reset
           </button>
           {hasChanges && !message && (
-            <p className="text-sm text-amber-700">Unsaved changes</p>
+            <p className="text-sm text-amber-400">Unsaved changes</p>
           )}
-          {message && <p className="text-sm text-emerald-600">{message}</p>}
+          {message && <p className="text-sm text-emerald-400">{message}</p>}
         </div>
       </div>
     </div>

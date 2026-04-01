@@ -34,20 +34,23 @@ function formatTransactionDate(transaction: CreditTransactionRecord) {
   return date ? dateFormatter.format(date) : "Pending timestamp";
 }
 
-function getTransactionTone(kind: CreditTransactionRecord["kind"], amount: number) {
+function getTransactionTone(
+  kind: CreditTransactionRecord["kind"],
+  amount: number,
+) {
   if (amount > 0) {
     return {
       icon: ArrowUpRight,
-      amountClass: "text-emerald-700",
-      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-100",
+      amountClass: "text-emerald-400",
+      badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
       label: kind === "grant" ? "Grant" : "Credit added",
     };
   }
 
   return {
     icon: ArrowDownRight,
-    amountClass: "text-rose-700",
-    badgeClass: "bg-rose-50 text-rose-700 border-rose-100",
+    amountClass: "text-rose-400",
+    badgeClass: "bg-rose-500/10 text-rose-400 border-rose-500/30",
     label: kind === "usage" ? "Usage" : "Debit",
   };
 }
@@ -55,7 +58,9 @@ function getTransactionTone(kind: CreditTransactionRecord["kind"], amount: numbe
 export function Billing() {
   const { user, isAuthReady } = useFirebase();
   const [credits, setCredits] = useState<number | null>(null);
-  const [transactions, setTransactions] = useState<CreditTransactionRecord[]>([]);
+  const [transactions, setTransactions] = useState<CreditTransactionRecord[]>(
+    [],
+  );
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
   useEffect(() => {
@@ -122,17 +127,17 @@ export function Billing() {
 
   return (
     <div className="max-w-6xl space-y-6">
-      <div className="overflow-hidden rounded-[28px] border border-pink-100 bg-[linear-gradient(135deg,#fff6fb_0%,#ffffff_48%,#f8f5ff_100%)] shadow-sm">
+      <div className="overflow-hidden rounded-[28px] border border-[#D81B60]/20 bg-[linear-gradient(135deg,#1a0d14_0%,#17131d_48%,#1a1330_100%)]">
         <div className="grid gap-6 p-6 lg:grid-cols-[1.35fr_0.95fr] lg:p-8">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-pink-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-pink-700">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#D81B60]/30 bg-[#D81B60]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f48fb1]">
               <Coins className="h-3.5 w-3.5" />
               Billing Ledger
             </div>
-            <h2 className="mt-4 text-2xl font-semibold tracking-[-0.03em] text-gray-950">
+            <h2 className="mt-4 text-2xl font-semibold tracking-[-0.03em] text-white">
               Track your credit balance and recent transaction history
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">
               Credits remain live in Firebase. Every tracked debit and credit
               event now appears here so you can see what changed, when it
               changed, and what your balance became afterward.
@@ -146,25 +151,26 @@ export function Billing() {
                 <Mail className="h-4 w-4" />
                 Request manual top-up
               </a>
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600">
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                Self-serve checkout is still pending server-side billing hardening
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/60">
+                <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                Self-serve checkout is still pending server-side billing
+                hardening
               </div>
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-white/80 bg-white/90 p-5 shadow-[0_18px_45px_rgba(216,27,96,0.08)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">
+          <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/50">
               Current balance
             </p>
             <div className="mt-3 flex items-center gap-3">
-              <div className="rounded-2xl bg-pink-50 p-3 text-pink-600">
+              <div className="rounded-2xl bg-[#D81B60]/10 p-3 text-[#f48fb1]">
                 <Coins className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-3xl font-bold tracking-[-0.04em] text-gray-950">
+                <p className="text-3xl font-bold tracking-[-0.04em] text-white">
                   {credits === null ? (
-                    <span className="inline-flex items-center gap-2 text-lg text-gray-500">
+                    <span className="inline-flex items-center gap-2 text-lg text-white/50">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Loading...
                     </span>
@@ -172,11 +178,13 @@ export function Billing() {
                     formatCreditAmount(credits)
                   )}
                 </p>
-                <p className="text-sm text-gray-500">credits available right now</p>
+                <p className="text-sm text-white/50">
+                  credits available right now
+                </p>
               </div>
             </div>
 
-            <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
               Manual top-ups are still reviewed by the team before they are
               applied to your balance.
             </div>
@@ -185,62 +193,67 @@ export function Billing() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-500">Available credits</p>
-            <Coins className="h-4 w-4 text-pink-600" />
+            <p className="text-sm font-medium text-white/50">
+              Available credits
+            </p>
+            <Coins className="h-4 w-4 text-[#f48fb1]" />
           </div>
-          <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-gray-950">
+          <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-white">
             {credits === null ? "..." : formatCreditAmount(credits)}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-500">Credits added</p>
-            <TrendingUp className="h-4 w-4 text-emerald-600" />
+            <p className="text-sm font-medium text-white/50">Credits added</p>
+            <TrendingUp className="h-4 w-4 text-emerald-400" />
           </div>
-          <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-gray-950">
+          <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-white">
             {formatCreditAmount(stats.totalAdded)}
           </p>
-          <p className="mt-2 text-sm text-gray-500">from grants and top-ups</p>
+          <p className="mt-2 text-sm text-white/50">from grants and top-ups</p>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-500">Credits spent</p>
-            <TrendingDown className="h-4 w-4 text-rose-600" />
+            <p className="text-sm font-medium text-white/50">Credits spent</p>
+            <TrendingDown className="h-4 w-4 text-rose-400" />
           </div>
-          <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-gray-950">
+          <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-white">
             {formatCreditAmount(stats.totalSpent)}
           </p>
-          <p className="mt-2 text-sm text-gray-500">tracked usage deductions</p>
+          <p className="mt-2 text-sm text-white/50">tracked usage deductions</p>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-500">Tracked events</p>
-            <History className="h-4 w-4 text-violet-600" />
+            <p className="text-sm font-medium text-white/50">Tracked events</p>
+            <History className="h-4 w-4 text-[#a78bfa]" />
           </div>
-          <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-gray-950">
+          <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-white">
             {formatCreditAmount(transactions.length)}
           </p>
-          <p className="mt-2 text-sm text-gray-500">most recent ledger entries</p>
+          <p className="mt-2 text-sm text-white/50">
+            most recent ledger entries
+          </p>
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-100 px-6 py-5">
+      <div className="rounded-[28px] border border-white/10 bg-white/5">
+        <div className="border-b border-white/10 px-6 py-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-950">
+              <h3 className="text-lg font-semibold text-white">
                 Transaction history
               </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Recent credits added, grants, and usage deductions for this account.
+              <p className="mt-1 text-sm text-white/50">
+                Recent credits added, grants, and usage deductions for this
+                account.
               </p>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-600">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/50">
               <Clock3 className="h-3.5 w-3.5" />
               Showing up to 25 most recent events
             </div>
@@ -249,21 +262,21 @@ export function Billing() {
 
         <div className="px-4 py-4 sm:px-6 sm:py-5">
           {isLoadingHistory ? (
-            <div className="flex min-h-48 items-center justify-center text-sm text-gray-500">
+            <div className="flex min-h-48 items-center justify-center text-sm text-white/50">
               <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin text-[#7c5cff]" />
                 Loading transaction history...
               </span>
             </div>
           ) : transactions.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-gray-200 bg-gray-50 px-6 py-12 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-pink-600 shadow-sm">
+            <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 px-6 py-12 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#D81B60]/10 text-[#f48fb1]">
                 <History className="h-5 w-5" />
               </div>
-              <h4 className="mt-4 text-lg font-semibold text-gray-900">
+              <h4 className="mt-4 text-lg font-semibold text-white">
                 No tracked transactions yet
               </h4>
-              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-gray-500">
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-white/50">
                 Recent credit activity will appear here automatically as credits
                 are used or applied to your balance.
               </p>
@@ -280,7 +293,7 @@ export function Billing() {
                 return (
                   <div
                     key={transaction.id}
-                    className="grid gap-4 rounded-3xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 sm:grid-cols-[minmax(0,1fr)_auto]"
+                    className="grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-4 transition-colors hover:border-white/20 sm:grid-cols-[minmax(0,1fr)_auto]"
                   >
                     <div className="flex items-start gap-4">
                       <div
@@ -291,7 +304,7 @@ export function Billing() {
 
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-semibold text-gray-900">
+                          <p className="font-semibold text-white">
                             {transaction.description}
                           </p>
                           <span
@@ -299,17 +312,18 @@ export function Billing() {
                           >
                             {tone.label}
                           </span>
-                          <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-600">
+                          <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">
                             {transaction.status}
                           </span>
                         </div>
 
-                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
+                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-white/50">
                           <span>{formatTransactionDate(transaction)}</span>
                           <span>Source: {transaction.source}</span>
                           <span>
                             Balance after:{" "}
-                            {formatCreditAmount(transaction.balanceAfter)} credits
+                            {formatCreditAmount(transaction.balanceAfter)}{" "}
+                            credits
                           </span>
                         </div>
                       </div>
@@ -322,7 +336,7 @@ export function Billing() {
                         {transaction.amount > 0 ? "+" : ""}
                         {formatCreditAmount(transaction.amount)}
                       </div>
-                      <div className="mt-1 text-xs uppercase tracking-[0.14em] text-gray-400">
+                      <div className="mt-1 text-xs uppercase tracking-[0.14em] text-white/30">
                         credits
                       </div>
                     </div>

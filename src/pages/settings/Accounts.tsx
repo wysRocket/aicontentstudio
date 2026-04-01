@@ -186,10 +186,10 @@ export function Accounts() {
   const availableCount = availablePlatforms.length;
   const statusBannerClass =
     statusTone === "success"
-      ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
       : statusTone === "error"
-        ? "border-rose-100 bg-rose-50 text-rose-700"
-        : "border-blue-100 bg-blue-50 text-blue-700";
+        ? "border-rose-500/30 bg-rose-500/10 text-rose-400"
+        : "border-[#7c5cff]/30 bg-[#7c5cff]/10 text-[#a78bfa]";
 
   const connectedPlatformNames = useMemo(
     () => connectedAccounts.map((account) => account.platform.toLowerCase()),
@@ -330,41 +330,41 @@ export function Accounts() {
   return (
     <div className="space-y-8">
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-500">Connected now</p>
-            <Link2 className="h-4 w-4 text-[#8c3857]" />
+            <p className="text-sm font-medium text-white/50">Connected now</p>
+            <Link2 className="h-4 w-4 text-[#f48fb1]" />
           </div>
-          <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-gray-950">
+          <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-white">
             {connectedCount}
           </p>
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-white/50">
             active publishing integrations
           </p>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-500">Available today</p>
-            <Sparkles className="h-4 w-4 text-emerald-600" />
+            <p className="text-sm font-medium text-white/50">Available today</p>
+            <Sparkles className="h-4 w-4 text-emerald-400" />
           </div>
-          <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-gray-950">
+          <p className="mt-4 text-3xl font-bold tracking-[-0.04em] text-white">
             {availableCount}
           </p>
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-white/50">
             providers ready for connection
           </p>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-500">Connection note</p>
-            <ShieldCheck className="h-4 w-4 text-blue-600" />
+            <p className="text-sm font-medium text-white/50">Connection note</p>
+            <ShieldCheck className="h-4 w-4 text-[#a78bfa]" />
           </div>
-          <p className="mt-4 text-base font-semibold tracking-[-0.02em] text-gray-950">
+          <p className="mt-4 text-base font-semibold tracking-[-0.02em] text-white">
             Connect from the right logged-in social account first
           </p>
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-white/50">
             This prevents mismatched OAuth sessions.
           </p>
         </div>
@@ -381,25 +381,25 @@ export function Accounts() {
         </div>
       )}
 
-      <section className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-gray-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <section className="rounded-[28px] border border-white/10 bg-white/5 p-6">
+        <div className="flex flex-col gap-3 border-b border-white/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold tracking-[-0.03em] text-gray-950">
+            <h2 className="text-xl font-semibold tracking-[-0.03em] text-white">
               Add a new account
             </h2>
-            <p className="mt-2 text-sm leading-6 text-gray-500">
+            <p className="mt-2 text-sm leading-6 text-white/50">
               Connect channels your team actively publishes to so the workspace
               can route content where it needs to go.
             </p>
           </div>
-          <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
             Log into the social platform before starting the connection flow.
           </div>
         </div>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.9fr]">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
               Available today
             </p>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -419,7 +419,7 @@ export function Accounts() {
           </div>
 
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
               Coming soon
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -438,27 +438,27 @@ export function Accounts() {
         </div>
       </section>
 
-      <section className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-2 border-b border-gray-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <section className="rounded-[28px] border border-white/10 bg-white/5 p-6">
+        <div className="flex flex-col gap-2 border-b border-white/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold tracking-[-0.03em] text-gray-950">
+            <h2 className="text-xl font-semibold tracking-[-0.03em] text-white">
               Connected accounts
             </h2>
-            <p className="mt-2 text-sm leading-6 text-gray-500">
+            <p className="mt-2 text-sm leading-6 text-white/50">
               Review active identities connected to this workspace and
               disconnect any account you no longer want to use.
             </p>
           </div>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-white/50">
             {loading ? "Syncing accounts..." : `${connectedCount} connected`}
           </div>
         </div>
 
         <div className="mt-6">
           {loading ? (
-            <div className="flex min-h-40 items-center justify-center rounded-3xl border border-dashed border-gray-200 bg-gray-50 text-sm text-gray-500">
+            <div className="flex min-h-40 items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/5 text-sm text-white/50">
               <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin text-[#7c5cff]" />
                 Loading connected accounts...
               </span>
             </div>
@@ -467,12 +467,12 @@ export function Accounts() {
               {connectedAccounts.map((account) => {
                 const Icon = PLATFORM_ICONS[account.platform] || Twitter;
                 const colorClass =
-                  PLATFORM_COLORS[account.platform] || "text-gray-900";
+                  PLATFORM_COLORS[account.platform] || "text-white";
 
                 return (
                   <div
                     key={account.id}
-                    className="flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/5 p-4 transition-colors hover:border-white/20 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex items-center gap-4">
                       {account.profilePicture ? (
@@ -482,24 +482,24 @@ export function Accounts() {
                           className="h-12 w-12 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-                          <Icon className="h-5 w-5 text-gray-400" />
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
+                          <Icon className="h-5 w-5 text-white/40" />
                         </div>
                       )}
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <Icon className={cn("h-4 w-4", colorClass)} />
-                          <span className="font-semibold capitalize text-gray-900">
+                          <span className="font-semibold capitalize text-white">
                             {account.platform}
                           </span>
-                          <span className="inline-flex rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-600">
+                          <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">
                             Active
                           </span>
                         </div>
-                        <p className="mt-1 text-sm font-medium text-gray-700">
+                        <p className="mt-1 text-sm font-medium text-white/80">
                           {account.name || account.handle}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-white/50">
                           {account.handle}
                         </p>
                       </div>
@@ -507,7 +507,7 @@ export function Accounts() {
                     <button
                       type="button"
                       onClick={() => handleDisconnect(account.id)}
-                      className="rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-100"
+                      className="rounded-xl bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20"
                     >
                       Disconnect
                     </button>
@@ -516,14 +516,14 @@ export function Accounts() {
               })}
             </div>
           ) : (
-            <div className="rounded-3xl border border-dashed border-gray-200 bg-gray-50 px-6 py-12 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#8c3857] shadow-sm">
+            <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 px-6 py-12 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-[#f48fb1]">
                 <Link2 className="h-5 w-5" />
               </div>
-              <h3 className="mt-4 text-lg font-semibold text-gray-900">
+              <h3 className="mt-4 text-lg font-semibold text-white">
                 No accounts connected yet
               </h3>
-              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-gray-500">
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-white/50">
                 Connect at least one publishing account to start routing content
                 out of the workspace.
               </p>

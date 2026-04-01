@@ -97,7 +97,7 @@ export function Settings() {
         </div>
       </section>
 
-      <section className="rounded-[28px] border border-black/8 bg-white p-4 shadow-sm sm:p-5">
+      <section className="rounded-[28px] border border-white/10 bg-white/5 p-4 sm:p-5">
         <nav
           className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5"
           aria-label="Settings tabs"
@@ -114,15 +114,15 @@ export function Settings() {
                 className={cn(
                   "rounded-2xl border p-3 text-left transition",
                   isActive
-                    ? "border-[#8c5f74]/30 bg-[#fff4f8] text-[#17131d] shadow-sm"
-                    : "border-black/8 bg-[#fcfaf7] text-[#6e5e58] hover:border-[#8c5f74]/20 hover:bg-white",
+                    ? "border-[#7c5cff]/30 bg-[#7c5cff]/10 text-white shadow-sm"
+                    : "border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:bg-white/10",
                 )}
                 aria-current={isActive ? "page" : undefined}
               >
                 <Icon
                   className={cn(
                     "h-4 w-4",
-                    isActive ? "text-[#8c3857]" : "text-[#8d7d74]",
+                    isActive ? "text-[#7c5cff]" : "text-white/40",
                   )}
                 />
                 <p className="mt-2 text-sm font-semibold">{tab.name}</p>
@@ -135,12 +135,12 @@ export function Settings() {
         </nav>
       </section>
 
-      <section className="rounded-[28px] border border-black/8 bg-[linear-gradient(180deg,#fffdf9_0%,#ffffff_100%)] p-5 shadow-sm sm:p-6">
-        <div className="mb-6 border-b border-black/6 pb-4">
-          <h2 className="text-xl font-semibold tracking-[-0.03em] text-[#17131d]">
+      <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 sm:p-6">
+        <div className="mb-6 border-b border-white/10 pb-4">
+          <h2 className="text-xl font-semibold tracking-[-0.03em] text-white">
             {activeTabMeta.name}
           </h2>
-          <p className="mt-2 text-sm leading-6 text-[#6e5e58]">
+          <p className="mt-2 text-sm leading-6 text-white/60">
             {activeTabMeta.description}
           </p>
         </div>

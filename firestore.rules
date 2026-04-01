@@ -241,6 +241,11 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
+    // CollectionGroup query access for admin panel
+    match /{path=**}/creditTransactions/{transactionId} {
+      allow read: if isAdmin();
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       
