@@ -223,14 +223,20 @@ button:not(:disabled),
 }
 
 .landing .hero-link {
-  color: rgba(180, 165, 255, 0.85);
+  color: rgba(255, 255, 255, 0.72);
   font-size: 1.25rem;
   line-height: 1.5;
   font-weight: 500;
 }
 
-.landing .hero-link:hover {
-  color: #ffffff;
+.landing .hero-link:hover,
+.landing .hero-link:focus-visible {
+  color: #ffffff !important;
+}
+
+/* Sticky nav section links */
+nav ul li a:hover {
+  color: #ffffff !important;
 }
 
 .landing .hero::before {
