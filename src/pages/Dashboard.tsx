@@ -25,11 +25,30 @@ import {
   Wand2,
   X,
   AlertTriangle,
+  WifiOff,
+  CreditCard,
+  ShieldAlert,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useSearchParams } from "react-router-dom";
 import { GoogleGenAI } from "@google/genai";
 import promptsData from "../prompts_data.json";
+import {
+  GEMINI_TEXT_MODEL,
+  GEMINI_IMAGE_MODEL,
+  IMAGE_NUMBER_OF_IMAGES,
+  IMAGE_ASPECT_RATIO,
+  AUTOSAVE_DEBOUNCE_MS,
+  PPTX_BG_COLOR,
+  PPTX_TITLE_COLOR,
+  PPTX_BODY_COLOR,
+  PPTX_ACCENT_COLOR,
+  PPTX_CLOSING_ACCENT_COLOR,
+  PPTX_FONT_FACE,
+  OUTPUT_TRANSFORM_INSTRUCTIONS,
+  classifyWorkspaceError,
+  type WorkspaceErrorKind,
+} from "../lib/config";
 import { useFirebase } from "../contexts/FirebaseContext";
 import {
   deleteWorkspaceRun,
@@ -42,6 +61,7 @@ import {
 import {
   WORKSPACE_TOOL_CONFIG,
   buildWorkspacePrompt,
+  compressImageToThumbnail,
   createWorkspaceRunDraft,
   getDefaultWorkspaceRunTitle,
   normalizeWorkspaceToolMode,
@@ -74,19 +94,19 @@ const MODE_ICONS = {
 
 const MODE_ACCENTS = {
   write_rewrite:
-    "border-[#d9c8e8] bg-[linear-gradient(180deg,#fff8ff_0%,#fffdf7_100%)] text-[#5b3c6e]",
+    "border-purple-700/35 bg-[linear-gradient(135deg,rgba(124,92,255,0.10)_0%,rgba(19,23,31,0.95)_100%)] text-purple-300",
   summarize:
-    "border-[#d9dfef] bg-[linear-gradient(180deg,#f8fbff_0%,#fffdf9_100%)] text-[#41546d]",
+    "border-blue-700/35 bg-[linear-gradient(135deg,rgba(96,165,250,0.10)_0%,rgba(19,23,31,0.95)_100%)] text-blue-300",
   transcribe:
-    "border-[#d8e6db] bg-[linear-gradient(180deg,#f5fff6_0%,#fffdf8_100%)] text-[#365947]",
+    "border-emerald-700/35 bg-[linear-gradient(135deg,rgba(52,211,153,0.10)_0%,rgba(19,23,31,0.95)_100%)] text-emerald-300",
   translate:
-    "border-[#ead8c7] bg-[linear-gradient(180deg,#fffaf2_0%,#fffdf7_100%)] text-[#8a5a34]",
+    "border-amber-700/35 bg-[linear-gradient(135deg,rgba(245,158,11,0.10)_0%,rgba(19,23,31,0.95)_100%)] text-amber-300",
   generate_image:
-    "border-[#c8d8ea] bg-[linear-gradient(180deg,#f4f9ff_0%,#fffdf9_100%)] text-[#244a6a]",
+    "border-sky-700/35 bg-[linear-gradient(135deg,rgba(56,189,248,0.10)_0%,rgba(19,23,31,0.95)_100%)] text-sky-300",
   create_document:
-    "border-[#c8e8d4] bg-[linear-gradient(180deg,#f4fff8_0%,#fffef9_100%)] text-[#1f5435]",
+    "border-green-700/35 bg-[linear-gradient(135deg,rgba(74,222,128,0.10)_0%,rgba(19,23,31,0.95)_100%)] text-green-300",
   create_presentation:
-    "border-[#e0c8ea] bg-[linear-gradient(180deg,#faf4ff_0%,#fffdf9_100%)] text-[#562070]",
+    "border-fuchsia-700/35 bg-[linear-gradient(135deg,rgba(232,121,249,0.10)_0%,rgba(19,23,31,0.95)_100%)] text-fuchsia-300",
 } satisfies Record<WorkspaceToolMode, string>;
 
 const OUTPUT_PANEL_ACCENTS = {
@@ -98,6 +118,14 @@ const OUTPUT_PANEL_ACCENTS = {
   create_document: "from-[#0d2218] via-[#153826] to-[#2a6040]",
   create_presentation: "from-[#1a0d32] via-[#2d1258] to-[#6a1a8a]",
 } satisfies Record<WorkspaceToolMode, string>;
+
+const SLIDE_LAYOUT_GRADIENTS: Record<SlideData["layout"], string> = {
+  title:        "from-[#0d0a1e] via-[#1a1040] to-[#2d1258]",
+  content:      "from-[#1a1040] via-[#2d1258] to-[#4a1a80]",
+  "two-column": "from-[#0f1a30] via-[#1a2a50] to-[#2d1258]",
+  quote:        "from-[#1a0d20] via-[#2a1040] to-[#1a1040]",
+  closing:      "from-[#0d0a1e] via-[#1a0d40] to-[#4a1a80]",
+};
 
 const TOOL_ORDER: WorkspaceToolMode[] = [
   "write_rewrite",
@@ -236,6 +264,7 @@ export default function Dashboard() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isTransformingOutput, setIsTransformingOutput] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorKind, setErrorKind] = useState<WorkspaceErrorKind | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [copiedOutput, setCopiedOutput] = useState(false);
@@ -399,6 +428,17 @@ export default function Dashboard() {
     [activeMode, editor, selectedFile],
   );
 
+  const setClassifiedError = (err: unknown) => {
+    const { kind, userMessage } = classifyWorkspaceError(err);
+    setError(userMessage);
+    setErrorKind(kind);
+  };
+
+  const clearError = () => {
+    setError(null);
+    setErrorKind(null);
+  };
+
   const selectRun = (run: WorkspaceRunRecord) => {
     setSearchParams({ tool: run.mode });
     setSelectedRunId(run.id);
@@ -409,7 +449,7 @@ export default function Dashboard() {
       [run.mode]: editableRun,
     }));
     setSelectedFile(null);
-    setError(null);
+    clearError();
     setSuccessMessage(null);
   };
 
@@ -423,7 +463,7 @@ export default function Dashboard() {
       [mode]: draft,
     }));
     setSelectedFile(null);
-    setError(null);
+    clearError();
     setSuccessMessage(null);
   };
 
@@ -445,7 +485,7 @@ export default function Dashboard() {
     }
 
     setSelectedFile(null);
-    setError(null);
+    clearError();
     setSuccessMessage(null);
   };
 
@@ -535,7 +575,7 @@ export default function Dashboard() {
         .catch((autosaveError) => {
           console.error("Autosave failed", autosaveError);
         });
-    }, 2200);
+    }, AUTOSAVE_DEBOUNCE_MS);
 
     return () => {
       window.clearTimeout(timeoutId);
@@ -570,7 +610,7 @@ export default function Dashboard() {
     if (!user) return;
 
     setIsSaving(true);
-    setError(null);
+    clearError();
     setSuccessMessage(null);
 
     try {
@@ -581,7 +621,7 @@ export default function Dashboard() {
       setSuccessMessage("Run saved to your workspace history.");
     } catch (err) {
       console.error("Failed to save workspace run", err);
-      setError("We couldn't save this run right now.");
+      setClassifiedError(err);
     } finally {
       setIsSaving(false);
     }
@@ -683,38 +723,51 @@ export default function Dashboard() {
 
       for (const slide of parsedSlides) {
         const pSlide = pptx.addSlide();
-        pSlide.background = { color: "1a1040" };
+        pSlide.background = { color: PPTX_BG_COLOR };
 
         const isTitle = slide.layout === "title";
         const isClosing = slide.layout === "closing";
         const isQuote = slide.layout === "quote";
+        const isTwoCol = slide.layout === "two-column";
 
         pSlide.addText(slide.title, {
           x: 0.5, y: isTitle ? 2.2 : 0.35,
           w: "90%", h: isTitle ? 1.5 : 1.0,
           fontSize: isTitle ? 40 : 26,
-          bold: true, color: "FFFFFF",
-          fontFace: "Calibri",
+          bold: true, color: PPTX_TITLE_COLOR,
+          fontFace: PPTX_FONT_FACE,
           align: isTitle || isClosing ? "center" : "left",
         });
 
         if (isQuote && slide.content.length > 0) {
           pSlide.addText(`"${slide.content[0]}"`, {
             x: 1.0, y: 2.0, w: "80%", h: 3.0,
-            fontSize: 22, italic: true, color: "C4B5FD",
-            fontFace: "Calibri", align: "center",
+            fontSize: 22, italic: true, color: PPTX_ACCENT_COLOR,
+            fontFace: PPTX_FONT_FACE, align: "center",
           });
+        } else if (isTwoCol && slide.content.length > 0) {
+          const mid = Math.ceil(slide.content.length / 2);
+          const leftItems = slide.content.slice(0, mid);
+          const rightItems = slide.content.slice(mid);
+          pSlide.addText(
+            leftItems.map((c) => ({ text: `${c}\n`, options: {} })),
+            { x: 0.5, y: 1.5, w: "43%", h: 5.5, fontSize: 16, color: PPTX_BODY_COLOR, fontFace: PPTX_FONT_FACE },
+          );
+          pSlide.addText(
+            rightItems.map((c) => ({ text: `${c}\n`, options: {} })),
+            { x: 5.2, y: 1.5, w: "43%", h: 5.5, fontSize: 16, color: PPTX_BODY_COLOR, fontFace: PPTX_FONT_FACE },
+          );
         } else if (!isTitle && !isClosing && slide.content.length > 0) {
           pSlide.addText(
             slide.content.map((c) => ({ text: `${c}\n`, options: {} })),
-            { x: 0.5, y: 1.5, w: "90%", h: 5.5, fontSize: 18, color: "E0D8FF", fontFace: "Calibri" },
+            { x: 0.5, y: 1.5, w: "90%", h: 5.5, fontSize: 18, color: PPTX_BODY_COLOR, fontFace: PPTX_FONT_FACE },
           );
         }
 
         if (isClosing && slide.content.length > 0) {
           pSlide.addText(slide.content[0], {
             x: 0.5, y: 3.8, w: "90%", h: 1.0,
-            fontSize: 20, color: "A78BFA", fontFace: "Calibri", align: "center",
+            fontSize: 20, color: PPTX_CLOSING_ACCENT_COLOR, fontFace: PPTX_FONT_FACE, align: "center",
           });
         }
       }
@@ -751,7 +804,7 @@ export default function Dashboard() {
     }
 
     setIsGenerating(true);
-    setError(null);
+    clearError();
     setSuccessMessage(null);
 
     try {
@@ -767,9 +820,9 @@ export default function Dashboard() {
           .join(". ");
 
         const imageResponse = await ai.models.generateImages({
-          model: "imagen-3.0-generate-001",
+          model: GEMINI_IMAGE_MODEL,
           prompt: imagePrompt,
-          config: { numberOfImages: 1, aspectRatio: "1:1" },
+          config: { numberOfImages: IMAGE_NUMBER_OF_IMAGES, aspectRatio: IMAGE_ASPECT_RATIO },
         });
 
         const imageBytes = imageResponse.generatedImages?.[0]?.image?.imageBytes;
@@ -809,7 +862,7 @@ export default function Dashboard() {
 
           const base64Audio = await readFileAsBase64(file);
           const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: GEMINI_TEXT_MODEL,
             contents: {
               parts: [
                 {
@@ -833,7 +886,7 @@ export default function Dashboard() {
           tokenCount = response.usageMetadata?.totalTokenCount ?? 0;
         } else {
           const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: GEMINI_TEXT_MODEL,
             contents: [
               {
                 role: "user",
@@ -882,9 +935,9 @@ export default function Dashboard() {
       }
     } catch (err) {
       console.error(`Failed to run ${activeMode}`, err);
+      setClassifiedError(err);
       const message =
         err instanceof Error ? err.message : "We couldn't complete that run.";
-      setError(message);
 
       try {
         await persistRun({
@@ -900,6 +953,28 @@ export default function Dashboard() {
       setIsGenerating(false);
     }
   };
+
+  // ⌘+Enter / Ctrl+Enter — trigger generation from anywhere on the page
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key !== "Enter") return;
+      // Don't fire when a modal is open
+      if (showPresetPicker || renameTargetRun || deleteTargetRun) return;
+      if (isGenerating || isSaving || Boolean(generationValidationMessage)) return;
+      e.preventDefault();
+      handleGenerate();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [
+    showPresetPicker,
+    renameTargetRun,
+    deleteTargetRun,
+    isGenerating,
+    isSaving,
+    generationValidationMessage,
+    handleGenerate,
+  ]);
 
   const handleOutputTransform = async (
     transform: "shorten" | "expand" | "tone",
@@ -920,22 +995,14 @@ export default function Dashboard() {
       return;
     }
 
-    const transformInstructionByType = {
-      shorten:
-        "Make this output around 30-40% shorter while preserving key meaning and action items.",
-      expand:
-        "Expand this output with practical detail, examples, and clearer structure while preserving the intent.",
-      tone: "Improve tone and readability so it sounds confident, practical, and natural without adding hype.",
-    } as const;
-
     try {
       setIsTransformingOutput(true);
-      setError(null);
+      clearError();
       setSuccessMessage(null);
 
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: GEMINI_TEXT_MODEL,
         contents: [
           {
             role: "user",
@@ -943,7 +1010,7 @@ export default function Dashboard() {
               {
                 text: [
                   "You are editing content inside AI Content Studio.",
-                  transformInstructionByType[transform],
+                  OUTPUT_TRANSFORM_INSTRUCTIONS[transform],
                   "Return only the transformed output with no extra commentary.",
                   editor.instructions.trim()
                     ? `Current guidance: ${editor.instructions.trim()}`
@@ -972,11 +1039,7 @@ export default function Dashboard() {
       setSuccessMessage("Output transformed and saved.");
     } catch (transformError) {
       console.error("Failed to transform output", transformError);
-      setError(
-        transformError instanceof Error
-          ? transformError.message
-          : "We couldn't transform this output right now.",
-      );
+      setClassifiedError(transformError);
     } finally {
       setIsTransformingOutput(false);
     }
@@ -1009,10 +1072,10 @@ export default function Dashboard() {
         [run.mode]: duplicatedDraft,
       }));
       setSuccessMessage("Run duplicated into a new editable draft.");
-      setError(null);
+      clearError();
     } catch (duplicateError) {
       console.error("Failed to duplicate run", duplicateError);
-      setError("We couldn't duplicate this run right now.");
+      setClassifiedError(duplicateError);
     } finally {
       setIsSaving(false);
     }
@@ -1046,11 +1109,11 @@ export default function Dashboard() {
       }
 
       setSuccessMessage("Run title updated.");
-      setError(null);
+      clearError();
       setRenameTargetRun(null);
     } catch (renameError) {
       console.error("Failed to rename run", renameError);
-      setError("We couldn't rename this run right now.");
+      setClassifiedError(renameError);
     } finally {
       setIsSaving(false);
     }
@@ -1075,21 +1138,21 @@ export default function Dashboard() {
       }
 
       setSuccessMessage("Run deleted from history.");
-      setError(null);
+      clearError();
       setDeleteTargetRun(null);
     } catch (deleteError) {
       console.error("Failed to delete run", deleteError);
-      setError("We couldn't delete this run right now.");
+      setClassifiedError(deleteError);
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="min-h-full overflow-x-hidden bg-[#f4ede4] px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+    <div className="min-h-full overflow-x-hidden px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
       <div className="mx-auto max-w-[1480px] space-y-4">
         {/* Compact hero */}
-        <section className="overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(135deg,#1a1623_0%,#2b2036_35%,#7c5cff_100%)] px-5 py-4 text-white shadow-[0_20px_60px_rgba(23,19,29,0.18)] sm:px-7 lg:px-8">
+        <section className="overflow-hidden rounded-[30px] border border-white/8 bg-[linear-gradient(135deg,#1a1623_0%,#2b2036_35%,#7c5cff_100%)] px-5 py-4 text-white shadow-[0_20px_60px_rgba(23,19,29,0.18)] sm:px-7 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#d4c6ff]">
@@ -1129,7 +1192,7 @@ export default function Dashboard() {
         </section>
 
         {/* Mode tab switcher */}
-        <div className="flex gap-1.5 rounded-[22px] border border-black/8 bg-white p-1.5 shadow-sm">
+        <div className="flex gap-1 overflow-x-auto rounded-[22px] border border-white/8 bg-[#13171f] p-1.5 shadow-sm">
           {TOOL_ORDER.map((mode) => {
             const Icon = MODE_ICONS[mode];
             const meta = WORKSPACE_TOOL_CONFIG[mode];
@@ -1139,10 +1202,10 @@ export default function Dashboard() {
                 key={mode}
                 type="button"
                 onClick={() => switchMode(mode)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-[18px] px-3 py-2.5 text-sm font-semibold transition ${
+                className={`flex flex-1 shrink-0 items-center justify-center gap-2 rounded-[18px] px-3 py-2.5 text-sm font-semibold transition ${
                   isActive
                     ? `border shadow-sm ${MODE_ACCENTS[mode]}`
-                    : "text-[#6e5e58] hover:bg-[#f9f6f2] hover:text-[#17131d]"
+                    : "text-white/45 hover:bg-white/6 hover:text-white/80"
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
@@ -1153,13 +1216,64 @@ export default function Dashboard() {
         </div>
 
         {/* Banners */}
-        {error && (
-          <div className="rounded-[22px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-            {error}
-          </div>
-        )}
+        {error && (() => {
+          const bannerConfig = {
+            credits: {
+              border: "border-amber-700/40",
+              bg: "bg-amber-950/50",
+              text: "text-amber-300",
+              Icon: CreditCard,
+              iconClass: "text-amber-400",
+            },
+            quota: {
+              border: "border-orange-700/40",
+              bg: "bg-orange-950/50",
+              text: "text-orange-300",
+              Icon: AlertTriangle,
+              iconClass: "text-orange-400",
+            },
+            network: {
+              border: "border-slate-600/40",
+              bg: "bg-slate-800/60",
+              text: "text-slate-300",
+              Icon: WifiOff,
+              iconClass: "text-slate-400",
+            },
+            auth: {
+              border: "border-purple-700/40",
+              bg: "bg-purple-950/50",
+              text: "text-purple-300",
+              Icon: ShieldAlert,
+              iconClass: "text-purple-400",
+            },
+            validation: {
+              border: "border-rose-700/40",
+              bg: "bg-rose-950/50",
+              text: "text-rose-300",
+              Icon: AlertTriangle,
+              iconClass: "text-rose-400",
+            },
+            unknown: {
+              border: "border-rose-700/40",
+              bg: "bg-rose-950/50",
+              text: "text-rose-300",
+              Icon: AlertTriangle,
+              iconClass: "text-rose-400",
+            },
+          };
+          const cfg = bannerConfig[errorKind ?? "unknown"];
+          const { Icon } = cfg;
+          return (
+            <div
+              className={`flex items-start gap-3 rounded-[22px] border ${cfg.border} ${cfg.bg} px-4 py-3 text-sm ${cfg.text}`}
+            >
+              <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${cfg.iconClass}`} />
+              <span>{error}</span>
+            </div>
+          );
+        })()}
         {successMessage && (
-          <div className="rounded-[22px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <div className="rounded-[22px] border border-emerald-700/40 bg-emerald-950/50 px-4 py-3 text-sm text-emerald-300">
             {successMessage}
           </div>
         )}
@@ -1177,16 +1291,16 @@ export default function Dashboard() {
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-current/75">
                     {modeMeta.eyebrow}
                   </p>
-                  <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[#17131d]">
+                  <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">
                     {modeMeta.label}
                   </h3>
-                  <p className="mt-3 text-sm leading-6 text-[#6e5e58]">
+                  <p className="mt-3 text-sm leading-6 text-white/55">
                     {modeMeta.description}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <p className="w-full text-xs text-[#6e5e58] lg:w-auto lg:pr-2 lg:pt-3">
+                  <p className="w-full text-xs text-white/55 lg:w-auto lg:pr-2 lg:pt-3">
                     {lastSavedAt
                       ? `Last saved ${lastSavedAt.toLocaleTimeString([], {
                           hour: "numeric",
@@ -1197,7 +1311,7 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => startNewRun(activeMode)}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-[#f0ecff] px-4 py-3 text-sm font-semibold text-[#5b3fc5] transition hover:bg-[#e8e2ff]"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-[#7c5cff]/15 px-4 py-3 text-sm font-semibold text-[#5b3fc5] transition hover:bg-[#e8e2ff]"
                   >
                     <Plus className="h-4 w-4" />
                     New run
@@ -1206,7 +1320,7 @@ export default function Dashboard() {
                     type="button"
                     onClick={handleSave}
                     disabled={isSaving || isGenerating || !isDirty}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-medium text-[#17131d] transition hover:border-[#7c5cff]/20 hover:bg-[#fffaf7] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-medium text-white transition hover:border-[#7c5cff]/20 hover:bg-[#0e1219] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSaving ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1215,34 +1329,45 @@ export default function Dashboard() {
                     )}
                     Save run
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleGenerate}
-                    disabled={
-                      isGenerating ||
-                      isSaving ||
-                      Boolean(generationValidationMessage)
-                    }
-                    className="inline-flex items-center gap-2 rounded-2xl bg-[#17131d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#2b2238] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isGenerating ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Wand2 className="h-4 w-4" />
-                    )}
-                    Run tool
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleGenerate}
+                      disabled={
+                        isGenerating ||
+                        isSaving ||
+                        Boolean(generationValidationMessage)
+                      }
+                      className="inline-flex items-center gap-2 rounded-2xl bg-[#17131d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#2b2238] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isGenerating ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Wand2 className="h-4 w-4" />
+                      )}
+                      Run tool
+                    </button>
+                    <span
+                      className="hidden text-xs text-white/40 sm:block"
+                      aria-hidden="true"
+                    >
+                      {typeof navigator !== "undefined" &&
+                      navigator.platform.toLowerCase().includes("mac")
+                        ? "⌘↵"
+                        : "Ctrl+↵"}
+                    </span>
+                  </div>
                 </div>
               </div>
             </section>
 
             {/* Input form */}
-            <section className="rounded-[30px] border border-black/8 bg-white p-5 shadow-sm">
+            <section className="rounded-[30px] border border-white/8 bg-[#13171f] p-5 shadow-sm">
               <div className="grid gap-5">
                 <div>
                   <label
                     htmlFor="workspace-run-title"
-                    className="mb-2 block text-sm font-semibold text-[#17131d]"
+                    className="mb-2 block text-sm font-semibold text-white"
                   >
                     Run title
                   </label>
@@ -1251,7 +1376,7 @@ export default function Dashboard() {
                     value={editor.title}
                     onChange={(e) => updateEditor({ title: e.target.value })}
                     placeholder={getDefaultWorkspaceRunTitle(activeMode)}
-                    className="w-full rounded-2xl border border-black/10 bg-[#fcfaf7] px-4 py-3 text-sm text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
+                    className="w-full rounded-2xl border border-white/10 bg-[#0e1219] px-4 py-3 text-sm text-white outline-none transition focus:border-[#7c5cff] focus:bg-[#1a2030]"
                   />
                 </div>
 
@@ -1259,7 +1384,7 @@ export default function Dashboard() {
                   <div>
                     <label
                       htmlFor="workspace-target-language"
-                      className="mb-2 block text-sm font-semibold text-[#17131d]"
+                      className="mb-2 block text-sm font-semibold text-white"
                     >
                       Target language
                     </label>
@@ -1270,10 +1395,10 @@ export default function Dashboard() {
                         updateEditor({ targetLanguage: e.target.value })
                       }
                       placeholder="Spanish, German, Ukrainian, French..."
-                      className="w-full rounded-2xl border border-black/10 bg-[#fcfaf7] px-4 py-3 text-sm text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
+                      className="w-full rounded-2xl border border-white/10 bg-[#0e1219] px-4 py-3 text-sm text-white outline-none transition focus:border-[#7c5cff] focus:bg-[#1a2030]"
                     />
                     {inlineTargetLanguageValidation && (
-                      <p className="mt-2 text-xs font-medium text-rose-700">
+                      <p className="mt-2 text-xs font-medium text-rose-400">
                         {inlineTargetLanguageValidation}
                       </p>
                     )}
@@ -1284,12 +1409,12 @@ export default function Dashboard() {
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <label
                       htmlFor="workspace-source-input"
-                      className="block text-sm font-semibold text-[#17131d]"
+                      className="block text-sm font-semibold text-white"
                     >
                       {modeMeta.inputLabel}
                     </label>
                     {activeMode !== "transcribe" && (
-                      <span className="text-xs text-[#8d7d74]">
+                      <span className="text-xs text-white/40">
                         {editor.sourceText.trim()
                           ? `${wordCount(editor.sourceText).toLocaleString()} words`
                           : "Saved with every run"}
@@ -1299,15 +1424,15 @@ export default function Dashboard() {
 
                   {activeMode === "transcribe" ? (
                     <div className="space-y-3">
-                      <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[28px] border border-dashed border-black/12 bg-[#fcfaf7] px-5 py-10 text-center transition hover:border-[#7c5cff]/35 hover:bg-white">
+                      <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[28px] border border-dashed border-white/12 bg-[#0e1219] px-5 py-10 text-center transition hover:border-[#7c5cff]/35 hover:bg-[#1a2030]">
                         <div className="rounded-full bg-[#17131d] p-4 text-white">
                           <FileAudio className="h-6 w-6" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-[#17131d]">
+                          <p className="text-sm font-semibold text-white">
                             Upload an audio file
                           </p>
-                          <p className="mt-1 text-sm text-[#6e5e58]">
+                          <p className="mt-1 text-sm text-white/55">
                             MP3, WAV, M4A, or another browser-supported audio
                             format.
                           </p>
@@ -1315,6 +1440,7 @@ export default function Dashboard() {
                         <input
                           type="file"
                           accept="audio/*"
+                          aria-label="Upload audio file for transcription"
                           className="hidden"
                           onChange={(e) =>
                             setSelectedFile(e.target.files?.[0] ?? null)
@@ -1323,11 +1449,11 @@ export default function Dashboard() {
                       </label>
 
                       {(selectedFile || editor.sourceFileName) && (
-                        <div className="rounded-[24px] border border-black/8 bg-[#fcfaf7] px-4 py-3 text-sm text-[#17131d]">
+                        <div className="rounded-[24px] border border-white/8 bg-[#0e1219] px-4 py-3 text-sm text-white">
                           <p className="font-semibold">
                             {selectedFile?.name || editor.sourceFileName}
                           </p>
-                          <p className="mt-1 text-[#6e5e58]">
+                          <p className="mt-1 text-white/55">
                             {selectedFile
                               ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB`
                               : "Saved file metadata from a previous run"}
@@ -1342,10 +1468,10 @@ export default function Dashboard() {
                           updateEditor({ sourceText: e.target.value })
                         }
                         placeholder={modeMeta.inputPlaceholder}
-                        className="min-h-[140px] w-full rounded-[28px] border border-black/10 bg-[#fcfaf7] px-4 py-4 text-sm leading-6 text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
+                        className="min-h-[140px] w-full rounded-[28px] border border-white/10 bg-[#0e1219] px-4 py-4 text-sm leading-6 text-white outline-none transition focus:border-[#7c5cff] focus:bg-[#1a2030]"
                       />
                       {inlineTranscribeValidation && (
-                        <p className="text-xs font-medium text-rose-700">
+                        <p className="text-xs font-medium text-rose-400">
                           {inlineTranscribeValidation}
                         </p>
                       )}
@@ -1359,10 +1485,10 @@ export default function Dashboard() {
                           updateEditor({ sourceText: e.target.value })
                         }
                         placeholder={modeMeta.inputPlaceholder}
-                        className="min-h-[260px] w-full rounded-[28px] border border-black/10 bg-[#fcfaf7] px-4 py-4 text-sm leading-6 text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
+                        className="min-h-[260px] w-full rounded-[28px] border border-white/10 bg-[#0e1219] px-4 py-4 text-sm leading-6 text-white outline-none transition focus:border-[#7c5cff] focus:bg-[#1a2030]"
                       />
                       {inlineSourceValidation && (
-                        <p className="mt-2 text-xs font-medium text-rose-700">
+                        <p className="mt-2 text-xs font-medium text-rose-400">
                           {inlineSourceValidation}
                         </p>
                       )}
@@ -1374,7 +1500,7 @@ export default function Dashboard() {
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <label
                       htmlFor="workspace-instructions-input"
-                      className="block text-sm font-semibold text-[#17131d]"
+                      className="block text-sm font-semibold text-white"
                     >
                       {modeMeta.instructionsLabel}
                     </label>
@@ -1384,7 +1510,7 @@ export default function Dashboard() {
                         setPresetSearch("");
                         setShowPresetPicker(true);
                       }}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-[#7c5cff]/25 bg-[#f6efff] px-3 py-1.5 text-xs font-semibold text-[#7c5cff] transition hover:bg-[#ede8ff]"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-[#7c5cff]/25 bg-[#7c5cff]/12 px-3 py-1.5 text-xs font-semibold text-[#7c5cff] transition hover:bg-[#7c5cff]/22"
                     >
                       <Sparkles className="h-3.5 w-3.5" />
                       Presets
@@ -1397,7 +1523,7 @@ export default function Dashboard() {
                       updateEditor({ instructions: e.target.value })
                     }
                     placeholder={modeMeta.instructionsPlaceholder}
-                    className="min-h-[140px] w-full rounded-[28px] border border-black/10 bg-[#fcfaf7] px-4 py-4 text-sm leading-6 text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
+                    className="min-h-[140px] w-full rounded-[28px] border border-white/10 bg-[#0e1219] px-4 py-4 text-sm leading-6 text-white outline-none transition focus:border-[#7c5cff] focus:bg-[#1a2030]"
                   />
                 </div>
 
@@ -1410,29 +1536,29 @@ export default function Dashboard() {
                       onClick={() => setShowPresetPicker(false)}
                       className="absolute inset-0 bg-black/35 backdrop-blur-sm"
                     />
-                    <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
-                      <div className="border-b border-black/6 px-5 py-4">
+                    <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-[28px] border border-white/8 bg-[#13171f] shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+                      <div className="border-b border-white/6 px-5 py-4">
                         <div className="flex items-center justify-between gap-3">
-                          <h3 className="text-base font-semibold text-[#17131d]">
+                          <h3 className="text-base font-semibold text-white">
                             Choose a preset
                           </h3>
                           <button
                             type="button"
                             onClick={() => setShowPresetPicker(false)}
-                            className="rounded-xl border border-black/8 p-1.5 text-[#6e5e58] transition hover:bg-[#f9f6f2]"
+                            className="rounded-xl border border-white/8 p-1.5 text-white/55 transition hover:bg-[#1a2030]"
                           >
                             <X className="h-4 w-4" />
                           </button>
                         </div>
                         <div className="relative mt-3">
-                          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d7d74]" />
+                          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
                           <input
                             autoFocus
                             type="text"
                             placeholder="Search presets..."
                             value={presetSearch}
                             onChange={(e) => setPresetSearch(e.target.value)}
-                            className="w-full rounded-2xl border border-black/10 bg-[#fcfaf7] py-2.5 pl-9 pr-4 text-sm text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
+                            className="w-full rounded-2xl border border-white/10 bg-[#0e1219] py-2.5 pl-9 pr-4 text-sm text-white outline-none transition focus:border-[#7c5cff] focus:bg-[#1a2030]"
                           />
                         </div>
                       </div>
@@ -1454,12 +1580,12 @@ export default function Dashboard() {
                                 updateEditor({ instructions: preset.content });
                                 setShowPresetPicker(false);
                               }}
-                              className="w-full rounded-[20px] border border-transparent px-4 py-3 text-left transition hover:border-[#7c5cff]/15 hover:bg-[#f6efff]"
+                              className="w-full rounded-[20px] border border-transparent px-4 py-3 text-left transition hover:border-[#7c5cff]/15 hover:bg-[#7c5cff]/12"
                             >
-                              <p className="text-sm font-semibold text-[#17131d]">
+                              <p className="text-sm font-semibold text-white">
                                 {preset.title}
                               </p>
-                              <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-[#6e5e58]">
+                              <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-white/55">
                                 {preset.description}
                               </p>
                             </button>
@@ -1475,7 +1601,7 @@ export default function Dashboard() {
           {/* Right column: output + history */}
           <div className="space-y-4 xl:sticky xl:top-[7.25rem] xl:self-start">
             {/* Output panel */}
-            <section className="overflow-hidden rounded-[30px] border border-black/8 bg-white shadow-sm">
+            <section className="overflow-hidden rounded-[30px] border border-white/8 bg-[#13171f] shadow-sm">
               <div
                 className={`bg-gradient-to-br px-5 py-5 text-white ${OUTPUT_PANEL_ACCENTS[activeMode]}`}
               >
@@ -1495,13 +1621,13 @@ export default function Dashboard() {
               </div>
 
               <div className="space-y-4 p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-black/6 bg-[#fcfaf7] px-4 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-white/6 bg-[#0e1219] px-4 py-4">
                   <div>
-                    <p className="text-sm font-semibold text-[#17131d]">
+                    <p className="text-sm font-semibold text-white">
                       {editor.title.trim() ||
                         getDefaultWorkspaceRunTitle(activeMode)}
                     </p>
-                    <p className="mt-1 text-sm text-[#6e5e58]">
+                    <p className="mt-1 text-sm text-white/55">
                       {activeRun
                         ? `Updated ${formatUpdatedAt(activeRun)}`
                         : "Not saved yet"}
@@ -1509,18 +1635,18 @@ export default function Dashboard() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-black/8 bg-white px-3 py-1.5 text-xs font-medium text-[#6e5e58]">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-white/8 px-3 py-1.5 text-xs font-medium text-white/55">
                       <Coins className="h-3.5 w-3.5 text-[#7c5cff]" />
                       {modeMeta.cost} credits
                     </span>
                     {editor.status === "completed" && (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-700/40 bg-emerald-900/30 px-3 py-1.5 text-xs font-medium text-emerald-400">
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         Done
                       </span>
                     )}
                     {editor.status === "failed" && (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-100 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-700/40 bg-rose-900/30 px-3 py-1.5 text-xs font-medium text-rose-400">
                         <AlertTriangle className="h-3.5 w-3.5" />
                         Failed
                       </span>
@@ -1528,14 +1654,14 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="overflow-hidden rounded-[28px] border border-black/8 bg-[#fffdf9]">
+                <div className="overflow-hidden rounded-[28px] border border-white/8 bg-[#0e1219]">
                   {isGenerating ? (
                     <div className="flex min-h-[420px] flex-col items-center justify-center p-5 text-center">
                       <Loader2 className="h-10 w-10 animate-spin text-[#7c5cff]" />
-                      <p className="mt-4 text-base font-semibold text-[#17131d]">
+                      <p className="mt-4 text-base font-semibold text-white">
                         Running {modeMeta.label.toLowerCase()}...
                       </p>
-                      <p className="mt-2 max-w-sm text-sm leading-6 text-[#6e5e58]">
+                      <p className="mt-2 max-w-sm text-sm leading-6 text-white/55">
                         {activeMode === "generate_image"
                           ? "Your image will be ready in a few seconds."
                           : "The result will be saved into your workspace history as soon as the model responds."}
@@ -1552,12 +1678,13 @@ export default function Dashboard() {
                           className="w-full rounded-t-[28px] object-cover"
                         />
                         <div className="flex items-center justify-between gap-3 px-5 py-4">
-                          <p className="text-xs text-[#8d7d74]">
+                          <p className="text-xs text-white/40">
                             Session only — download to keep this image.
                           </p>
                           <button
                             type="button"
                             onClick={handleDownloadImage}
+                            aria-label="Download generated image as JPG"
                             className="inline-flex items-center gap-1.5 rounded-xl bg-[#17131d] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#2c2438]"
                           >
                             <Download className="h-3.5 w-3.5" />
@@ -1568,15 +1695,15 @@ export default function Dashboard() {
                     ) : editor.status === "completed" ? (
                       <div className="flex min-h-[420px] flex-col items-center justify-center p-5 text-center">
                         <ImageIcon className="h-10 w-10 text-[#c8d8ea]" />
-                        <p className="mt-4 text-sm font-semibold text-[#17131d]">Image not available</p>
-                        <p className="mt-2 max-w-xs text-sm text-[#6e5e58]">
+                        <p className="mt-4 text-sm font-semibold text-white">Image not available</p>
+                        <p className="mt-2 max-w-xs text-sm text-white/55">
                           Images aren't stored in history. Generate a new one or download immediately after generation.
                         </p>
                       </div>
                     ) : (
                       <div className="flex min-h-[420px] flex-col items-start justify-center p-5">
-                        <p className="text-sm font-semibold text-[#17131d]">No image yet</p>
-                        <p className="mt-2 max-w-md text-sm leading-6 text-[#6e5e58]">
+                        <p className="text-sm font-semibold text-white">No image yet</p>
+                        <p className="mt-2 max-w-md text-sm leading-6 text-white/55">
                           Describe what you want to see, then run the tool. Images are available for download during this session.
                         </p>
                       </div>
@@ -1585,8 +1712,8 @@ export default function Dashboard() {
                   ) : activeMode === "create_document" && editor.outputText.trim() ? (
                     /* ── Document output ── */
                     <>
-                      <div className="flex items-center justify-between gap-3 border-b border-black/6 px-5 py-3">
-                        <span className="text-xs text-[#8d7d74]">
+                      <div className="flex items-center justify-between gap-3 border-b border-white/6 px-5 py-3">
+                        <span className="text-xs text-white/40">
                           {wordCount(editor.outputText).toLocaleString()} words
                           &middot; {editor.outputText.length.toLocaleString()} chars
                           {editor.tokenCount > 0 && <> &middot; {editor.tokenCount.toLocaleString()} tokens</>}
@@ -1595,7 +1722,8 @@ export default function Dashboard() {
                           <button
                             type="button"
                             onClick={handleCopyOutput}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2]"
+                            aria-label={copiedOutput ? "Output copied to clipboard" : "Copy document to clipboard"}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/8 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#1a2030]"
                           >
                             {copiedOutput ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                             {copiedOutput ? "Copied!" : "Copy"}
@@ -1604,7 +1732,8 @@ export default function Dashboard() {
                             type="button"
                             onClick={handleDownloadDocx}
                             disabled={docDownloading}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2] disabled:opacity-60"
+                            aria-label="Download document as DOCX"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/8 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#1a2030] disabled:opacity-60"
                           >
                             {docDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                             DOCX
@@ -1613,14 +1742,15 @@ export default function Dashboard() {
                             type="button"
                             onClick={handleDownloadPdf}
                             disabled={docDownloading}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2] disabled:opacity-60"
+                            aria-label="Download document as PDF"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/8 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#1a2030] disabled:opacity-60"
                           >
                             {docDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                             PDF
                           </button>
                         </div>
                       </div>
-                      <div className="prose prose-sm max-w-none p-5 [&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-[#17131d] [&_h1]:mt-0 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-[#17131d] [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-[#17131d] [&_p]:text-sm [&_p]:leading-7 [&_p]:text-[#17131d] [&_ul]:text-sm [&_ul]:leading-7 [&_li]:text-[#17131d] [&_strong]:text-[#17131d]">
+                      <div className="prose prose-sm max-w-none p-5 [&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-0 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-white [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-white [&_p]:text-sm [&_p]:leading-7 [&_p]:text-white [&_ul]:text-sm [&_ul]:leading-7 [&_li]:text-white [&_strong]:text-white">
                         <ReactMarkdown>{editor.outputText}</ReactMarkdown>
                       </div>
                     </>
@@ -1634,7 +1764,7 @@ export default function Dashboard() {
                       return (
                         <>
                           {/* Slide canvas */}
-                          <div className="relative aspect-video overflow-hidden rounded-t-[28px] bg-gradient-to-br from-[#1a1040] via-[#2d1258] to-[#4a1a80]">
+                          <div className={`relative aspect-video overflow-hidden rounded-t-[28px] bg-gradient-to-br ${SLIDE_LAYOUT_GRADIENTS[slide.layout]}`}>
                             {slide.layout === "title" || slide.layout === "closing" ? (
                               <div className="flex h-full flex-col items-center justify-center px-10 text-center">
                                 <p className="text-4xl font-bold leading-tight text-white">{slide.title}</p>
@@ -1648,6 +1778,35 @@ export default function Dashboard() {
                                 <p className="text-2xl italic leading-relaxed text-purple-100">
                                   &ldquo;{slide.content[0]}&rdquo;
                                 </p>
+                              </div>
+                            ) : slide.layout === "two-column" ? (
+                              <div className="flex h-full flex-col px-10 py-8">
+                                <p className="mb-5 text-xl font-bold text-white">{slide.title}</p>
+                                <div className="grid flex-1 grid-cols-2 gap-6 overflow-hidden">
+                                  {(() => {
+                                    const mid = Math.ceil(slide.content.length / 2);
+                                    return (
+                                      <>
+                                        <ul className="space-y-2 overflow-hidden">
+                                          {slide.content.slice(0, mid).map((item, i) => (
+                                            <li key={i} className="flex items-start gap-2 text-sm leading-5 text-purple-100">
+                                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-purple-400" />
+                                              {item}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                        <ul className="space-y-2 overflow-hidden border-l border-white/10 pl-6">
+                                          {slide.content.slice(mid).map((item, i) => (
+                                            <li key={i} className="flex items-start gap-2 text-sm leading-5 text-indigo-200">
+                                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-400" />
+                                              {item}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </>
+                                    );
+                                  })()}
+                                </div>
                               </div>
                             ) : (
                               <div className="flex h-full flex-col justify-start px-10 py-8">
@@ -1669,13 +1828,14 @@ export default function Dashboard() {
                           </div>
 
                           {/* Navigation row */}
-                          <div className="flex items-center justify-between gap-3 border-b border-black/6 px-4 py-3">
+                          <div className="flex items-center justify-between gap-3 border-b border-white/6 px-4 py-3">
                             <div className="flex items-center gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => setCurrentSlideIndex((i) => Math.max(0, i - 1))}
                                 disabled={isFirst}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-black/10 bg-white transition hover:bg-[#f9f6f2] disabled:opacity-40"
+                                aria-label="Previous slide"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/8 transition hover:bg-[#1a2030] disabled:opacity-40"
                               >
                                 <ChevronLeft className="h-4 w-4" />
                               </button>
@@ -1683,11 +1843,12 @@ export default function Dashboard() {
                                 type="button"
                                 onClick={() => setCurrentSlideIndex((i) => Math.min(parsedSlides.length - 1, i + 1))}
                                 disabled={isLast}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-black/10 bg-white transition hover:bg-[#f9f6f2] disabled:opacity-40"
+                                aria-label="Next slide"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/8 transition hover:bg-[#1a2030] disabled:opacity-40"
                               >
                                 <ChevronRight className="h-4 w-4" />
                               </button>
-                              <span className="ml-1 text-xs text-[#8d7d74]">
+                              <span className="ml-1 text-xs text-white/40">
                                 {parsedSlides.length} slides
                                 {editor.tokenCount > 0 && <> &middot; {editor.tokenCount.toLocaleString()} tokens</>}
                               </span>
@@ -1696,7 +1857,7 @@ export default function Dashboard() {
                               <button
                                 type="button"
                                 onClick={() => setShowSlideNotes((v) => !v)}
-                                className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${showSlideNotes ? "border-[#7c5cff]/25 bg-[#f0ecff] text-[#5b3fc5]" : "border-black/10 bg-white text-[#6e5e58] hover:bg-[#f9f6f2]"}`}
+                                className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${showSlideNotes ? "border-[#7c5cff]/25 bg-[#7c5cff]/15 text-purple-300" : "border-white/10 bg-white/8 text-white/55 hover:bg-[#1a2030]"}`}
                               >
                                 Notes
                               </button>
@@ -1704,6 +1865,7 @@ export default function Dashboard() {
                                 type="button"
                                 onClick={handleDownloadPptx}
                                 disabled={slideDownloading}
+                                aria-label="Download presentation as PPTX"
                                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#17131d] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#2c2438] disabled:opacity-60"
                               >
                                 {slideDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
@@ -1714,9 +1876,9 @@ export default function Dashboard() {
 
                           {/* Speaker notes */}
                           {showSlideNotes && slide.notes && (
-                            <div className="border-b border-black/6 bg-[#faf8f5] px-5 py-3">
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8d7d74]">Speaker notes</p>
-                              <p className="mt-1.5 text-sm leading-6 text-[#6e5e58]">{slide.notes}</p>
+                            <div className="border-b border-white/6 bg-[#0e1219] px-5 py-3">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">Speaker notes</p>
+                              <p className="mt-1.5 text-sm leading-6 text-white/55">{slide.notes}</p>
                             </div>
                           )}
 
@@ -1727,10 +1889,11 @@ export default function Dashboard() {
                                 key={i}
                                 type="button"
                                 onClick={() => setCurrentSlideIndex(i)}
+                                aria-label={`Go to slide ${i + 1}: ${s.title}`}
+                                aria-current={i === currentSlideIndex ? "true" : undefined}
                                 className={`shrink-0 rounded-lg overflow-hidden border-2 transition ${i === currentSlideIndex ? "border-[#7c5cff]" : "border-transparent hover:border-black/15"}`}
-                                title={s.title}
                               >
-                                <div className="flex h-10 w-16 items-center justify-center bg-gradient-to-br from-[#1a1040] to-[#4a1a80]">
+                                <div className={`flex h-10 w-16 items-center justify-center bg-gradient-to-br ${SLIDE_LAYOUT_GRADIENTS[s.layout]}`}>
                                   <span className="truncate px-1 text-[7px] font-semibold text-white/80">{s.title}</span>
                                 </div>
                               </button>
@@ -1743,8 +1906,8 @@ export default function Dashboard() {
                   ) : editor.outputText.trim() ? (
                     /* ── Default text output ── */
                     <>
-                      <div className="flex items-center justify-between gap-3 border-b border-black/6 px-5 py-3">
-                        <span className="text-xs text-[#8d7d74]">
+                      <div className="flex items-center justify-between gap-3 border-b border-white/6 px-5 py-3">
+                        <span className="text-xs text-white/40">
                           {wordCount(editor.outputText).toLocaleString()} words
                           &middot; {editor.outputText.length.toLocaleString()}{" "}
                           chars
@@ -1762,7 +1925,8 @@ export default function Dashboard() {
                             disabled={
                               isGenerating || isSaving || isTransformingOutput
                             }
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2] disabled:cursor-not-allowed disabled:opacity-60"
+                            aria-label="Shorten output"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/8 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#1a2030] disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {isTransformingOutput ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1777,7 +1941,8 @@ export default function Dashboard() {
                             disabled={
                               isGenerating || isSaving || isTransformingOutput
                             }
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2] disabled:cursor-not-allowed disabled:opacity-60"
+                            aria-label="Expand output with more detail"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/8 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#1a2030] disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             <Wand2 className="h-3.5 w-3.5" />
                             Expand
@@ -1788,7 +1953,8 @@ export default function Dashboard() {
                             disabled={
                               isGenerating || isSaving || isTransformingOutput
                             }
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2] disabled:cursor-not-allowed disabled:opacity-60"
+                            aria-label="Improve tone and readability"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/8 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#1a2030] disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             <Wand2 className="h-3.5 w-3.5" />
                             Improve tone
@@ -1796,7 +1962,8 @@ export default function Dashboard() {
                           <button
                             type="button"
                             onClick={handleCopyOutput}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-[#17131d] transition hover:bg-[#f9f6f2]"
+                            aria-label={copiedOutput ? "Output copied to clipboard" : "Copy output to clipboard"}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/8 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#1a2030]"
                           >
                             {copiedOutput ? (
                               <Check className="h-3.5 w-3.5 text-emerald-600" />
@@ -1812,15 +1979,15 @@ export default function Dashboard() {
                         onChange={(e) =>
                           updateEditor({ outputText: e.target.value })
                         }
-                        className="min-h-[360px] w-full resize-none bg-transparent p-5 font-sans text-sm leading-7 text-[#17131d] outline-none"
+                        className="min-h-[360px] w-full resize-none bg-transparent p-5 font-sans text-sm leading-7 text-white outline-none"
                       />
                     </>
                   ) : (
                     <div className="flex min-h-[420px] flex-col items-start justify-center p-5">
-                      <p className="text-sm font-semibold text-[#17131d]">
+                      <p className="text-sm font-semibold text-white">
                         No output yet
                       </p>
-                      <p className="mt-2 max-w-md text-sm leading-6 text-[#6e5e58]">
+                      <p className="mt-2 max-w-md text-sm leading-6 text-white/55">
                         Fill the editor, run the tool, and the generated result
                         will appear here and stay connected to this saved run.
                       </p>
@@ -1829,7 +1996,7 @@ export default function Dashboard() {
                 </div>
 
                 {editor.lastError && (
-                  <div className="rounded-[24px] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">
+                  <div className="rounded-[24px] border border-rose-700/40 bg-rose-950/50 px-4 py-4 text-sm text-rose-300">
                     Last saved error: {editor.lastError}
                   </div>
                 )}
@@ -1837,13 +2004,13 @@ export default function Dashboard() {
             </section>
 
             {/* History panel */}
-            <section className="rounded-[30px] border border-black/8 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-3 border-b border-black/6 pb-4">
+            <section className="rounded-[30px] border border-white/8 bg-[#13171f] p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3 border-b border-white/6 pb-4">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c5cff]">
                     Saved history
                   </p>
-                  <p className="mt-2 text-sm text-[#6e5e58]">
+                  <p className="mt-2 text-sm text-white/55">
                     {filteredDisplayedRuns.length}{" "}
                     {filteredDisplayedRuns.length === 1 ? "run" : "runs"}
                     {showAllRuns
@@ -1857,8 +2024,8 @@ export default function Dashboard() {
                     onClick={() => setShowAllRuns((v) => !v)}
                     className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
                       showAllRuns
-                        ? "border-[#7c5cff]/25 bg-[#f0ecff] text-[#5b3fc5]"
-                        : "border-black/10 bg-[#fcfaf7] text-[#6e5e58] hover:bg-white hover:text-[#17131d]"
+                        ? "border-[#7c5cff]/25 bg-[#7c5cff]/15 text-[#5b3fc5]"
+                        : "border-white/10 bg-[#0e1219] text-white/55 hover:bg-[#1a2030] hover:text-white"
                     }`}
                   >
                     {showAllRuns ? "This tool" : "All tools"}
@@ -1866,7 +2033,7 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => startNewRun(activeMode)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-[#17131d] text-white transition hover:bg-[#2c2438]"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-[#17131d] text-white transition hover:bg-[#2c2438]"
                     aria-label={`Start a new ${modeMeta.label.toLowerCase()} run`}
                   >
                     <Plus className="h-4 w-4" />
@@ -1876,14 +2043,14 @@ export default function Dashboard() {
 
               <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <label className="relative block">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d7d74]" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
                   <input
                     value={historySearchQuery}
                     onChange={(event) =>
                       setHistorySearchQuery(event.target.value)
                     }
                     placeholder="Search titles, source text, or output"
-                    className="w-full rounded-xl border border-black/10 bg-[#fcfaf7] py-2.5 pl-9 pr-3 text-sm text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
+                    className="w-full rounded-xl border border-white/10 bg-[#0e1219] py-2.5 pl-9 pr-3 text-sm text-white outline-none transition focus:border-[#7c5cff] focus:bg-[#1a2030]"
                   />
                 </label>
 
@@ -1898,7 +2065,7 @@ export default function Dashboard() {
                         | "failed",
                     )
                   }
-                  className="rounded-xl border border-black/10 bg-[#fcfaf7] px-3 py-2.5 text-sm text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
+                  className="rounded-xl border border-white/10 bg-[#0e1219] px-3 py-2.5 text-sm text-white outline-none transition focus:border-[#7c5cff] focus:bg-[#1a2030]"
                 >
                   <option value="all">All statuses</option>
                   <option value="draft">Draft</option>
@@ -1918,7 +2085,7 @@ export default function Dashboard() {
                       className={`w-full rounded-[24px] border p-4 text-left transition ${
                         isSelected
                           ? `${MODE_ACCENTS[run.mode]} shadow-sm`
-                          : "border-black/8 bg-[#fcfaf7] hover:border-[#7c5cff]/20 hover:bg-white"
+                          : "border-white/8 bg-[#0e1219] hover:border-[#7c5cff]/20 hover:bg-[#1a2030]"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -1927,14 +2094,25 @@ export default function Dashboard() {
                           onClick={() => selectRun(run)}
                           className="flex min-w-0 flex-1 items-start gap-3 text-left"
                         >
-                          <div className="rounded-2xl bg-white/80 p-2 text-current shadow-sm">
+                          <div className="rounded-2xl bg-white/10 p-2 text-current shadow-sm">
                             <Icon className="h-4 w-4" />
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-[#17131d]">
-                              {run.title}
-                            </p>
-                            <p className="mt-1 text-xs text-[#6e5e58]">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openRenameDialog(run);
+                              }}
+                              aria-label={`Rename "${run.title}"`}
+                              className="group/title flex min-w-0 items-center gap-1 text-left"
+                            >
+                              <p className="truncate cursor-text text-sm font-semibold text-white">
+                                {run.title}
+                              </p>
+                              <Pencil className="h-3 w-3 shrink-0 text-white/40 opacity-0 transition-opacity group-hover/title:opacity-100" />
+                            </button>
+                            <p className="mt-1 text-xs text-white/55">
                               {formatUpdatedAt(run)}
                             </p>
                           </div>
@@ -1944,10 +2122,10 @@ export default function Dashboard() {
                           <span
                             className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
                               run.status === "completed"
-                                ? "bg-emerald-100 text-emerald-700"
+                                ? "bg-emerald-900/40 text-emerald-400"
                                 : run.status === "failed"
-                                  ? "bg-rose-100 text-rose-700"
-                                  : "bg-slate-100 text-slate-700"
+                                  ? "bg-rose-900/40 text-rose-400"
+                                  : "bg-slate-800/60 text-slate-400"
                             }`}
                           >
                             {formatStatus(run.status)}
@@ -1955,7 +2133,7 @@ export default function Dashboard() {
                           <button
                             type="button"
                             onClick={() => handleDuplicateRun(run)}
-                            className="rounded-lg border border-black/10 bg-white p-1.5 text-[#6e5e58] transition hover:text-[#17131d]"
+                            className="rounded-lg border border-white/10 bg-white/8 p-1.5 text-white/55 transition hover:text-white"
                             aria-label={`Duplicate ${run.title}`}
                             title="Duplicate"
                           >
@@ -1964,7 +2142,7 @@ export default function Dashboard() {
                           <button
                             type="button"
                             onClick={() => openRenameDialog(run)}
-                            className="rounded-lg border border-black/10 bg-white p-1.5 text-[#6e5e58] transition hover:text-[#17131d]"
+                            className="rounded-lg border border-white/10 bg-white/8 p-1.5 text-white/55 transition hover:text-white"
                             aria-label={`Rename ${run.title}`}
                             title="Rename"
                           >
@@ -1973,7 +2151,7 @@ export default function Dashboard() {
                           <button
                             type="button"
                             onClick={() => openDeleteDialog(run)}
-                            className="rounded-lg border border-black/10 bg-white p-1.5 text-[#6e5e58] transition hover:text-rose-700"
+                            className="rounded-lg border border-white/10 bg-white/8 p-1.5 text-white/55 transition hover:text-rose-700"
                             aria-label={`Delete ${run.title}`}
                             title="Delete"
                           >
@@ -1988,7 +2166,7 @@ export default function Dashboard() {
                           onClick={() => selectRun(run)}
                           className="mt-3 block w-full text-left"
                         >
-                          <p className="line-clamp-3 text-sm leading-6 text-[#6e5e58]">
+                          <p className="line-clamp-3 text-sm leading-6 text-white/55">
                             {run.outputText || run.sourceText || run.lastError}
                           </p>
                         </button>
@@ -1998,17 +2176,39 @@ export default function Dashboard() {
                 })}
 
                 {!filteredDisplayedRuns.length && !isLoading && (
-                  <div className="rounded-[24px] border border-dashed border-black/10 bg-[#fcfaf7] px-4 py-6 text-sm text-[#6e5e58]">
-                    {displayedRuns.length
-                      ? "No runs match your current search or status filter."
-                      : showAllRuns
-                        ? "No saved runs yet. Start a new run and the history will fill automatically."
-                        : "No saved runs for this tool yet. Start a new run and the history panel will fill automatically."}
-                  </div>
+                  displayedRuns.length ? (
+                    /* Filter-no-results state */
+                    <div className="rounded-[24px] border border-dashed border-white/10 bg-[#0e1219] px-4 py-6 text-sm text-white/55">
+                      No runs match your current search or status filter.
+                    </div>
+                  ) : (
+                    /* True empty state — no runs for this tool yet */
+                    <div className="flex flex-col items-center gap-3 rounded-[24px] border border-dashed border-white/10 bg-[#0e1219] px-4 py-10 text-center">
+                      <div className={`rounded-2xl p-3 ${MODE_ACCENTS[activeMode]}`}>
+                        <ModeIcon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">
+                          No {modeMeta.label.toLowerCase()} runs yet
+                        </p>
+                        <p className="mt-1 max-w-[220px] text-xs leading-5 text-white/55">
+                          {modeMeta.description}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => startNewRun(activeMode)}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#17131d] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#2c2438]"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Start first run
+                      </button>
+                    </div>
+                  )
                 )}
 
                 {isLoading && (
-                  <div className="rounded-[24px] border border-dashed border-black/10 bg-[#fcfaf7] px-4 py-6 text-center text-sm text-[#6e5e58]">
+                  <div className="rounded-[24px] border border-dashed border-white/10 bg-[#0e1219] px-4 py-6 text-center text-sm text-white/55">
                     <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin text-[#7c5cff]" />
                     Loading workspace history...
                   </div>
@@ -2026,34 +2226,34 @@ export default function Dashboard() {
               onClick={() => setRenameTargetRun(null)}
               className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
             />
-            <div className="relative z-10 w-full max-w-md rounded-[28px] border border-black/8 bg-white p-6 shadow-[0_24px_80px_rgba(23,19,29,0.22)]">
+            <div className="relative z-10 w-full max-w-md rounded-[28px] border border-white/8 bg-[#13171f] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c5cff]">
                     Rename run
                   </p>
-                  <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[#17131d]">
+                  <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-white">
                     Update history label
                   </h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setRenameTargetRun(null)}
-                  className="rounded-full border border-black/10 p-2 text-[#6e5e58] transition hover:text-[#17131d]"
+                  className="rounded-full border border-white/10 p-2 text-white/55 transition hover:text-white"
                   aria-label="Close rename dialog"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              <p className="mt-3 text-sm leading-6 text-[#6e5e58]">
+              <p className="mt-3 text-sm leading-6 text-white/55">
                 Give this run a clearer label so it is easier to find later in
                 history.
               </p>
 
               <label
                 htmlFor="rename-run-input"
-                className="mt-5 block text-sm font-semibold text-[#17131d]"
+                className="mt-5 block text-sm font-semibold text-white"
               >
                 Run title
               </label>
@@ -2061,7 +2261,7 @@ export default function Dashboard() {
                 id="rename-run-input"
                 value={renameValue}
                 onChange={(event) => setRenameValue(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf7] px-4 py-3 text-sm text-[#17131d] outline-none transition focus:border-[#7c5cff] focus:bg-white"
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-[#0e1219] px-4 py-3 text-sm text-white outline-none transition focus:border-[#7c5cff] focus:bg-[#1a2030]"
                 placeholder="Enter a run title"
               />
 
@@ -2069,7 +2269,7 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={() => setRenameTargetRun(null)}
-                  className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-medium text-[#17131d] transition hover:bg-[#fcfaf7]"
+                  className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-medium text-white transition hover:bg-[#0e1219]"
                 >
                   Cancel
                 </button>
@@ -2094,17 +2294,17 @@ export default function Dashboard() {
               onClick={() => setDeleteTargetRun(null)}
               className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
             />
-            <div className="relative z-10 w-full max-w-md rounded-[28px] border border-rose-100 bg-white p-6 shadow-[0_24px_80px_rgba(23,19,29,0.22)]">
+            <div className="relative z-10 w-full max-w-md rounded-[28px] border border-rose-900/40 bg-[#13171f] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-2xl bg-rose-50 p-3 text-rose-700">
+                  <div className="rounded-2xl bg-rose-900/40 p-3 text-rose-400">
                     <AlertTriangle className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-700">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-400">
                       Delete run
                     </p>
-                    <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[#17131d]">
+                    <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-white">
                       Remove from history
                     </h3>
                   </div>
@@ -2112,16 +2312,16 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={() => setDeleteTargetRun(null)}
-                  className="rounded-full border border-black/10 p-2 text-[#6e5e58] transition hover:text-[#17131d]"
+                  className="rounded-full border border-white/10 p-2 text-white/55 transition hover:text-white"
                   aria-label="Close delete dialog"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              <p className="mt-4 text-sm leading-6 text-[#6e5e58]">
+              <p className="mt-4 text-sm leading-6 text-white/55">
                 Delete{" "}
-                <span className="font-semibold text-[#17131d]">
+                <span className="font-semibold text-white">
                   {deleteTargetRun.title}
                 </span>{" "}
                 from history. This action cannot be undone.
@@ -2131,7 +2331,7 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={() => setDeleteTargetRun(null)}
-                  className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-medium text-[#17131d] transition hover:bg-[#fcfaf7]"
+                  className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-medium text-white transition hover:bg-[#0e1219]"
                 >
                   Cancel
                 </button>

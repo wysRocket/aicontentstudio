@@ -27,8 +27,51 @@ export interface WorkspaceRunRecord {
   sourceFileName: string;
   sourceMimeType: string;
   lastError: string;
+  /** Compressed JPEG thumbnail for image runs (≤100 KB base64 data URI). Not stored for other modes. */
+  thumbnailBase64?: string | null;
   createdAt?: Timestamp | null;
   updatedAt?: Timestamp | null;
+}
+
+/**
+ * Compress a full-size image data URL to a JPEG thumbnail suitable for
+ * storage in Firestore (target ≤ maxSizeBytes, default 90 KB).
+ * Scales down to at most maxDimension px on the longest side first, then
+ * reduces JPEG quality until the size target is met.
+ */
+export async function compressImageToThumbnail(
+  dataUrl: string,
+  maxSizeBytes = 90 * 1024,
+  maxDimension = 400,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Canvas 2D context unavailable"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // Reduce quality until we're under the size target
+      let quality = 0.8;
+      let result = canvas.toDataURL("image/jpeg", quality);
+      while (result.length > maxSizeBytes * 1.37 && quality > 0.1) {
+        quality = Math.max(0.1, quality - 0.1);
+        result = canvas.toDataURL("image/jpeg", quality);
+      }
+
+      resolve(result);
+    };
+    img.onerror = () => reject(new Error("Failed to load image for thumbnail compression"));
+    img.src = dataUrl;
+  });
 }
 
 export type WorkspaceRunInput = Omit<
@@ -216,6 +259,7 @@ export function createWorkspaceRunDraft(
     sourceFileName: overrides.sourceFileName ?? "",
     sourceMimeType: overrides.sourceMimeType ?? "",
     lastError: overrides.lastError ?? "",
+    thumbnailBase64: overrides.thumbnailBase64 ?? null,
   };
 }
 

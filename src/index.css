@@ -229,6 +229,10 @@ button:not(:disabled),
   font-weight: 500;
 }
 
+.landing .hero-link:hover {
+  color: #ffffff;
+}
+
 .landing .hero::before {
   content: "";
   position: absolute;
@@ -428,48 +432,47 @@ button:not(:disabled),
   color: var(--color-primary);
 }
 
+/* ─── Shared reveal base ────────────────────────────────────────────────────── */
+/* All animated elements start hidden via reveal-ready and become visible via   */
+/* is-visible. Section-specific variants define the initial transform.          */
+
 .landing .reveal-ready {
   opacity: 0;
 }
 
 .landing .is-visible {
   opacity: 1;
+  transform: none;
+  transition-delay: var(--delay, 0ms);
 }
+
+/* ─── Features section ──────────────────────────────────────────────────────── */
 
 .landing .features h2.reveal-ready,
-.landing .features p.lead.reveal-ready {
-  transform: translateY(40px);
-}
-
+.landing .features p.lead.reveal-ready,
 .landing .features .card.reveal-ready {
   transform: translateY(40px);
 }
 
 .landing .features .is-visible {
-  transform: translateY(0);
   transition:
     opacity 0.5s ease,
     transform 0.6s ease;
-  transition-delay: var(--delay, 0ms);
 }
 
 .landing .features .card.is-visible:hover {
   transform: translateY(-4px);
 }
 
+/* ─── Credits section ───────────────────────────────────────────────────────── */
+
 .landing .credits h2.reveal-ready,
 .landing .credits p.lead.reveal-ready {
   transform: translateY(30px);
 }
 
-.landing .credits .credits-card-left.reveal-ready {
-  transform: translateX(-52px);
-}
-
-.landing .credits .credits-card-center.reveal-ready {
-  transform: translateX(-52px);
-}
-
+.landing .credits .credits-card-left.reveal-ready,
+.landing .credits .credits-card-center.reveal-ready,
 .landing .credits .credits-card-right.reveal-ready {
   transform: translateX(-52px);
 }
@@ -478,23 +481,21 @@ button:not(:disabled),
   transform: translateY(12px);
 }
 
-.landing .credits h2.is-visible,
-.landing .credits p.lead.is-visible,
-.landing .credits .card.is-visible,
-.landing .credits .credits-alert.is-visible {
-  transform: translate(0, 0);
+.landing .credits .is-visible {
   transition:
     opacity 0.5s ease,
     transform 0.6s ease;
-  transition-delay: var(--delay, 0ms);
 }
 
 .landing .credits .card.is-visible:hover {
   transform: translateY(-4px);
 }
 
+/* ─── Trust section ─────────────────────────────────────────────────────────── */
+
 .landing .trust h2.reveal-ready,
-.landing .trust p.lead.reveal-ready {
+.landing .trust p.lead.reveal-ready,
+.landing .trust .trust-tail.reveal-ready {
   transform: translateY(30px);
 }
 
@@ -502,27 +503,21 @@ button:not(:disabled),
   transform: translateY(60px) scale(0.5);
 }
 
-.landing .trust .trust-tail.reveal-ready {
-  transform: translateY(20px);
-}
-
-.landing .trust h2.is-visible,
-.landing .trust p.lead.is-visible,
-.landing .trust .card.is-visible,
-.landing .trust .trust-tail.is-visible {
-  transform: translateY(0) scale(1);
+.landing .trust .is-visible {
   transition:
     opacity 0.6s ease,
     transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1);
-  transition-delay: var(--delay, 0ms);
 }
 
 .landing .trust .card.is-visible:hover {
   transform: translateY(-4px);
 }
 
+/* ─── Pricing section ───────────────────────────────────────────────────────── */
+
 .landing .pricing h2.reveal-ready,
-.landing .pricing p.lead.reveal-ready {
+.landing .pricing p.lead.reveal-ready,
+.landing .pricing .pricing-tail.reveal-ready {
   transform: translateY(20px);
 }
 
@@ -530,27 +525,21 @@ button:not(:disabled),
   transform: translateY(40px) scale(0.5);
 }
 
-.landing .pricing .pricing-tail.reveal-ready {
-  transform: translateY(20px);
-}
-
-.landing .pricing h2.is-visible,
-.landing .pricing p.lead.is-visible,
-.landing .pricing .card.is-visible,
-.landing .pricing .pricing-tail.is-visible {
-  transform: translateY(0) scale(1);
+.landing .pricing .is-visible {
   transition:
     opacity 0.45s ease,
     transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-  transition-delay: var(--delay, 0ms);
 }
 
 .landing .pricing .card.is-visible:hover {
   transform: translateY(-4px);
 }
 
+/* ─── FAQ section ───────────────────────────────────────────────────────────── */
+
 .landing .faq h2.reveal-ready,
-.landing .faq p.lead.reveal-ready {
+.landing .faq p.lead.reveal-ready,
+.landing .faq .faq-cta.reveal-ready {
   transform: translateY(20px);
 }
 
@@ -568,23 +557,49 @@ button:not(:disabled),
   }
 }
 
-.landing .faq .faq-cta.reveal-ready {
-  transform: translateY(20px);
-}
-
-.landing .faq h2.is-visible,
-.landing .faq p.lead.is-visible,
-.landing .faq .faq-item.is-visible,
-.landing .faq .faq-cta.is-visible {
-  transform: translate3d(0, 0, 0) !important;
+.landing .faq .is-visible {
   transition:
     opacity 0.42s ease,
     transform 0.48s ease;
-  transition-delay: var(--delay, 0ms);
 }
 
 .landing .no-motion {
   transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Immediately reveal all animated elements — no transforms, no transitions */
+  .landing .reveal-ready,
+  .landing .is-visible {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  /* Suppress background-reveal scale transition */
+  .landing .credits::before,
+  .landing .pricing::before {
+    transition: none !important;
+  }
+
+  /* Stop background art drift */
+  .landing .hero__art,
+  .landing .pricing-art {
+    animation: none !important;
+  }
+
+  /* Suppress hero content fade-in — show immediately */
+  .landing .hero__content,
+  .hero-content-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Stop hero art parallax */
+  .hero-art {
+    animation: none !important;
+  }
 }
 
 @media (max-width: 47.99875rem) {
@@ -629,9 +644,9 @@ button:not(:disabled),
   }
 
   .landing .hero__art {
-    background-position: 70% top;
+    background-position: center top;
     background-size: cover;
-    opacity: 0.6;
+    opacity: 0.55;
   }
 
   .landing .hero::before {

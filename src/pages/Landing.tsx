@@ -44,6 +44,24 @@ export default function Landing() {
   };
 
   useEffect(() => {
+    // If the user prefers reduced motion, immediately reveal all animated
+    // elements and skip the scroll-driven animation controller entirely.
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    if (prefersReducedMotion) {
+      document.querySelectorAll<HTMLElement>(".landing .reveal-ready").forEach((el) => {
+        el.classList.remove("reveal-ready");
+        el.classList.add("is-visible", "no-motion");
+      });
+      // Also trigger background reveal classes so section backgrounds appear
+      document
+        .querySelectorAll<HTMLElement>(".landing .credits, .landing .pricing")
+        .forEach((el) => el.classList.add("bg-reveal-on"));
+      return;
+    }
+
     let lastY = window.scrollY || 0;
     let dir: "up" | "down" = "down";
     const timeouts = new Set<number>();
@@ -208,10 +226,10 @@ export default function Landing() {
       };
 
       const playCardsDown = () => {
-        const order = isDesktop()
-          ? [cards[2], cards[1], cards[0]].filter(Boolean)
-          : cards;
-        const step = isDesktop() ? 130 : 140;
+        // Desktop: left-to-right, faster cascade (cards 0→1→2, 110 ms apart)
+        // Mobile: left-to-right, slightly slower for single-column stacking (160 ms apart)
+        const order = [...cards].filter(Boolean);
+        const step = isDesktop() ? 110 : 160;
         order.forEach((card, index) => {
           setStaggerDelay(card, index * step);
           queue(() => showAnimated(card), index * step);
