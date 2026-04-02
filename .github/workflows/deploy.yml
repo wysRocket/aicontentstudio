@@ -20,6 +20,17 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install app dependencies
+        run: npm ci
+
+      - name: Build app locally
+        run: npm run build
+
+      - name: Extract expected asset hashes
+        run: |
+          echo "EXPECTED_CSS_ASSET=$(node -e "const fs=require('fs'); const html=fs.readFileSync('dist/index.html','utf8'); const match=html.match(/href=\"([^\"]+\\.css)\"/); if(!match) process.exit(1); process.stdout.write(match[1]);")" >> "$GITHUB_ENV"
+          echo "EXPECTED_JS_ASSET=$(node -e "const fs=require('fs'); const html=fs.readFileSync('dist/index.html','utf8'); const match=html.match(/src=\"([^\"]+\\.js)\"/); if(!match) process.exit(1); process.stdout.write(match[1]);")" >> "$GITHUB_ENV"
+
       - name: Create source archive
         run: |
           zip -r /tmp/aicontentstudio.zip . \
@@ -44,4 +55,6 @@ jobs:
           API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
           DOMAIN: aicontentstudio.net
           ARCHIVE_PATH: /tmp/aicontentstudio.zip
+          EXPECTED_CSS_ASSET: ${{ env.EXPECTED_CSS_ASSET }}
+          EXPECTED_JS_ASSET: ${{ env.EXPECTED_JS_ASSET }}
         run: node deploy.mjs

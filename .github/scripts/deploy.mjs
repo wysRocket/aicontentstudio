@@ -12,6 +12,11 @@ import * as tus from 'tus-js-client';
 const API_TOKEN = process.env.API_TOKEN;
 const DOMAIN = process.env.DOMAIN;
 const ARCHIVE_PATH = process.env.ARCHIVE_PATH;
+const EXPECTED_CSS_ASSET = process.env.EXPECTED_CSS_ASSET || '';
+const EXPECTED_JS_ASSET = process.env.EXPECTED_JS_ASSET || '';
+const LIVE_URL = process.env.LIVE_URL || `https://${DOMAIN}/`;
+const VERIFY_TIMEOUT_MS = Number.parseInt(process.env.VERIFY_TIMEOUT_MS || '600000', 10);
+const VERIFY_INTERVAL_MS = Number.parseInt(process.env.VERIFY_INTERVAL_MS || '15000', 10);
 const API_BASE = (process.env.API_BASE_URL || 'https://developers.hostinger.com').replace(/\/$/, '');
 
 if (!API_TOKEN) throw new Error('API_TOKEN is required');
@@ -20,6 +25,68 @@ if (!ARCHIVE_PATH) throw new Error('ARCHIVE_PATH is required');
 if (!fs.existsSync(ARCHIVE_PATH)) throw new Error(`Archive not found: ${ARCHIVE_PATH}`);
 
 const authHeaders = { Authorization: `Bearer ${API_TOKEN}` };
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function extractServedAssets(html) {
+  return {
+    css: html.match(/href="([^"]+\.css)"/)?.[1] || '',
+    js: html.match(/src="([^"]+\.js)"/)?.[1] || '',
+  };
+}
+
+function liveAssetsMatch(html) {
+  return (
+    (!EXPECTED_CSS_ASSET || html.includes(EXPECTED_CSS_ASSET)) &&
+    (!EXPECTED_JS_ASSET || html.includes(EXPECTED_JS_ASSET))
+  );
+}
+
+async function pollForLiveAssets() {
+  if (!EXPECTED_CSS_ASSET && !EXPECTED_JS_ASSET) {
+    console.log('Skipping live asset verification because no expected assets were provided.');
+    return;
+  }
+
+  const startedAt = Date.now();
+  let lastSeen = { css: '', js: '' };
+
+  while (Date.now() - startedAt < VERIFY_TIMEOUT_MS) {
+    const cacheBustUrl = `${LIVE_URL}${LIVE_URL.includes('?') ? '&' : '?'}deploy-check=${Date.now()}`;
+    const response = await axios.get(cacheBustUrl, {
+      headers: {
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+      },
+      timeout: 15000,
+      validateStatus: (s) => s < 500,
+    });
+
+    if (response.status === 200 && typeof response.data === 'string') {
+      lastSeen = extractServedAssets(response.data);
+      if (liveAssetsMatch(response.data)) {
+        console.log(
+          `Production is serving the expected assets: css=${lastSeen.css || 'n/a'}, js=${lastSeen.js || 'n/a'}`,
+        );
+        return;
+      }
+    }
+
+    console.log(
+      `Waiting for production to update. Expected css=${EXPECTED_CSS_ASSET || 'n/a'}, js=${EXPECTED_JS_ASSET || 'n/a'}; ` +
+        `currently serving css=${lastSeen.css || 'n/a'}, js=${lastSeen.js || 'n/a'}`,
+    );
+    await sleep(VERIFY_INTERVAL_MS);
+  }
+
+  throw new Error(
+    `Timed out waiting for production to serve expected assets. ` +
+      `Expected css=${EXPECTED_CSS_ASSET || 'n/a'}, js=${EXPECTED_JS_ASSET || 'n/a'}; ` +
+      `last seen css=${lastSeen.css || 'n/a'}, js=${lastSeen.js || 'n/a'}`,
+  );
+}
 
 async function resolveUsername(domain) {
   console.log(`Resolving username for domain: ${domain}`);
@@ -164,7 +231,8 @@ async function main() {
   const archiveBasename = await uploadArchive(ARCHIVE_PATH, uploadUrl, authRestToken, authToken);
   const buildSettings = await fetchBuildSettings(username, DOMAIN, archiveBasename);
   await triggerBuild(username, DOMAIN, archiveBasename, buildSettings);
-  console.log('Deployment complete. Build is running on Hostinger.');
+  await pollForLiveAssets();
+  console.log('Deployment complete. Production is serving the latest build.');
 }
 
 main().catch((err) => {
