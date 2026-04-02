@@ -147,7 +147,7 @@ export function Layout() {
       >
         <div className="sticky top-0 z-[55] border-b border-white/8 bg-[#0d0b18]/95 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl flex-col gap-3 px-3 py-3 sm:px-6 lg:px-10">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0 flex items-start gap-3">
                 <button
                   type="button"
@@ -179,7 +179,7 @@ export function Layout() {
                 </div>
               </div>
 
-              <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+              <div className="flex w-full shrink-0 items-center justify-between gap-2 sm:w-auto sm:justify-end sm:gap-3">
                 <div className="flex h-10 items-center gap-2 rounded-2xl border border-white/10 bg-white/6 px-3 text-sm shadow-sm">
                   <Coins className="h-4 w-4 text-[#7c5cff]" />
                   <span className="font-medium text-white">

@@ -656,7 +656,7 @@ export default function Landing() {
           <div className="container hero__content max-w-6xl mx-auto px-5 sm:px-6">
             <div className="grid lg:grid-cols-12 gap-8 items-center">
               <div className="lg:col-span-8">
-                <h1 className="mb-5 text-[1.85rem] font-semibold leading-[0.95] tracking-[-0.05em] sm:mb-6 sm:text-[2.5rem] lg:text-[2.5rem]">
+                <h1 className="mb-5 max-w-[18ch] text-[1.85rem] font-semibold leading-[0.95] tracking-[-0.05em] sm:mb-6 sm:text-[2.5rem] lg:text-[2.5rem]">
                   <span className="block text-primary">AI Content Studio,</span>
                   <span className="mt-1 block text-text-main">powered by credits</span>
                 </h1>

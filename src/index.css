@@ -32,6 +32,7 @@ body {
   color: var(--color-text-main);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 a[href],
@@ -271,7 +272,7 @@ nav ul li a:hover {
   background-color: rgba(5, 8, 20, 0.45);
   border-color: rgba(255, 255, 255, 0.14);
   box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.08),
+    0 20px 40px rgba(0, 0, 0, 0.14),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   border-width: 0;
 }
@@ -646,13 +647,12 @@ nav ul li a:hover {
   }
 
   .landing .hero__content {
-    padding-top: 0.75rem;
+    padding-top: 3rem;
+    padding-bottom: 4rem;
   }
 
   .landing .hero__art {
-    background-position: center top;
-    background-size: cover;
-    opacity: 0.72;
+    background-position: 70% center;
   }
 
   .landing .hero::before {
@@ -675,7 +675,7 @@ nav ul li a:hover {
   .landing .credits .credits-card-left.reveal-ready,
   .landing .credits .credits-card-center.reveal-ready,
   .landing .credits .credits-card-right.reveal-ready {
-    transform: translateX(-44px);
+    transform: translateY(40px);
   }
 
   .landing .credits::before {
@@ -700,6 +700,7 @@ nav ul li a:hover {
   }
 
   .landing .hero__content {
-    padding-top: 0.5rem;
+    padding-top: 2.5rem;
+    padding-bottom: 3rem;
   }
 }

@@ -31,12 +31,15 @@ test("translate prompts include the requested language and source text", () => {
   assert.match(prompt, /Keep the tone direct and professional\./);
 });
 
-test("all four tool modes remain available for the shared workspace", () => {
+test("all workspace tool modes remain available for the shared workspace", () => {
   assert.deepEqual(WORKSPACE_TOOL_MODES, [
     "write_rewrite",
     "summarize",
     "transcribe",
     "translate",
+    "generate_image",
+    "create_document",
+    "create_presentation",
   ]);
 });
 
@@ -52,6 +55,9 @@ test("workspace sidebar counts runs per tool mode", () => {
     summarize: 0,
     transcribe: 0,
     translate: 1,
+    generate_image: 0,
+    create_document: 0,
+    create_presentation: 0,
   });
 });
 

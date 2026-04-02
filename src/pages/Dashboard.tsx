@@ -1164,7 +1164,7 @@ export default function Dashboard() {
               </h2>
             </div>
 
-            <div className="flex gap-2.5">
+            <div className="flex flex-wrap gap-2.5">
               <div className="rounded-[18px] border border-white/10 bg-white/10 px-4 py-2.5 backdrop-blur-sm">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
                   Credits
@@ -1279,15 +1279,15 @@ export default function Dashboard() {
         )}
 
         {/* Main workspace grid */}
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.14fr)_minmax(360px,0.86fr)]">
+        <section className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.14fr)_minmax(360px,0.86fr)]">
           {/* Left column: tool header + input form */}
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             {/* Tool header with action buttons */}
             <section
               className={`rounded-[30px] border p-5 shadow-sm ${MODE_ACCENTS[activeMode]}`}
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="max-w-2xl">
+                <div className="min-w-0 max-w-2xl">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-current/75">
                     {modeMeta.eyebrow}
                   </p>
@@ -1299,7 +1299,7 @@ export default function Dashboard() {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex w-full flex-wrap gap-2 lg:w-auto lg:justify-end">
                   <p className="w-full text-xs text-white/55 lg:w-auto lg:pr-2 lg:pt-3">
                     {lastSavedAt
                       ? `Last saved ${lastSavedAt.toLocaleTimeString([], {
@@ -1311,7 +1311,7 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => startNewRun(activeMode)}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-[#7c5cff]/15 px-4 py-3 text-sm font-semibold text-[#5b3fc5] transition hover:bg-[#e8e2ff]"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-[#7c5cff]/15 px-4 py-3 text-sm font-semibold text-[#5b3fc5] transition hover:bg-[#e8e2ff] sm:w-auto"
                   >
                     <Plus className="h-4 w-4" />
                     New run
@@ -1320,7 +1320,7 @@ export default function Dashboard() {
                     type="button"
                     onClick={handleSave}
                     disabled={isSaving || isGenerating || !isDirty}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-medium text-white transition hover:border-[#7c5cff]/20 hover:bg-[#0e1219] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-medium text-white transition hover:border-[#7c5cff]/20 hover:bg-[#0e1219] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                   >
                     {isSaving ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1329,7 +1329,7 @@ export default function Dashboard() {
                     )}
                     Save run
                   </button>
-                  <div className="flex items-center gap-2">
+                  <div className="flex w-full items-center gap-2 sm:w-auto">
                     <button
                       type="button"
                       onClick={handleGenerate}
@@ -1338,7 +1338,7 @@ export default function Dashboard() {
                         isSaving ||
                         Boolean(generationValidationMessage)
                       }
-                      className="inline-flex items-center gap-2 rounded-2xl bg-[#17131d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#2b2238] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#17131d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#2b2238] disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
                     >
                       {isGenerating ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -1599,7 +1599,7 @@ export default function Dashboard() {
           </div>
 
           {/* Right column: output + history */}
-          <div className="space-y-4 xl:sticky xl:top-[7.25rem] xl:self-start">
+          <div className="min-w-0 space-y-4 xl:sticky xl:top-[7.25rem] xl:self-start">
             {/* Output panel */}
             <section className="overflow-hidden rounded-[30px] border border-white/8 bg-[#13171f] shadow-sm">
               <div
@@ -1712,13 +1712,13 @@ export default function Dashboard() {
                   ) : activeMode === "create_document" && editor.outputText.trim() ? (
                     /* ── Document output ── */
                     <>
-                      <div className="flex items-center justify-between gap-3 border-b border-white/6 px-5 py-3">
-                        <span className="text-xs text-white/40">
+                      <div className="flex flex-col items-start gap-3 border-b border-white/6 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <span className="min-w-0 text-xs text-white/40">
                           {wordCount(editor.outputText).toLocaleString()} words
                           &middot; {editor.outputText.length.toLocaleString()} chars
                           {editor.tokenCount > 0 && <> &middot; {editor.tokenCount.toLocaleString()} tokens</>}
                         </span>
-                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                        <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:justify-end">
                           <button
                             type="button"
                             onClick={handleCopyOutput}
@@ -2005,7 +2005,7 @@ export default function Dashboard() {
 
             {/* History panel */}
             <section className="rounded-[30px] border border-white/8 bg-[#13171f] p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-3 border-b border-white/6 pb-4">
+              <div className="flex flex-col gap-3 border-b border-white/6 pb-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c5cff]">
                     Saved history
@@ -2018,11 +2018,11 @@ export default function Dashboard() {
                       : ` in ${modeMeta.label.toLowerCase()}`}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex w-full items-center gap-2 sm:w-auto">
                   <button
                     type="button"
                     onClick={() => setShowAllRuns((v) => !v)}
-                    className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+                    className={`flex-1 rounded-xl border px-3 py-1.5 text-xs font-semibold transition sm:flex-none ${
                       showAllRuns
                         ? "border-[#7c5cff]/25 bg-[#7c5cff]/15 text-[#5b3fc5]"
                         : "border-white/10 bg-[#0e1219] text-white/55 hover:bg-[#1a2030] hover:text-white"
@@ -2033,7 +2033,7 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => startNewRun(activeMode)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-[#17131d] text-white transition hover:bg-[#2c2438]"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-[#17131d] text-white transition hover:bg-[#2c2438]"
                     aria-label={`Start a new ${modeMeta.label.toLowerCase()} run`}
                   >
                     <Plus className="h-4 w-4" />
@@ -2088,7 +2088,7 @@ export default function Dashboard() {
                           : "border-white/8 bg-[#0e1219] hover:border-[#7c5cff]/20 hover:bg-[#1a2030]"
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <button
                           type="button"
                           onClick={() => selectRun(run)}
@@ -2118,7 +2118,7 @@ export default function Dashboard() {
                           </div>
                         </button>
 
-                        <div className="flex shrink-0 items-start gap-2">
+                        <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
                           <span
                             className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
                               run.status === "completed"
