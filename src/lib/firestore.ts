@@ -539,8 +539,7 @@ function mapWorkspaceRun(snapshot: QueryDocumentSnapshot): WorkspaceRunRecord {
         status: data.status ?? "draft",
         creditCost:
           typeof data.creditCost === "number" ? data.creditCost : undefined,
-        tokenCount:
-          typeof data.tokenCount === "number" ? data.tokenCount : 0,
+        tokenCount: typeof data.tokenCount === "number" ? data.tokenCount : 0,
         sourceFileName: data.sourceFileName ?? "",
         sourceMimeType: data.sourceMimeType ?? "",
         lastError: data.lastError ?? "",
@@ -579,7 +578,12 @@ export async function createUserProfileIfNotExists(
   try {
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) {
-      const payload = buildUserProfilePayload(uid, email, displayName, photoURL);
+      const payload = buildUserProfilePayload(
+        uid,
+        email,
+        displayName,
+        photoURL,
+      );
       await setDoc(userRef, {
         ...payload.data,
         createdAt: serverTimestamp(),
@@ -710,8 +714,17 @@ export async function deductCredits(
 
 export async function getUserByEmail(
   email: string,
-): Promise<{ uid: string; email: string; credits: number; displayName: string | null } | null> {
-  const q = query(collection(db, "users"), where("email", "==", email.trim().toLowerCase()), limit(1));
+): Promise<{
+  uid: string;
+  email: string;
+  credits: number;
+  displayName: string | null;
+} | null> {
+  const q = query(
+    collection(db, "users"),
+    where("email", "==", email.trim().toLowerCase()),
+    limit(1),
+  );
   const snap = await getDocs(q);
   if (snap.empty) return null;
   const docSnap = snap.docs[0];
@@ -724,7 +737,11 @@ export async function getUserByEmail(
   };
 }
 
-export async function addCredits(uid: string, amount: number, description?: string): Promise<void> {
+export async function addCredits(
+  uid: string,
+  amount: number,
+  description?: string,
+): Promise<void> {
   if (!Number.isInteger(amount) || amount <= 0) {
     throw new Error("amount must be a positive integer");
   }

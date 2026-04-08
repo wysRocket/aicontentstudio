@@ -11,26 +11,33 @@ import {
   normalizeWorkspaceToolMode,
 } from "../lib/workspace";
 
-const routeMeta: Record<string, { eyebrow: string; title: string; description: string }> = {
+const routeMeta: Record<
+  string,
+  { eyebrow: string; title: string; description: string }
+> = {
   "/dashboard": {
     eyebrow: "Authenticated workspace",
     title: "Workspace",
-    description: "Run write, summary, transcription, and translation work from one saved dashboard canvas.",
+    description:
+      "Run write, summary, transcription, and translation work from one saved dashboard canvas.",
   },
   "/dashboard/create": {
     eyebrow: "Legacy workflow",
     title: "Create Post",
-    description: "This earlier workflow is still available directly, but the main product surface now lives in Workspace.",
+    description:
+      "This earlier workflow is still available directly, but the main product surface now lives in Workspace.",
   },
   "/dashboard/inspiration": {
     eyebrow: "Legacy workflow",
     title: "Inspiration",
-    description: "Saved reference material from the earlier pipeline structure.",
+    description:
+      "Saved reference material from the earlier pipeline structure.",
   },
   "/dashboard/prompts": {
     eyebrow: "Library",
     title: "Prompts",
-    description: "Reusable prompt references that can still support the authenticated workspace.",
+    description:
+      "Reusable prompt references that can still support the authenticated workspace.",
   },
   "/dashboard/sources": {
     eyebrow: "Legacy workflow",
@@ -55,37 +62,44 @@ const routeMeta: Record<string, { eyebrow: string; title: string; description: s
   "/dashboard/videos": {
     eyebrow: "Legacy workflow",
     title: "Videos",
-    description: "Older video entry point retained outside the primary workspace navigation.",
+    description:
+      "Older video entry point retained outside the primary workspace navigation.",
   },
   "/dashboard/video-generation": {
     eyebrow: "Video generation",
     title: "Video Generator",
-    description: "Describe the visual you want, generate it, and track the credit cost before you run.",
+    description:
+      "Describe the visual you want, generate it, and track the credit cost before you run.",
   },
   "/dashboard/api-dashboard": {
     eyebrow: "Integrations",
     title: "API Dashboard",
-    description: "See what is configured in this workspace right now and what still needs setup.",
+    description:
+      "See what is configured in this workspace right now and what still needs setup.",
   },
   "/dashboard/coach": {
     eyebrow: "Analysis",
     title: "Viral AI Coach",
-    description: "Upload a short-form video and get actionable feedback on hook, pacing, and engagement.",
+    description:
+      "Upload a short-form video and get actionable feedback on hook, pacing, and engagement.",
   },
   "/dashboard/help": {
     eyebrow: "Support",
     title: "Help",
-    description: "Understand what each workspace section does and where to go next.",
+    description:
+      "Understand what each workspace section does and where to go next.",
   },
   "/dashboard/admin": {
     eyebrow: "Operations",
     title: "Admin Panel",
-    description: "Review billing, account access, and workspace operations from one internal control surface.",
+    description:
+      "Review billing, account access, and workspace operations from one internal control surface.",
   },
   "/dashboard/settings": {
     eyebrow: "Workspace config",
     title: "Settings",
-    description: "Manage brand voice, connected accounts, billing, and the preferences that shape output.",
+    description:
+      "Manage brand voice, connected accounts, billing, and the preferences that shape output.",
   },
 };
 
@@ -94,7 +108,8 @@ export function Layout() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isAuthReady } = useFirebase();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const [isDesktopSidebarExpanded, setIsDesktopSidebarExpanded] = useState(false);
+  const [isDesktopSidebarExpanded, setIsDesktopSidebarExpanded] =
+    useState(false);
   const [credits, setCredits] = useState<number | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [isPurchasingCredits, setIsPurchasingCredits] = useState(false);
@@ -109,10 +124,14 @@ export function Layout() {
         }
       : null;
   const headerMeta =
-    workspaceHeaderMeta ?? routeMeta[location.pathname] ?? routeMeta["/dashboard"];
-  const isCompactCanvas = ["/dashboard/create", "/dashboard/inspiration", "/dashboard/videos"].includes(
-    location.pathname,
-  );
+    workspaceHeaderMeta ??
+    routeMeta[location.pathname] ??
+    routeMeta["/dashboard"];
+  const isCompactCanvas = [
+    "/dashboard/create",
+    "/dashboard/inspiration",
+    "/dashboard/videos",
+  ].includes(location.pathname);
   const profileInitial = useMemo(
     () => user?.email?.trim()?.charAt(0)?.toUpperCase() || "U",
     [user],
@@ -154,9 +173,17 @@ export function Layout() {
                   type="button"
                   onClick={() => setIsMobileNavOpen((current) => !current)}
                   className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-white shadow-sm lg:hidden"
-                  aria-label={isMobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
+                  aria-label={
+                    isMobileNavOpen
+                      ? "Close navigation menu"
+                      : "Open navigation menu"
+                  }
                 >
-                  {isMobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                  {isMobileNavOpen ? (
+                    <X className="h-5 w-5" />
+                  ) : (
+                    <Menu className="h-5 w-5" />
+                  )}
                 </button>
 
                 <div className="min-w-0">
