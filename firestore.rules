@@ -121,8 +121,8 @@ service cloud.firestore {
     }
 
     function isCreditsOnlyUpdate() {
-      return ('credits' in request.resource.data) &&
-             request.resource.data.keys().hasOnly(['credits']);
+          return ('credits' in request.resource.data) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['credits']);
     }
 
     // ===============================================================
