@@ -137,7 +137,7 @@ service cloud.firestore {
              isValidOptionalString('photoURL', 0, 2048) &&
              data.role in ['admin', 'user'] &&
              (!('credits' in data) || (data.credits is int && data.credits >= 0)) &&
-             data.createdAt is timestamp;
+             (data.createdAt is timestamp || data.createdAt == request.time);
     }
 
     function isValidConnectedAccount(data) {
@@ -159,8 +159,8 @@ service cloud.firestore {
              data.description is string && data.description.size() <= 200 &&
              data.content is string && data.content.size() > 0 && data.content.size() <= 50000 &&
              data.type in ['TEXT', 'IMAGE', 'VIDEO'] &&
-             data.createdAt is timestamp &&
-             data.updatedAt is timestamp;
+             (data.createdAt is timestamp || data.createdAt == request.time) &&
+             (data.updatedAt is timestamp || data.updatedAt == request.time);
     }
 
     function isValidInspiration(data) {
@@ -173,8 +173,8 @@ service cloud.firestore {
              data.mediaUrl is string && data.mediaUrl.size() <= 2048 &&
              data.note is string && data.note.size() <= 4000 &&
              data.tags is list && data.tags.size() <= 20 &&
-             data.createdAt is timestamp &&
-             data.updatedAt is timestamp;
+             (data.createdAt is timestamp || data.createdAt == request.time) &&
+             (data.updatedAt is timestamp || data.updatedAt == request.time);
     }
 
     function isValidContentItem(data) {
@@ -192,8 +192,8 @@ service cloud.firestore {
              (!('validationIssues' in data) || (data.validationIssues is list && data.validationIssues.size() <= 20)) &&
              (!('publishFailureReason' in data) || (data.publishFailureReason is string && data.publishFailureReason.size() <= 2000)) &&
              (!('scheduledFor' in data) || data.scheduledFor == null || data.scheduledFor is timestamp) &&
-             data.createdAt is timestamp &&
-             data.updatedAt is timestamp;
+             (data.createdAt is timestamp || data.createdAt == request.time) &&
+             (data.updatedAt is timestamp || data.updatedAt == request.time);
     }
 
     function isValidSource(data) {
@@ -213,8 +213,8 @@ service cloud.firestore {
              (!('analysisAudience' in data) || (data.analysisAudience is string && data.analysisAudience.size() <= 4000)) &&
              (!('analysisRisks' in data) || (data.analysisRisks is list && data.analysisRisks.size() <= 50)) &&
              (!('lastProcessedAt' in data) || data.lastProcessedAt == null || data.lastProcessedAt is timestamp) &&
-             data.createdAt is timestamp &&
-             data.updatedAt is timestamp;
+             (data.createdAt is timestamp || data.createdAt == request.time) &&
+             (data.updatedAt is timestamp || data.updatedAt == request.time);
     }
 
     function isValidWorkspaceSettings(data) {
@@ -231,7 +231,7 @@ service cloud.firestore {
              data.apiBaseUrl is string && data.apiBaseUrl.size() <= 2048 &&
              data.webhookUrl is string && data.webhookUrl.size() <= 2048 &&
              data.supportEmail is string && data.supportEmail.size() <= 320 &&
-             data.updatedAt is timestamp;
+             (data.updatedAt is timestamp || data.updatedAt == request.time);
     }
 
     function isValidWorkspaceRun(data) {
@@ -247,8 +247,8 @@ service cloud.firestore {
              (!('sourceFileName' in data) || (data.sourceFileName is string && data.sourceFileName.size() <= 260)) &&
              (!('sourceMimeType' in data) || (data.sourceMimeType is string && data.sourceMimeType.size() <= 200)) &&
              (!('lastError' in data) || (data.lastError is string && data.lastError.size() <= 4000)) &&
-             data.createdAt is timestamp &&
-             data.updatedAt is timestamp;
+             (data.createdAt is timestamp || data.createdAt == request.time) &&
+             (data.updatedAt is timestamp || data.updatedAt == request.time);
     }
 
     function isValidCreditTransaction(data) {
@@ -259,7 +259,7 @@ service cloud.firestore {
              data.status in ['completed', 'pending'] &&
              data.description is string && data.description.size() > 0 && data.description.size() <= 200 &&
              data.source is string && data.source.size() > 0 && data.source.size() <= 80 &&
-             data.createdAt is timestamp;
+             (data.createdAt is timestamp || data.createdAt == request.time);
     }
 
     // ===============================================================
@@ -402,7 +402,7 @@ service cloud.firestore {
                       request.resource.data.status in ['completed', 'pending'] &&
                       request.resource.data.description is string && request.resource.data.description.size() > 0 && request.resource.data.description.size() <= 200 &&
                       request.resource.data.source is string && request.resource.data.source.size() > 0 && request.resource.data.source.size() <= 80 &&
-                      (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp);
+                      (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp || request.resource.data.createdAt == request.time);
 
         allow update, delete: if isAdmin();
       }
