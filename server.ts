@@ -604,8 +604,15 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     app.use(express.static(distPath));
-    app.get("*", (_req, res) => {
+    app.get("*", (req, res, next) => {
+      // Only serve SPA shell for navigation requests. Let asset-like paths 404.
+      if (req.path.startsWith("/api/")) return next();
+      if (path.extname(req.path)) return next();
       res.sendFile(path.join(distPath, "index.html"));
+    });
+
+    app.use((_req, res) => {
+      res.status(404).send("Not Found");
     });
   }
 
