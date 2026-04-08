@@ -28,6 +28,20 @@ jobs:
           VITE_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: npm run build
 
+      - name: Create production env file for Hostinger build
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "GEMINI_API_KEY secret is required for production deploy"
+            exit 1
+          fi
+
+          cat > .env.production <<EOF
+          GEMINI_API_KEY=$GEMINI_API_KEY
+          VITE_GEMINI_API_KEY=$GEMINI_API_KEY
+          EOF
+
       - name: Extract expected asset hashes
         run: |
           echo "EXPECTED_CSS_ASSET=$(node -e "const fs=require('fs'); const html=fs.readFileSync('dist/index.html','utf8'); const match=html.match(/href=\"([^\"]+\\.css)\"/); if(!match) process.exit(1); process.stdout.write(match[1]);")" >> "$GITHUB_ENV"
@@ -43,7 +57,7 @@ jobs:
             --exclude ".git/*" \
             --exclude "node_modules/*" \
             --exclude "dist/*" \
-            --exclude ".env*" \
+            --exclude ".env.local" \
             --exclude "*.log"
           echo "Archive size: $(du -sh /tmp/aicontentstudio.zip | cut -f1)"
 
