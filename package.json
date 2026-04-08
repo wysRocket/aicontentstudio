@@ -12,7 +12,8 @@
     "docs:dev": "npx mint dev",
     "docs:check": "npx mint openapi-check",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "deploy:rules": "node scripts/deploy-rules.js"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
