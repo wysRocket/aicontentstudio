@@ -117,6 +117,10 @@ service cloud.firestore {
       );
     }
 
+    function isCreditsOnlyUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['credits']);
+    }
+
     // ===============================================================
     // Domain Validators
     // ===============================================================
@@ -274,12 +278,21 @@ service cloud.firestore {
                     ((request.resource.data.role == 'user') || isAdmin());
                     
       allow update: if isAuthenticated() && 
-                    isOwner(userId) && 
-                    isValidUser(request.resource.data) && 
-                    uidSafeForOwnerUpdate() &&
-                    createdAtSafeForUpdate() &&
-                    roleSafeForOwnerUpdate() &&
-                    (creditsNotIncreasing() || creditsMockTopUpAllowed() || isAdmin());
+                    isOwner(userId) &&
+                    (
+                      (
+                        isValidUser(request.resource.data) && 
+                        uidSafeForOwnerUpdate() &&
+                        createdAtSafeForUpdate() &&
+                        roleSafeForOwnerUpdate() &&
+                        (creditsNotIncreasing() || creditsMockTopUpAllowed() || isAdmin())
+                      )
+                      ||
+                      (
+                        isCreditsOnlyUpdate() &&
+                        (creditsNotIncreasing() || creditsMockTopUpAllowed() || isAdmin())
+                      )
+                    );
                     
       allow delete: if isAdmin();
 
