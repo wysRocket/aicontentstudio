@@ -219,7 +219,7 @@ button:not(:disabled),
   background-image: var(--landing-hero-url);
   background-repeat: no-repeat;
   background-position: center center;
-  background-size: cover;
+  background-size: contain;
   animation: heroArtDrift 14s ease-in-out infinite alternate;
 }
 
