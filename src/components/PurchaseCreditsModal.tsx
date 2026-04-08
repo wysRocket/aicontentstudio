@@ -18,7 +18,8 @@ import {
 interface PurchaseCreditsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPurchase: (amount: number) => void;
+  onPurchase: (amount: number) => Promise<void> | void;
+  isPurchasing?: boolean;
   purchasesDisabled?: boolean;
   disabledReason?: string;
   currentCredits?: number | null;
@@ -52,6 +53,7 @@ export default function PurchaseCreditsModal({
   isOpen,
   onClose,
   onPurchase,
+  isPurchasing = false,
   purchasesDisabled = false,
   disabledReason,
   currentCredits = null,
@@ -572,13 +574,24 @@ export default function PurchaseCreditsModal({
                 ) : (
                   <button
                     type="button"
-                    onClick={() => {
-                      onPurchase(selectedCredits);
-                      onClose();
+                    disabled={isPurchasing}
+                    onClick={async () => {
+                      try {
+                        await onPurchase(selectedCredits);
+                        onClose();
+                      } catch (error) {
+                        const message =
+                          error instanceof Error
+                            ? error.message
+                            : "Mock top-up failed.";
+                        showToast(message);
+                      }
                     }}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#7c5cff] px-6 py-4 text-sm font-semibold text-white transition-colors hover:bg-[#6f50f0]"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#7c5cff] px-6 py-4 text-sm font-semibold text-white transition-colors hover:bg-[#6f50f0] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Buy {formatCreditAmount(selectedCredits)} credits
+                    {isPurchasing
+                      ? "Processing mock top-up..."
+                      : `Buy ${formatCreditAmount(selectedCredits)} credits`}
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 )}

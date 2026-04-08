@@ -768,6 +768,58 @@ export async function addCredits(uid: string, amount: number, description?: stri
   }
 }
 
+export async function purchaseCreditsMock(
+  uid: string,
+  amount: number,
+): Promise<void> {
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error("amount must be a positive integer");
+  }
+  if (amount > 10000) {
+    throw new Error("mock_top_up_limit_exceeded");
+  }
+
+  const userRef = userDoc(uid);
+  try {
+    const currentUser = auth.currentUser;
+    if (currentUser && currentUser.uid === uid) {
+      await createUserProfileIfNotExists(
+        uid,
+        currentUser.email,
+        currentUser.displayName,
+        currentUser.photoURL,
+      );
+    }
+
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(userRef);
+      if (!snap.exists()) throw new Error("user_not_found");
+
+      const data = snap.data();
+      const currentCredits =
+        data && typeof data.credits === "number" ? data.credits : 0;
+      const nextBalance = currentCredits + amount;
+      const transactionRef = doc(creditTransactionsCollection(uid));
+
+      transaction.update(userRef, { credits: nextBalance });
+      transaction.set(transactionRef, {
+        amount,
+        balanceAfter: nextBalance,
+        kind: "top_up",
+        status: "completed",
+        description: `Mock checkout top-up (${amount} credits)`,
+        source: "mock_checkout",
+        createdAt: serverTimestamp(),
+      });
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "user_not_found") {
+      throw error;
+    }
+    handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+  }
+}
+
 export async function ensureWorkspaceSeedData(uid: string) {
   try {
     const [

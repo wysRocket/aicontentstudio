@@ -5,7 +5,7 @@ import { Sidebar } from "./Sidebar";
 import PurchaseCreditsModal from "./PurchaseCreditsModal";
 import { cn } from "../lib/utils";
 import { useFirebase } from "../contexts/FirebaseContext";
-import { subscribeToUserCredits } from "../lib/firestore";
+import { purchaseCreditsMock, subscribeToUserCredits } from "../lib/firestore";
 import {
   WORKSPACE_TOOL_CONFIG,
   normalizeWorkspaceToolMode,
@@ -97,6 +97,7 @@ export function Layout() {
   const [isDesktopSidebarExpanded, setIsDesktopSidebarExpanded] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [isPurchasingCredits, setIsPurchasingCredits] = useState(false);
 
   const activeTool = normalizeWorkspaceToolMode(searchParams.get("tool"));
   const workspaceHeaderMeta =
@@ -228,11 +229,17 @@ export function Layout() {
       <PurchaseCreditsModal
         isOpen={isPurchaseModalOpen}
         onClose={() => setIsPurchaseModalOpen(false)}
-        onPurchase={(amount) => {
-          console.warn(`Requested top-up for ${amount} credits`);
+        isPurchasing={isPurchasingCredits}
+        onPurchase={async (amount) => {
+          if (!user) throw new Error("Sign in to top up credits.");
+
+          setIsPurchasingCredits(true);
+          try {
+            await purchaseCreditsMock(user.uid, amount);
+          } finally {
+            setIsPurchasingCredits(false);
+          }
         }}
-        purchasesDisabled
-        disabledReason="Self-serve checkout is still being finalized, so top-ups are requested manually for now."
         currentCredits={credits}
       />
     </div>

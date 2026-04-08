@@ -100,6 +100,23 @@ service cloud.firestore {
              );
     }
 
+    function creditsMockTopUpAllowed() {
+      return (
+        ('credits' in request.resource.data) &&
+        (request.resource.data.credits is int) &&
+        request.resource.data.credits >= 0 &&
+        (
+          (!('credits' in resource.data) && request.resource.data.credits <= 10000) ||
+          (
+            ('credits' in resource.data) &&
+            (resource.data.credits is int) &&
+            request.resource.data.credits >= resource.data.credits &&
+            request.resource.data.credits - resource.data.credits <= 10000
+          )
+        )
+      );
+    }
+
     // ===============================================================
     // Domain Validators
     // ===============================================================
@@ -262,7 +279,7 @@ service cloud.firestore {
                     uidSafeForOwnerUpdate() &&
                     createdAtSafeForUpdate() &&
                     roleSafeForOwnerUpdate() &&
-                    (creditsNotIncreasing() || isAdmin());
+                    (creditsNotIncreasing() || creditsMockTopUpAllowed() || isAdmin());
                     
       allow delete: if isAdmin();
 
