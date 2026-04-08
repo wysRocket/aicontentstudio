@@ -712,9 +712,7 @@ export async function deductCredits(
   }
 }
 
-export async function getUserByEmail(
-  email: string,
-): Promise<{
+export async function getUserByEmail(email: string): Promise<{
   uid: string;
   email: string;
   credits: number;
