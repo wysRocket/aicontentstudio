@@ -281,11 +281,19 @@ service cloud.firestore {
                     uidUnchanged() &&
                     ((request.resource.data.role == 'user') || isAdmin());
                     
-      // Temporary mock top-up path: owner can update only `credits` in bounded increments.
+      // Credits update path (usage deductions and mock top-ups).
+      // Avoids diff()/keys() checks that fail for server-timestamp fields.
+      // Validates security-sensitive fields directly instead.
       allow update: if isAuthenticated() &&
                     isOwner(userId) &&
-                    isCreditsOnlyUpdate() &&
-                    (creditsNotIncreasing() || creditsMockTopUpDeltaAllowed() || isAdmin());
+                    ('credits' in request.resource.data) &&
+                    (request.resource.data.credits is int) &&
+                    (request.resource.data.credits >= 0) &&
+                    (!('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid) &&
+                    (!('role' in request.resource.data) || request.resource.data.role == resource.data.role) &&
+                    (!('email' in request.resource.data) || request.resource.data.email == resource.data.email) &&
+                    (request.resource.data.credits <= currentCredits() ||
+                     request.resource.data.credits - currentCredits() <= 10000);
 
       allow update: if isAuthenticated() && 
                     isOwner(userId) && 
