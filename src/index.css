@@ -320,7 +320,7 @@ nav ul li a:hover {
 }
 
 .landing .credits::before {
-  background: var(--landing-credits-url) center center / cover no-repeat;
+  background: var(--landing-credits-url) center center / contain no-repeat;
 }
 
 .landing .credits::after {
