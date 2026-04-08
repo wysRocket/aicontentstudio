@@ -31,7 +31,11 @@ jobs:
       - name: Extract expected asset hashes
         run: |
           echo "EXPECTED_CSS_ASSET=$(node -e "const fs=require('fs'); const html=fs.readFileSync('dist/index.html','utf8'); const match=html.match(/href=\"([^\"]+\\.css)\"/); if(!match) process.exit(1); process.stdout.write(match[1]);")" >> "$GITHUB_ENV"
-          echo "EXPECTED_JS_ASSET=$(node -e "const fs=require('fs'); const html=fs.readFileSync('dist/index.html','utf8'); const match=html.match(/src=\"([^\"]+\\.js)\"/); if(!match) process.exit(1); process.stdout.write(match[1]);")" >> "$GITHUB_ENV"
+          # JS hash can differ between local and remote builds when build-time env vars differ.
+          # Keep JS verification opt-in to avoid false deployment stalls.
+          if [ "${VERIFY_JS_ASSET}" = "true" ]; then
+            echo "EXPECTED_JS_ASSET=$(node -e "const fs=require('fs'); const html=fs.readFileSync('dist/index.html','utf8'); const match=html.match(/src=\"([^\"]+\\.js)\"/); if(!match) process.exit(1); process.stdout.write(match[1]);")" >> "$GITHUB_ENV"
+          fi
 
       - name: Create source archive
         run: |

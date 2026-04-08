@@ -72,6 +72,14 @@ async function pollForLiveAssets() {
         );
         return;
       }
+
+      const cssMatches = !EXPECTED_CSS_ASSET || response.data.includes(EXPECTED_CSS_ASSET);
+      const jsMismatches = !!EXPECTED_JS_ASSET && !response.data.includes(EXPECTED_JS_ASSET);
+      if (cssMatches && jsMismatches) {
+        console.log(
+          'Hint: CSS matches but JS hash differs. This often means build-time env vars differ between local CI build and remote server build.',
+        );
+      }
     }
 
     console.log(
