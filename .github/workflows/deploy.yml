@@ -67,7 +67,7 @@ jobs:
           cp .github/scripts/deploy.mjs /tmp/deploy-deps/
           cd /tmp/deploy-deps
           npm init -y
-          npm install axios tus-js-client
+          npm install axios tus-js-client@^3
 
       - name: Deploy to Hostinger
         working-directory: /tmp/deploy-deps

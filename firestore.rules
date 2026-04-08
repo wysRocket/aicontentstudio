@@ -235,7 +235,7 @@ service cloud.firestore {
     }
 
     function isValidWorkspaceRun(data) {
-      return hasOnlyAllowedFields(['mode', 'title', 'sourceText', 'instructions', 'outputText', 'targetLanguage', 'status', 'creditCost', 'sourceFileName', 'sourceMimeType', 'lastError', 'createdAt', 'updatedAt']) &&
+      return hasOnlyAllowedFields(['mode', 'title', 'sourceText', 'instructions', 'outputText', 'targetLanguage', 'status', 'creditCost', 'tokenCount', 'sourceFileName', 'sourceMimeType', 'thumbnailBase64', 'lastError', 'createdAt', 'updatedAt']) &&
              data.mode in ['write_rewrite', 'summarize', 'transcribe', 'translate'] &&
              data.title is string && data.title.size() <= 160 &&
              (!('sourceText' in data) || (data.sourceText is string && data.sourceText.size() <= 50000)) &&
@@ -244,8 +244,10 @@ service cloud.firestore {
              (!('targetLanguage' in data) || (data.targetLanguage is string && data.targetLanguage.size() <= 120)) &&
              data.status in ['draft', 'completed', 'failed'] &&
              data.creditCost is int && data.creditCost >= 0 &&
+             (!('tokenCount' in data) || (data.tokenCount is int && data.tokenCount >= 0)) &&
              (!('sourceFileName' in data) || (data.sourceFileName is string && data.sourceFileName.size() <= 260)) &&
              (!('sourceMimeType' in data) || (data.sourceMimeType is string && data.sourceMimeType.size() <= 200)) &&
+             (!('thumbnailBase64' in data) || data.thumbnailBase64 == null || (data.thumbnailBase64 is string && data.thumbnailBase64.size() <= 500000)) &&
              (!('lastError' in data) || (data.lastError is string && data.lastError.size() <= 4000)) &&
              (data.createdAt is timestamp || data.createdAt == request.time) &&
              (data.updatedAt is timestamp || data.updatedAt == request.time);
