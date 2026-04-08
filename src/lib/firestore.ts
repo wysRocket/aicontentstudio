@@ -816,18 +816,8 @@ export async function purchaseCreditsMock(
       const currentCredits =
         data && typeof data.credits === "number" ? data.credits : 0;
       const nextBalance = currentCredits + amount;
-      const transactionRef = doc(creditTransactionsCollection(uid));
 
       transaction.update(userRef, { credits: nextBalance });
-      transaction.set(transactionRef, {
-        amount,
-        balanceAfter: nextBalance,
-        kind: "top_up",
-        status: "completed",
-        description: `Mock checkout top-up (${amount} credits)`,
-        source: "mock_checkout",
-        createdAt: serverTimestamp(),
-      });
     });
   } catch (error) {
     if (error instanceof Error && error.message === "user_not_found") {
