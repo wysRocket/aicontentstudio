@@ -104,17 +104,20 @@ service cloud.firestore {
       return (
         ('credits' in request.resource.data) &&
         (request.resource.data.credits is int) &&
-        request.resource.data.credits >= 0 &&
-        (
-          (!('credits' in resource.data) && request.resource.data.credits <= 10000) ||
-          (
-            ('credits' in resource.data) &&
-            (resource.data.credits is int) &&
-            request.resource.data.credits >= resource.data.credits &&
-            request.resource.data.credits - resource.data.credits <= 10000
-          )
-        )
+        request.resource.data.credits >= 0
       );
+    }
+
+    function currentCredits() {
+      return (('credits' in resource.data) && (resource.data.credits is int))
+        ? resource.data.credits
+        : 0;
+    }
+
+    function creditsMockTopUpDeltaAllowed() {
+      return creditsMockTopUpAllowed() &&
+             request.resource.data.credits >= currentCredits() &&
+             request.resource.data.credits - currentCredits() <= 10000;
     }
 
     function isCreditsOnlyUpdate() {
@@ -277,22 +280,19 @@ service cloud.firestore {
                     uidUnchanged() &&
                     ((request.resource.data.role == 'user') || isAdmin());
                     
-      allow update: if isAuthenticated() && 
+      // Temporary mock top-up path: owner can update only `credits` in bounded increments.
+      allow update: if isAuthenticated() &&
                     isOwner(userId) &&
-                    (
-                      (
-                        isValidUser(request.resource.data) && 
-                        uidSafeForOwnerUpdate() &&
-                        createdAtSafeForUpdate() &&
-                        roleSafeForOwnerUpdate() &&
-                        (creditsNotIncreasing() || creditsMockTopUpAllowed() || isAdmin())
-                      )
-                      ||
-                      (
-                        isCreditsOnlyUpdate() &&
-                        (creditsNotIncreasing() || creditsMockTopUpAllowed() || isAdmin())
-                      )
-                    );
+                    isCreditsOnlyUpdate() &&
+                    (creditsNotIncreasing() || creditsMockTopUpDeltaAllowed() || isAdmin());
+
+      allow update: if isAuthenticated() && 
+                    isOwner(userId) && 
+                    isValidUser(request.resource.data) && 
+                    uidSafeForOwnerUpdate() &&
+                    createdAtSafeForUpdate() &&
+                    roleSafeForOwnerUpdate() &&
+                    (creditsNotIncreasing() || creditsMockTopUpDeltaAllowed() || isAdmin());
                     
       allow delete: if isAdmin();
 
@@ -385,7 +385,15 @@ service cloud.firestore {
 
         allow create: if isAuthenticated() &&
                       isOwner(userId) &&
-                      isValidCreditTransaction(request.resource.data);
+                      request.resource.data.keys().hasAll(['amount', 'balanceAfter', 'kind', 'status', 'description', 'source']) &&
+                      request.resource.data.keys().hasOnly(['amount', 'balanceAfter', 'kind', 'status', 'description', 'source', 'createdAt']) &&
+                      request.resource.data.amount is int &&
+                      request.resource.data.balanceAfter is int &&
+                      request.resource.data.kind in ['usage', 'top_up', 'grant', 'adjustment'] &&
+                      request.resource.data.status in ['completed', 'pending'] &&
+                      request.resource.data.description is string && request.resource.data.description.size() > 0 && request.resource.data.description.size() <= 200 &&
+                      request.resource.data.source is string && request.resource.data.source.size() > 0 && request.resource.data.source.size() <= 80 &&
+                      (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp);
 
         allow update, delete: if isAdmin();
       }
