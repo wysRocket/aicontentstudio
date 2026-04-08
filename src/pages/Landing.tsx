@@ -44,6 +44,13 @@ export default function Landing() {
   };
 
   useEffect(() => {
+    document.body.classList.add("path-frontpage");
+    return () => {
+      document.body.classList.remove("path-frontpage");
+    };
+  }, []);
+
+  useEffect(() => {
     // If the user prefers reduced motion, immediately reveal all animated
     // elements and skip the scroll-driven animation controller entirely.
     const prefersReducedMotion = window.matchMedia(
@@ -654,75 +661,77 @@ export default function Landing() {
           <div className="hero__art" aria-hidden="true"></div>
 
           <div className="container hero__content max-w-6xl mx-auto px-5 sm:px-6">
-            <div className="grid lg:grid-cols-12 gap-8 items-center">
-              <div className="lg:col-span-8">
-                <h1 className="mb-5 max-w-[18ch] text-[1.85rem] font-semibold leading-[0.95] tracking-[-0.05em] sm:mb-6 sm:text-[2.5rem] lg:text-[2.5rem]">
-                  <span className="block text-primary">AI Content Studio,</span>
-                  <span className="mt-1 block text-text-main">powered by credits</span>
-                </h1>
-                <p className="lead mb-7 max-w-[58ch] text-[15px] leading-6 text-text-muted sm:mb-8 sm:text-lg sm:leading-7 md:text-[1.15rem] md:leading-relaxed">
-                  Create, rewrite, summarize, and transcribe content with a
-                  clear balance, predictable spend, and a complete order history
-                  in your account.
-                </p>
-                <div className="mb-6 flex flex-col gap-3 sm:mb-7 sm:flex-row sm:flex-wrap">
-                  {user ? (
-                    <button
-                      onClick={goToDashboard}
-                      className="w-full rounded-xl bg-primary px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover sm:w-auto sm:px-6 sm:text-base"
-                    >
-                      Open dashboard
-                    </button>
-                  ) : (
-                    <>
+            <div className="hero__inner py-5">
+              <div className="grid lg:grid-cols-12 gap-8 items-center">
+                <div className="lg:col-span-8">
+                  <h1 className="mb-5 max-w-[18ch] text-[1.85rem] font-semibold leading-[0.95] tracking-[-0.05em] sm:mb-6 sm:text-[2.5rem] lg:text-[2.5rem]">
+                    <span className="block text-primary">AI Content Studio,</span>
+                    <span className="mt-1 block text-text-main">powered by credits</span>
+                  </h1>
+                  <p className="lead mb-7 text-[15px] leading-6 text-text-muted sm:mb-8 sm:text-lg sm:leading-7 md:text-[1.15rem] md:leading-relaxed">
+                    Create, rewrite, summarize, and transcribe content with a
+                    clear balance, predictable spend, and a complete order history
+                    in your account.
+                  </p>
+                  <div className="mb-6 flex flex-col gap-3 sm:mb-7 sm:flex-row sm:flex-wrap">
+                    {user ? (
                       <button
-                        onClick={() => goToAuth("signup")}
+                        onClick={goToDashboard}
                         className="w-full rounded-xl bg-primary px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover sm:w-auto sm:px-6 sm:text-base"
                       >
-                        Create account
+                        Open dashboard
                       </button>
-                      <button
-                        onClick={() => goToAuth("signin")}
-                        className="w-full rounded-xl border border-outline-border px-5 py-3 text-sm font-medium text-primary transition-colors hover:bg-outline-hover-bg hover:border-outline-hover-border hover:text-white sm:w-auto sm:px-6 sm:text-base"
-                      >
-                        Sign in
-                      </button>
-                    </>
-                  )}
-                  <a
-                    href="#how-credits-work"
-                    className="hero-link px-1 py-2 transition-colors hover:text-white sm:px-4 sm:py-3"
-                  >
-                    How credits work
-                  </a>
-                  <a
-                    href="#pricing"
-                    className="hero-link px-1 py-2 transition-colors hover:text-white sm:px-4 sm:py-3"
-                  >
-                    Pricing
-                  </a>
-                  <a
-                    href="#faq"
-                    className="hero-link px-1 py-2 transition-colors hover:text-white sm:px-4 sm:py-3"
-                  >
-                    FAQ
-                  </a>
-                </div>
-                <div className="text-sm text-text-muted">
-                  Pay as you go. Buy credits only when you need them.
-                </div>
-              </div>
-              <div className="lg:col-span-4">
-                <div className="card bg-bg-card border border-border-main rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
-                  <div className="font-semibold mb-4 text-lg">
-                    <span className="text-primary">In your</span> account
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => goToAuth("signup")}
+                          className="w-full rounded-xl bg-primary px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover sm:w-auto sm:px-6 sm:text-base"
+                        >
+                          Create account
+                        </button>
+                        <button
+                          onClick={() => goToAuth("signin")}
+                          className="w-full rounded-xl border border-outline-border px-5 py-3 text-sm font-medium text-primary transition-colors hover:bg-outline-hover-bg hover:border-outline-hover-border hover:text-white sm:w-auto sm:px-6 sm:text-base"
+                        >
+                          Sign in
+                        </button>
+                      </>
+                    )}
+                    <a
+                      href="#how-credits-work"
+                      className="hero-link transition-colors hover:text-white"
+                    >
+                      How credits work
+                    </a>
+                    <a
+                      href="#pricing"
+                      className="hero-link transition-colors hover:text-white"
+                    >
+                      Pricing
+                    </a>
+                    <a
+                      href="#faq"
+                      className="hero-link transition-colors hover:text-white"
+                    >
+                      FAQ
+                    </a>
                   </div>
-                  <ul className="space-y-2 text-white/80 list-disc pl-5 marker:text-primary">
-                    <li>Current credit balance</li>
-                    <li>Fast credit purchase</li>
-                    <li>Orders table with totals</li>
-                    <li>Payment methods management</li>
-                  </ul>
+                  <div className="text-sm text-text-muted">
+                    Pay as you go. Buy credits only when you need them.
+                  </div>
+                </div>
+                <div className="lg:col-span-4">
+                  <div className="card bg-bg-card border border-border-main rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
+                    <div className="font-semibold mb-4 text-lg">
+                      <span className="text-primary">In your</span> account
+                    </div>
+                    <ul className="space-y-2 text-white/80 list-disc pl-5 marker:text-primary">
+                      <li>Current credit balance</li>
+                      <li>Fast credit purchase</li>
+                      <li>Orders table with totals</li>
+                      <li>Payment methods management</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>

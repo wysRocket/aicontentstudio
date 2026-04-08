@@ -197,6 +197,7 @@ button:not(:disabled),
 }
 
 .landing .hero {
+  position: relative;
   min-height: 750px;
   padding-top: calc(4.5rem + 4rem);
   overflow: hidden;
@@ -225,9 +226,10 @@ button:not(:disabled),
 
 .landing .hero-link {
   color: rgba(255, 255, 255, 0.72);
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   line-height: 1.5;
   font-weight: 500;
+  text-underline-offset: 0.22em;
 }
 
 .landing .hero-link:hover,
@@ -272,9 +274,29 @@ nav ul li a:hover {
   background-color: rgba(5, 8, 20, 0.45);
   border-color: rgba(255, 255, 255, 0.14);
   box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.14),
+    0 20px 40px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  border-width: 0;
+  border: 0;
+}
+
+.landing .hero h1,
+.landing .hero .h1 {
+  max-width: 18ch;
+}
+
+.landing .hero .lead {
+  max-width: 62ch;
+  font-size: 1.15rem;
+}
+
+body.path-frontpage .landing .hero {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+body.path-frontpage .landing section:not(.hero) {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
 }
 
 .landing .features {
