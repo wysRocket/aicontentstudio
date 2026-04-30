@@ -4,7 +4,7 @@ import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect,
   signOut as firebaseSignOut,
   updateProfile,
 } from 'firebase/auth';
@@ -77,7 +77,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (error) {
       console.error('Error signing in with Google', error);
       throw error;

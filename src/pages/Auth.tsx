@@ -39,9 +39,9 @@ function getFriendlyAuthError(error: unknown) {
     case "auth/weak-password":
       return "Choose a stronger password with at least 6 characters.";
     case "auth/popup-closed-by-user":
-      return "Google sign-in was closed before it finished.";
+      return "Google sign-in was closed before it finished. Try Google sign-in again.";
     case "auth/popup-blocked":
-      return "Your browser blocked the Google sign-in popup. Allow popups and try again.";
+      return "Your browser blocked Google sign-in. Try again in a full browser window.";
     case "auth/unauthorized-domain":
       return "This domain is not authorized in Firebase Auth yet.";
     case "auth/operation-not-allowed":
@@ -209,10 +209,8 @@ export default function Auth() {
 
     try {
       await signInWithGoogle();
-      navigate(redirectTarget, { replace: true });
     } catch (error) {
       setErrorMessage(getFriendlyAuthError(error));
-    } finally {
       setSubmitAction(null);
     }
   };
