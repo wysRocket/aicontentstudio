@@ -2,7 +2,7 @@
   "projectId": "aicontentstudio-net",
   "appId": "1:10408174214:web:ead57d90a6986d57746707",
   "apiKey": "AIzaSyCMIOPp2zJlxFOw6Vs2-9KLvTVOlEcGCvQ",
-  "authDomain": "sample-firebase-ai-app-9cee4.firebaseapp.com",
+  "authDomain": "aicontentstudio-net.firebaseapp.com",
   "firestoreDatabaseId": "(default)",
   "storageBucket": "aicontentstudio-net.firebasestorage.app",
   "messagingSenderId": "10408174214",
