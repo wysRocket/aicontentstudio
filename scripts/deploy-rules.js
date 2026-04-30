@@ -7,8 +7,8 @@
 import { readFileSync } from "fs";
 import { execSync } from "child_process";
 
-const PROJECT_ID = "sample-firebase-ai-app-9cee4";
-const DATABASE_ID = "ai-studio-659a1553-c634-4909-82e0-eccc60628d0e";
+const PROJECT_ID = "aicontentstudio-net";
+const DATABASE_ID = "(default)";
 const RULES_FILE = new URL("../firestore.rules", import.meta.url).pathname;
 
 function getAccessToken() {
@@ -64,7 +64,9 @@ async function deployRules() {
   console.log("Ruleset created:", rulesetName);
 
   console.log("Updating release for named database...");
-  const releaseName = `projects/${PROJECT_ID}/releases/cloud.firestore/${DATABASE_ID}`;
+  const releaseName = DATABASE_ID === "(default)"
+    ? `projects/${PROJECT_ID}/releases/cloud.firestore`
+    : `projects/${PROJECT_ID}/releases/cloud.firestore/${DATABASE_ID}`;
   const release = await fetchJSON(
     `https://firebaserules.googleapis.com/v1/${releaseName}?updateMask=rulesetName`,
     {

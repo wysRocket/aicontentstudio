@@ -13,7 +13,7 @@
     "docs:check": "npx mint openapi-check",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "deploy:rules": "node scripts/deploy-rules.js"
+    "deploy:rules": "npx firebase-tools deploy --only firestore:rules"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
