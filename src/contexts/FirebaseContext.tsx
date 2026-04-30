@@ -4,7 +4,7 @@ import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithRedirect,
+  signInWithPopup,
   signOut as firebaseSignOut,
   updateProfile,
 } from 'firebase/auth';
@@ -30,7 +30,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       setUser(currentUser);
       setIsAuthReady(true);
-      
+
       if (currentUser) {
         await createUserProfileIfNotExists(
           currentUser.uid,
@@ -77,7 +77,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
-      await signInWithRedirect(auth, provider);
+      await signInWithPopup(auth, provider);
     } catch (error) {
       console.error('Error signing in with Google', error);
       throw error;
